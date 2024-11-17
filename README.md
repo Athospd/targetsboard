@@ -12,7 +12,7 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 An experimental alternative to `targets::tar_watch()` to monitor and
 (eventually) control DAGs from the UI.
 
-**Ultra-early stage**! Still finding out if any useful.
+**Ultra-early stage** with some performance issues and clunkyness! Still finding out if any useful.
 Help/Support/Ideas are welcomed!
 
 ## Installation
