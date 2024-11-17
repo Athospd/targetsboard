@@ -1,0 +1,17 @@
+Package: targetsboard
+Title: Targets Board
+Version: 0.0.0.9000
+Authors@R: 
+    person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre"))
+Description: An UI alternative to targets::tar_watch to monitor targets DAGs.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports: 
+    golem,
+    htmltools,
+    htmlwidgets,
+    reactR,
+    shiny,
+    zeallot

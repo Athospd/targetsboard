@@ -1,0 +1,17 @@
+
+html,
+body {
+  margin: 0;
+  font-family: sans-serif;
+  box-sizing: border-box;
+}
+ 
+
+:root {    
+  --bslib-spacer: 1.0rem;
+}
+
+.bslib-sidebar-layout>.main, .bslib-sidebar-layout.sidebar-collapsed>.main, .accordion-body {
+    padding: 0;
+  }
+  

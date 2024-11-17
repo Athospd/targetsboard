@@ -1,0 +1,30 @@
+---
+title: Train/Test Report
+output_format: html
+---
+
+Train and Test EDA
+
+```{r}
+library(targetsboard)
+library(ggplot2)
+train_data <- targets::tar_read(train_data)
+test_data <- targets::tar_read(test_data)
+```
+
+```{r}
+dplyr::bind_rows(
+  train_data |> dplyr::mutate(set = "train"), 
+  test_data |> dplyr::mutate(set = "_targets/")
+) |>
+  ggplot(aes(x = Petal.Length, y = Sepal.Length, colour = set)) +
+  geom_point()
+```
+
+```{r}
+head(train_data)
+```
+
+```{r}
+head(test_data)
+```

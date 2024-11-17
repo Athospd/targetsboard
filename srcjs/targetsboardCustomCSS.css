@@ -1,0 +1,96 @@
+
+#app {
+  width: 100vw;
+  height: 100vh;
+}
+ 
+:root {
+  --xy-node-color: #dbdbdb;
+  --xy-node-color-default: #e4e4e4;
+}
+
+.base-node {
+  padding: 10px;
+  border-radius: var(--xy-node-border-radius, var(--xy-node-border-radius-default));
+  width: 150px;
+  font-size: 12px;
+  color: var(--xy-node-color, var(--xy-node-color-default));
+  text-align: center;
+  border: var(--xy-node-border, var(--xy-node-border-default));
+  background-color: var(--xy-node-background-color, var(--xy-node-background-color-default));
+}
+
+.providerflow {
+  flex-direction: column;
+  display: flex;
+  flex-grow: 1;
+  height: 100%;
+}
+ 
+.providerflow aside {
+  border-left: 1px solid #eee;
+  padding: 15px 10px;
+  font-size: 12px;
+  background: #fff;
+}
+ 
+.providerflow aside .description {
+  margin-bottom: 10px;
+}
+ 
+.providerflow aside .title {
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+ 
+.providerflow aside .transform {
+  margin-bottom: 20px;
+}
+ 
+.providerflow .reactflow-wrapper {
+  flex-grow: 1;
+}
+ 
+.providerflow .selectall {
+  margin-top: 10px;
+}
+ 
+@media screen and (min-width: 768px) {
+  .providerflow {
+    flex-direction: column;
+  }
+ 
+  .providerflow aside {
+    width: 20%;
+    max-width: 250px;
+    height: 200px;
+  }
+}
+
+
+
+/* Spinner styles */
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 4px solid white;
+  width: 20px;
+  height: 20px;
+  -webkit-animation: spin 2s linear infinite; /* Chrome, Safari, Opera */
+  animation: spin 2s linear infinite;
+  position: absolute;
+  top: 10px; /* Adjust as needed */
+  right: 10px; /* Adjust as needed */
+}
+
+/* Animation for spinning effect */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
