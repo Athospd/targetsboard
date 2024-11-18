@@ -146,9 +146,6 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
     purrr::transpose()
 }
 
-
-
-
 #' dataframe_to_reactflow_edge_data
 #'
 #' @export
@@ -162,9 +159,20 @@ dataframe_to_reactflow_edge_data <- function(dataframe) {
 }
 
 #' @export
-tar_board <- function() {
+tar_board <- function(metadata, script = "_targets.R", port = 9999) {
   bg_process <- callr::r_bg(
-    \() shiny::runApp(port = 9999),
+    \(metadata, script, port) {
+      print(shiny::shinyApp(
+        targetsboard::app_ui(metadata, script), 
+        targetsboard::app_server(metadata), 
+        options = list(port = port)
+      ))
+    },
+    args = list(
+      metadata = metadata, 
+      script = script, 
+      port = port
+    ),
     supervise = TRUE,
     poll_connection = TRUE,
     stdout = "|",

@@ -1,5 +1,8 @@
+#' app_ui
+#' 
+#' @import shiny bslib
 #' @export
-app_ui <- function(metadata) {
+app_ui <- function(metadata, script = "_targets.R") {
   nodes <- dataframe_to_reactflow_node_data(metadata$nodes)
   edges <- dataframe_to_reactflow_edge_data(metadata$edges)
   shiny::tagList(  
@@ -8,7 +11,7 @@ app_ui <- function(metadata) {
       title = "Targets board",
       sidebar =  sidebar(
         title = "Control Panel",
-        textInput("script", "Script", "inst/test_targets/targets_randomly_breaking.R")
+        textInput("script", "Script", script)
       ),
       accordion(
         open = c("DAG", "debug"),
@@ -23,6 +26,7 @@ app_ui <- function(metadata) {
               class = "p-0",
               layout_sidebar(
                 sidebar = sidebar(
+                  id = "output_preview_sidebar",
                   width = "40%",
                   open = FALSE,
                   position = "right",
@@ -48,7 +52,7 @@ app_ui <- function(metadata) {
         accordion_panel(
           "Debug",
           card(
-            shiny::verbatimTextOutput("debug")
+            verbatimTextOutput("debug")
           )
         )
       )

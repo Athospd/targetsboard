@@ -20,6 +20,11 @@ app_server <- function(metadata) {
       edges_tab = metadata$edges
     )
 
+    observe({   
+      print(!is.null(input$selected_nodes[1]))
+      bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$selected_nodes[1]))
+    })
+
     output$output_preview <- shiny::renderUI({
       req(input$selected_nodes)
       tar_output <- tryCatch(
@@ -91,15 +96,6 @@ app_server <- function(metadata) {
         reactiveValuesToList(visnetwork_metadata),
         reactiveValuesToList(input)
       )
-    })
-
-    onStop(function() {
-        if(inherits(visnetwork_metadata$tar_visnetwork_app, "r_process")){
-          app_killed <- visnetwork_metadata$tar_visnetwork_app$kill()
-          print(app_killed)
-        }
-      
-      print("exited")
     })
   }
 }
