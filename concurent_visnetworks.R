@@ -1,19 +1,89 @@
-# targets::tar_visnetwork(targets_only = TRUE, script = "inst/test_targets/targets_randomly_breaking.R")
-library(coro)
-tar_visnetwork_generator <- async_generator(function() { 
-  while (TRUE) { 
-    vn <- targets::tar_visnetwork(targets_only = TRUE, script = "inst/test_targets/targets_randomly_breaking.R")
-    yield(vn) 
-  } 
-})
+library(targetsboard)
 
 
-async_vis <- async(function() {
-  async_sleep(10)
-  stream <- tar_visnetwork_generator()
-  values <- await(async_collect(stream, 2))
-  values
-})
+a <- tar_visnetwork_bg(targets_only = TRUE, script = "inst/test_targets/targets_randomly_breaking.R")
+b <- a$process()
 
 
-a <- async_vis()
+
+
+tar_vis_tempdir <- tempdir()
+tar_vis_path <- fs::path(tar_vis_tempdir, "tar_visnetwork.rds")
+script = "inst/test_targets/targets_randomly_breaking.R"
+tar_visnetwork_instance <- \() {
+  while(TRUE) {
+    tar_vis_obj <- targets::tar_visnetwork(script = script, targets_only = TRUE)
+    saveRDS(tar_vis_obj, file = tar_vis_path)
+    print("tar_visnetwork updated")
+    NULL
+  }
+}
+
+tar_visnetwork_instance()
+
+ bg_process <- callr::r_bg(
+  tar_visnetwork_instance,
+  supervise = TRUE,
+  poll_connection = TRUE,
+  stdout = "|",
+  stderr = "|"
+)
+a = list(bg_process, tar_vis_path)
+
+
+a <- bg_process
+a()
+
+
+
+
+#' @export
+tar_board <- function() {
+  bg_process <- callr::r_bg(
+    \() shiny::runApp(port = 9999),
+    supervise = TRUE,
+    poll_connection = TRUE,
+    stdout = "|",
+    stderr = "|"
+  )
+  invisible(bg_process)
+}
+
+a <- tar_board()
+
+#' @export
+tar_visnetwork_bg <- function(script, ...) {
+  tar_vis_tempdir <- tempdir()
+  tar_vis_path <- fs::path(tar_vis_tempdir, "tar_visnetwork.rds")
+
+  tar_visnetwork_instance <- \(script, tar_vis_tempdir, tar_vis_path, ...) {
+    while(TRUE) {
+      tar_vis_obj <- targets::tar_visnetwork(script = script, ...)
+      saveRDS(tar_vis_obj, file = tar_vis_path)
+      print("tar_visnetwork updated")
+    }
+    return(NULL)
+  }
+  bg_process <- callr::r_bg(
+    tar_visnetwork_instance,
+    args = list(script = script, tar_vis_tempdir = tar_vis_tempdir, tar_vis_path = tar_vis_path, ...),
+    supervise = TRUE,
+    poll_connection = TRUE,
+    stdout = "|",
+    stderr = "|"
+  )
+  invisible(list(process = bg_process, tar_vis_path = tar_vis_path))
+}
+
+
+a <- tar_visnetwork_bg(targets_only = TRUE, script = "inst/test_targets/targets_randomly_breaking.R")
+a$process$is_alive()
+# a$process$get_result()
+a$process$kill()
+
+
+
+
+
+
+

@@ -1,7 +1,7 @@
 #' @export
 app_ui <- function(metadata) {
-  nodes <- dataframe_to_reactflow_node_data(metadata$x$nodes)
-  edges <- dataframe_to_reactflow_edge_data(metadata$x$edges)
+  nodes <- dataframe_to_reactflow_node_data(metadata$nodes)
+  edges <- dataframe_to_reactflow_edge_data(metadata$edges)
   shiny::tagList(  
     add_external_resources(),
     page_sidebar(
@@ -26,7 +26,7 @@ app_ui <- function(metadata) {
                   width = "40%",
                   open = FALSE,
                   position = "right",
-                  uiOutput("output") |> shinycssloaders::withSpinner(1)
+                  uiOutput("output_preview")
                 ),
                 targetsboard('flow', nodes, edges)
               )

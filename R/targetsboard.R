@@ -93,7 +93,7 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
         edges = edges
       ),
       list(
-        height = height, 
+        height = height,
         width = width,
         background_color = "#f0e5d7",
         background_marks_color = "#2f223d"
@@ -122,27 +122,27 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
     `deletable?` = TRUE
   )
 
-  dataframe |> 
+  dataframe |>
     dplyr::select(
       c("id", "description", "type", "status", "status", "level", "label", "color")
-    ) |> 
-    dplyr::rowwise() |> 
+    ) |>
+    dplyr::rowwise() |>
     dplyr::summarise(
       id = id,
       position = list(list(x = 0, y = 0)),
       type = status,
       # style = list(list(background = color, color = "white")),
       data = list(list(
-        label = label, 
+        label = label,
         level = level,
         description = description,
         target_type = type,
         target_status = status
       ))
-    ) |> 
+    ) |>
     dplyr::mutate(
       !!!nodes_global_params
-    ) |> 
+    ) |>
     purrr::transpose()
 }
 
@@ -153,17 +153,47 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
 #'
 #' @export
 dataframe_to_reactflow_edge_data <- function(dataframe) {
-  dataframe |> 
+  dataframe |>
     dplyr::mutate(
       id = f("{from}_{arrows}_{to}")
-    ) |> 
-    dplyr::select(id, source = from, target = to) |> 
+    ) |>
+    dplyr::select(id, source = from, target = to) |>
     purrr::transpose()
 }
 
-
 #' @export
 tar_board <- function() {
-  bg_process <- callr::r_bg(\() shiny::runApp(port = 9999), supervise = TRUE, poll_connection = TRUE, stdout = "|", stderr = "|")
+  bg_process <- callr::r_bg(
+    \() shiny::runApp(port = 9999),
+    supervise = TRUE,
+    poll_connection = TRUE,
+    stdout = "|",
+    stderr = "|"
+  )
   invisible(bg_process)
+}
+
+#' @export
+tar_visnetwork_bg <- function(script, ...) {
+  tar_vis_tempdir <- tempdir()
+  tar_vis_path <- fs::path(tar_vis_tempdir, "tar_visnetwork.rds")
+
+  tar_visnetwork_instance <- \(script, tar_vis_tempdir, tar_vis_path, ...) {
+    while(TRUE) {
+      tar_vis_obj <- targets::tar_visnetwork(script = script, ...)
+      saveRDS(tar_vis_obj, file = tar_vis_path)
+      
+      saveRDS(1, file = fs::path(tar_vis_tempdir, sample(c("a", "b", "c"), 1)))
+    }
+  }
+
+  bg_process <- callr::r_bg(
+    tar_visnetwork_instance,
+    args = list(script = script, tar_vis_tempdir = tar_vis_tempdir, tar_vis_path = tar_vis_path, ...),
+    supervise = TRUE,
+    poll_connection = TRUE,
+    stdout = "|",
+    stderr = "|"
+  )
+  invisible(list(process = bg_process, tar_vis_path = tar_vis_path))
 }
