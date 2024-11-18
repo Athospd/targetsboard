@@ -1,34 +1,3 @@
-# #' targetsboard
-# #'
-# #' targetsboard widget
-# #'
-# #' @import htmlwidgets
-# #'
-# #' @export
-# targetsboard <- function(nodes, edges, ..., width = NULL, height = NULL) {
-#   # describe a React component to send to the browser for rendering.
-#   component <- reactR::component(
-#     name = "ReactFlow",
-#     varArgs = list(
-#       nodes_ = nodes,
-#       edges_ = edges,
-#       onNodesChange=list(),
-#       onEdgesChange=list(),
-#       onConnect=list(),
-#       ...
-#     )
-#   )
-
-#   # create widget
-#   htmlwidgets::createWidget(
-#     name = 'targetsboard',
-#     reactR::reactMarkup(component),
-#     width = width,
-#     height = height,
-#     package = 'targetsboard'
-#   )
-# }
-
 #' Called by HTMLWidgets to produce the widget's root element.
 #' @noRd
 widget_html.targetsboard <- function(id, style, class, ...) {
@@ -158,8 +127,13 @@ dataframe_to_reactflow_edge_data <- function(dataframe) {
     purrr::transpose()
 }
 
+#' tar_board
+#'
 #' @export
-tar_board <- function(metadata, script = "_targets.R", port = 9999) {
+tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, ...) {
+  if(is.null(metadata))
+    metadata <- targets::tar_visnetwork(script = script, ...)$x
+
   bg_process <- callr::r_bg(
     \(metadata, script, port) {
       print(shiny::shinyApp(
@@ -181,6 +155,8 @@ tar_board <- function(metadata, script = "_targets.R", port = 9999) {
   invisible(bg_process)
 }
 
+#' tar_visnetwork_bg
+#'
 #' @export
 tar_visnetwork_bg <- function(script, ...) {
   tar_vis_tempdir <- tempdir()
