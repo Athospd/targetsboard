@@ -1,14 +1,11 @@
 library(targetsboard)
 script = "inst/test_targets/targets_randomly_breaking.R"
-# metadata <- targets::tar_visnetwork(targets_only = TRUE, script = script)
-# saveRDS(metadata, "metadata.rds")
-metadata <- readRDS("metadata.rds")$x
 
-# inicia o servico em plano de fundo
-app_bg <- targetsboard::tar_board(script = script, metadata = metadata, port = 9999)
+# app running in background
+app_bg <- targetsboard::tar_board(script, targets_only = TRUE)
 app_bg$is_alive() 
 
-# roda o pipeline do targets a vontade
+# R is free to run tar_* as we like
 targets::tar_destroy(ask = FALSE)
 targets::tar_make(script = script)
 
