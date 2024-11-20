@@ -2,9 +2,9 @@ library(shiny)
 library(targetsboard)
 library(promises)
 library(bslib)
-# metadata <- targets::tar_visnetwork(targets_only = TRUE, script = "inst/test_targets/targets_randomly_breaking.R")
-# saveRDS(metadata, "metadata.rds")
-script = "inst/test_targets/targets_randomly_breaking.R"
+script = "inst/test_targets/targets_massive_pipeline.R"
+metadata <- targets::tar_visnetwork(targets_only = TRUE, script = script)
+saveRDS(metadata, "metadata.rds")
 metadata <- readRDS("metadata.rds")$x
 
 

@@ -93,7 +93,7 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
 
   dataframe |>
     dplyr::select(
-      c("id", "description", "type", "status", "status", "level", "label", "color")
+      c("id", "description", "type", "status", "level", "label", "color")
     ) |>
     dplyr::rowwise() |>
     dplyr::summarise(
@@ -130,9 +130,9 @@ dataframe_to_reactflow_edge_data <- function(dataframe) {
 #' tar_board
 #'
 #' @export
-tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, ...) {
+tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targets_only = TRUE, ...) {
   if(is.null(metadata))
-    metadata <- targets::tar_visnetwork(script = script, ...)$x
+    metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
 
   bg_process <- callr::r_bg(
     \(metadata, script, port) {

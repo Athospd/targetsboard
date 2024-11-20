@@ -1,5 +1,5 @@
 library(targetsboard)
-script = "inst/test_targets/targets_randomly_breaking.R"
+script = "inst/test_targets/targets_massive_pipeline.R"
 
 # app running in background
 app_bg <- targetsboard::tar_board(script, targets_only = TRUE)
