@@ -4,9 +4,18 @@
 \alias{\%not_in\%}
 \title{Not in operator}
 \usage{
-... \%not_in\% NA
+`\%not_in\%`(...)
+}
+\arguments{
+\item{...}{\code{x} and \code{table}, as for \link[base:match]{base::\%in\%}.}
+}
+\value{
+A logical vector as long as \code{x}.
 }
 \description{
-the Negate(\verb{\\\%in\\\%}) function.
+The negation of \code{\%in\%}: \code{x \%not_in\% table} is \code{!(x \%in\% table)}.
+}
+\examples{
+c("a", "z") \%not_in\% letters[1:3]
 }
 \keyword{internal}

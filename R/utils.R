@@ -31,20 +31,17 @@ f <- glue::glue
 
 #' Not in operator
 #'
-#' the Negate(`\%in\%`) function.
+#' The negation of `%in%`: `x %not_in% table` is `!(x %in% table)`.
 #'
+#' @usage `\%not_in\%`(...)
+#' @param ... `x` and `table`, as for [base::%in%].
+#' @return A logical vector as long as `x`.
 #' @keywords internal
 #' @export
+#' @examples
+#' c("a", "z") %not_in% letters[1:3]
 "%not_in%" <- Negate(`%in%`)
 
-#' Multiple assignment operator
-#'
-#' See \code{zeallot::\link[zeallot:operator]{\%<-\%}} for details.
-#'
-#' @name %<-%
-#' @rdname zeallot-multi-assignment
-#' @keywords internal
-#' @export
 #' @importFrom zeallot %<-%
-#' @usage c(x, y, z) \%<-\% list(a, b, c)
-NULL
+#' @export
+zeallot::`%<-%`
