@@ -13,7 +13,11 @@ app_ui <- function(metadata, script = "_targets.R") {
         title = "Control Panel",
         textInput("script", "Script", script),
         actionButton("load_script", "Load", icon = icon("folder-open")),
-        actionButton("refresh", "Refresh", icon = icon("rotate"))
+        actionButton("refresh", "Refresh", icon = icon("rotate")),
+        tags$hr(),
+        actionButton("run_all", "Run all", icon = icon("play")),
+        actionButton("run_selected", "Run selected", icon = icon("forward"), disabled = TRUE),
+        actionButton("stop", "Stop", icon = icon("stop"), disabled = TRUE)
       ),
       accordion(
         open = c("DAG", "debug"),

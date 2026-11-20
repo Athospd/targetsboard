@@ -25,6 +25,15 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
     poller_rds_path(assets$tar_vis_path)
   }
 
+  # The run started from the board, also shared by every browser session.
+  runner <- new.env()
+  board_run_alive <- function() {
+    inherits(runner$process, "process") && runner$process$is_alive()
+  }
+  # Counts the board's own run from the start: targets records the process
+  # only once the pipeline is loaded.
+  busy <- function() !is.null(active_run()) || board_run_alive()
+
   function(input, output, session) {
     if (is.null(poller$process)) {
       start_poller(script)
@@ -62,11 +71,7 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
     )
 
     # Whether a run is going, whoever started it: checked twice a second.
-    running <- shiny::reactivePoll(
-      500, session,
-      checkFunc = function() !is.null(active_run()),
-      valueFunc = function() !is.null(active_run())
-    )
+    running <- shiny::reactivePoll(500, session, checkFunc = busy, valueFunc = busy)
 
     # A new graph: send it whole, with the live statuses on top.
     shiny::observeEvent(board(), {
@@ -88,6 +93,60 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       statuses <- live_statuses(progress(), shiny::isolate(board())$progress_mtime)
       statuses <- settle_statuses(statuses, running())
       if (length(statuses)) update_targetsboard_status(session, "flow", statuses)
+    }, ignoreInit = TRUE)
+
+    shiny::observe({
+      is_running <- running()
+      shiny::updateActionButton(session, "run_all", disabled = is_running)
+      shiny::updateActionButton(
+        session, "run_selected",
+        disabled = is_running || length(input$flow_selected_nodes) == 0
+      )
+      shiny::updateActionButton(session, "stop", disabled = !is_running)
+    })
+
+    launch_run <- function(names = NULL) {
+      if (busy()) {
+        shiny::showNotification("A run is already going.", type = "warning")
+        return()
+      }
+      runner$process <- start_run(poller$script, names)
+      runner$stopped <- FALSE
+    }
+    shiny::observeEvent(input$run_all, launch_run())
+    shiny::observeEvent(input$run_selected, {
+      shiny::req(input$flow_selected_nodes)
+      launch_run(input$flow_selected_nodes)
+    })
+
+    # Stops the run going, whoever started it.
+    shiny::observeEvent(input$stop, {
+      if (board_run_alive()) {
+        runner$stopped <- TRUE
+        runner$process$kill_tree() # the board's own run: its whole tree
+      } else {
+        handle <- active_run()
+        if (!is.null(handle)) stop_run(handle)
+      }
+    })
+
+    # Tell how the board's own run ended, once per session.
+    notified <- NULL
+    shiny::observeEvent(running(), {
+      process <- runner$process
+      if (running() || !inherits(process, "process") || identical(process, notified)) return()
+      notified <<- process
+      error <- run_error(process)
+      if (isTRUE(runner$stopped)) {
+        shiny::showNotification("Run stopped.", type = "warning")
+      } else if (is.null(error)) {
+        shiny::showNotification("Run finished.", type = "message")
+      } else {
+        shiny::showNotification(
+          shiny::tagList("Run failed: ", shiny::tags$code(error)),
+          type = "error", duration = NULL
+        )
+      }
     }, ignoreInit = TRUE)
 
     shiny::observeEvent(input$refresh, {
