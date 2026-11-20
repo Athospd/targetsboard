@@ -25,7 +25,6 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       shiny::onStop(stop_poller, session = NULL) # runs when the app stops
     }
 
-    autoInvalidateLong <- reactiveTimer(3500)
     autoInvalidateShort <- reactiveTimer(1000)
 
     ###############################################################
@@ -47,10 +46,10 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       )
 
       c(render_fun, output_ui_fun) %<-% render_and_output_bundle(tar_output)
-      random_name <- paste0("x", digest::sha1(runif(1)))
-      output[[random_name]] <- render_fun(tar_output)
-      tar_output_ui <- output_ui_fun(random_name)
-      shiny::tagList(tar_output_ui)
+      # Reuse one output id: assigning it again replaces the previous
+      # renderer instead of piling up a new output per click.
+      output$output_preview_content <- render_fun(tar_output)
+      output_ui_fun("output_preview_content")
     })
 
     observeEvent(input$load_script, {
@@ -109,9 +108,21 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       reactable::reactable(visnetwork_metadata$nodes_tab)
     })
 
+    # Re-read tar_meta() only when targets writes new metadata; checking the
+    # file's modification time every second is cheap.
+    tar_meta_data <- shiny::reactivePoll(
+      1000, session,
+      checkFunc = function() {
+        file.mtime(file.path(targets::tar_config_get("store"), "meta", "meta"))
+      },
+      valueFunc = function() {
+        tryCatch(targets::tar_meta(targets_only = TRUE), error = function(e) NULL)
+      }
+    )
+
     output$meta <- reactable::renderReactable({
-      autoInvalidateShort()
-      reactable::reactable(targets::tar_meta(targets_only = TRUE), wrap = FALSE)
+      req(tar_meta_data())
+      reactable::reactable(tar_meta_data(), wrap = FALSE)
     })
 
     output$debug <- shiny::renderPrint({
