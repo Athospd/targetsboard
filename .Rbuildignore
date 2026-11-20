@@ -11,3 +11,5 @@
 ^README\.Rmd$
 ^_targets$
 ^\.quarto$
+^\.github$
+^codecov\.yml$
