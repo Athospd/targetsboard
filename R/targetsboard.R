@@ -129,11 +129,15 @@ dataframe_to_reactflow_edge_data <- function(dataframe) {
 
 #' tar_board
 #'
+#' Launches the board in a background R process. Its output goes to a log
+#' file: read it with `readLines(app$get_output_file())`.
+#'
 #' @export
 tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targets_only = TRUE, ...) {
   if(is.null(metadata))
     metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
 
+  log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
     \(metadata, script, port, targets_only) {
       print(shiny::shinyApp(
@@ -150,9 +154,10 @@ tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targe
     ),
     supervise = TRUE,
     poll_connection = TRUE,
-    stdout = "|",
-    stderr = "|"
+    stdout = log_file,
+    stderr = "2>&1"
   )
+  message("targetsboard log: ", log_file)
   invisible(bg_process)
 }
 
@@ -192,8 +197,8 @@ tar_visnetwork_bg <- function(script, interval = 1, ...) {
     args = list(script = script, tar_vis_path = tar_vis_path, interval = interval, ...),
     supervise = TRUE,
     poll_connection = TRUE,
-    stdout = "|",
-    stderr = "|"
+    stdout = sub("[.]rds$", ".log", tar_vis_path),
+    stderr = "2>&1"
   )
   invisible(list(process = bg_process, tar_vis_path = tar_vis_path))
 }

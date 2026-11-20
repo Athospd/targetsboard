@@ -4,7 +4,14 @@
 \alias{tar_visnetwork_bg}
 \title{tar_visnetwork_bg}
 \usage{
-tar_visnetwork_bg(script, ...)
+tar_visnetwork_bg(script, interval = 1, ...)
+}
+\arguments{
+\item{script}{Path to the targets script.}
+
+\item{interval}{Seconds to wait between two \code{tar_visnetwork()} calls.}
+
+\item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}}.}
 }
 \description{
 tar_visnetwork_bg

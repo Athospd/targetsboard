@@ -35,8 +35,7 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       edges_tab = metadata$edges
     )
 
-    observe({   
-      print(!is.null(input$selected_nodes[1]))
+    observe({
       bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$selected_nodes[1]))
     })
 

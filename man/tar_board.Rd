@@ -13,5 +13,6 @@ tar_board(
 )
 }
 \description{
-tar_board
+Launches the board in a background R process. Its output goes to a log
+file: read it with \code{readLines(app$get_output_file())}.
 }
