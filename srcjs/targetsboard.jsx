@@ -37,6 +37,15 @@ import DispatchedNode from './DispatchedNode';
 //   Controls: Controls
 // });
 
+// Defined at module scope: a new object on every render makes React Flow
+// re-mount all nodes (and warn about it).
+const nodeTypes = {
+  uptodate: UptodateNode,
+  outdated: OutdatedNode,
+  errored: ErroredNode,
+  dispatched: DispatchedNode
+};
+
 const getLayoutedElements = (nodes, edges, options) => {
   nodes = Array.isArray(nodes) ? nodes : []; 
   edges = Array.isArray(edges) ? edges : [];
@@ -139,13 +148,6 @@ export default function targetsboard({ configuration, value, setValue }) {
       }),
     );
   }, [configuration.nodes]);
-
-  const nodeTypes = { 
-    uptodate: UptodateNode, 
-    outdated: OutdatedNode, 
-    errored: ErroredNode,
-    dispatched: DispatchedNode
-  };
 
   return (
     <div className="providerflow">
