@@ -7,8 +7,8 @@ test_that("one background poller is shared by all sessions", {
     rds_path <- environment(server)$poller_rds_path()
     wait_for(function() file.exists(rds_path))
 
-    session$elapse(1100)
-    expect_setequal(visnetwork_metadata$nodes_tab$id, c("a", "b", "c"))
+    session$elapse(600)
+    expect_setequal(board()$x$nodes$id, c("a", "b", "c"))
   })
 
   pid <- poller_of(server)$process$get_pid()
@@ -88,5 +88,40 @@ test_that("tar_meta() is re-read only when the metadata file changes", {
     session$elapse(1000)
     invisible(output$meta)
     expect_equal(reads, before + 1)
+  })
+})
+
+test_that("a run's progress reaches the widget as status-only updates", {
+  skip_on_cran()
+  local_pipeline()
+  server <- local_app_server()
+
+  sent <- list()
+  local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses) {
+    sent[[length(sent) + 1]] <<- statuses
+  })
+
+  shiny::testServer(server, {
+    # Keep the graph as it is: only the progress file changes.
+    environment(server)$stop_poller()
+    session$flushReact() # the first flush, which a real app does at start
+    targets::tar_make(reporter = "silent")
+    session$elapse(600)
+
+    expect_length(sent, 1)
+    expect_equal(sent[[1]][c("a", "b", "c")], c(a = "completed", b = "completed", c = "completed"))
+  })
+})
+
+test_that("Refresh asks the poller to recompute", {
+  skip_on_cran()
+  local_pipeline()
+  server <- local_app_server()
+
+  shiny::testServer(server, {
+    path <- poller_of(server)$refresh_path
+    expect_false(file.exists(path))
+    session$setInputs(refresh = 1)
+    expect_true(file.exists(path))
   })
 })
