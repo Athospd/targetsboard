@@ -1,4 +1,4 @@
-# targetsboard (development version)
+# targetsboard 0.0.0.9000
 
 First cleanup of the 2024 prototype.
 
