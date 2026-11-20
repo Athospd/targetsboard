@@ -157,23 +157,31 @@ tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targe
 
 #' tar_visnetwork_bg
 #'
+#' @param script Path to the targets script.
+#' @param interval Seconds to wait between two `tar_visnetwork()` calls.
+#' @param ... Passed on to [targets::tar_visnetwork()].
+#'
 #' @export
-tar_visnetwork_bg <- function(script, ...) {
+tar_visnetwork_bg <- function(script, interval = 1, ...) {
   tar_vis_tempdir <- tempdir()
   tar_vis_path <- fs::path(tar_vis_tempdir, "tar_visnetwork.rds")
 
-  tar_visnetwork_instance <- \(script, tar_vis_tempdir, tar_vis_path, ...) {
-    while(TRUE) {
+  tar_visnetwork_instance <- \(script, tar_vis_path, interval, ...) {
+    previous <- NULL
+    while (TRUE) {
       tar_vis_obj <- targets::tar_visnetwork(script = script, ...)
-      saveRDS(tar_vis_obj, file = tar_vis_path)
-      
-      saveRDS(1, file = fs::path(tar_vis_tempdir, sample(c("a", "b", "c"), 1)))
+      # Only write when the graph changed, so readers aren't woken for nothing.
+      if (!identical(tar_vis_obj$x, previous)) {
+        saveRDS(tar_vis_obj, file = tar_vis_path)
+        previous <- tar_vis_obj$x
+      }
+      Sys.sleep(interval)
     }
   }
 
   bg_process <- callr::r_bg(
     tar_visnetwork_instance,
-    args = list(script = script, tar_vis_tempdir = tar_vis_tempdir, tar_vis_path = tar_vis_path, ...),
+    args = list(script = script, tar_vis_path = tar_vis_path, interval = interval, ...),
     supervise = TRUE,
     poll_connection = TRUE,
     stdout = "|",
