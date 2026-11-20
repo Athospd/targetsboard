@@ -9,3 +9,5 @@
 ^webpack\.config\.js$
 ^LICENSE\.md$
 ^README\.Rmd$
+^_targets$
+^\.quarto$
