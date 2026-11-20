@@ -49,7 +49,12 @@ app_server <- function(metadata) {
       autoInvalidateShort()
       req(visnetwork_metadata$tar_vis_rds_path)
       if(file.exists(visnetwork_metadata$tar_vis_rds_path)) {
-        visnetwork_metadata$metadata <- readRDS(visnetwork_metadata$tar_vis_rds_path)$x
+        new_metadata <- tryCatch(
+          readRDS(visnetwork_metadata$tar_vis_rds_path)$x,
+          error = function(e) NULL
+        )
+        req(new_metadata)
+        visnetwork_metadata$metadata <- new_metadata
         visnetwork_metadata$nodes_tab <- visnetwork_metadata$metadata$nodes
         visnetwork_metadata$edges_tab <- visnetwork_metadata$metadata$edges
       }

@@ -172,8 +172,16 @@ tar_visnetwork_bg <- function(script, interval = 1, ...) {
       tar_vis_obj <- targets::tar_visnetwork(script = script, ...)
       # Only write when the graph changed, so readers aren't woken for nothing.
       if (!identical(tar_vis_obj$x, previous)) {
-        saveRDS(tar_vis_obj, file = tar_vis_path)
-        previous <- tar_vis_obj$x
+        # Write to a temp file and rename it into place, so the app never
+        # reads a half-written file. On Windows the rename fails while the
+        # app holds the file open: then retry on the next iteration.
+        tmp <- paste0(tar_vis_path, ".tmp")
+        saveRDS(tar_vis_obj, file = tmp)
+        if (file.rename(tmp, tar_vis_path)) {
+          previous <- tar_vis_obj$x
+        } else {
+          unlink(tmp)
+        }
       }
       Sys.sleep(interval)
     }
