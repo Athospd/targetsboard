@@ -1,4 +1,4 @@
-import { reactWidget, reactShinyInput } from 'reactR';
+import { reactShinyInput } from 'reactR';
 import { useEffect, useCallback, useRef, useState } from 'react';
 import Dagre from '@dagrejs/dagre';
 import {
@@ -6,36 +6,30 @@ import {
   ReactFlowProvider,
   MiniMap,
   Background,
-  BackgroundVariant,
   Controls,
-  useNodesState,
-  useEdgesState,
   applyNodeChanges,
   applyEdgeChanges,
   getIncomers,
   addEdge,
-  Panel,
   useReactFlow,
-  Handle,
-  Position 
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
 
-import UptodateNode from './UptodateNode'; 
-import OutdatedNode from './OutdatedNode'; 
+import UptodateNode from './UptodateNode';
+import OutdatedNode from './OutdatedNode';
 import ErroredNode from './ErroredNode';
 import DispatchedNode from './DispatchedNode';
 
-
-
-// reactWidget('targetsboard', 'output', {
-//   ReactFlow: targetsboardWidget,
-//   MiniMap: MiniMap,
-//   Background: Background,
-//   Controls: Controls
-// });
+// Defined at module scope: a new object on every render makes React Flow
+// re-mount all nodes (and warn about it).
+const nodeTypes = {
+  uptodate: UptodateNode,
+  outdated: OutdatedNode,
+  errored: ErroredNode,
+  dispatched: DispatchedNode
+};
 
 const getLayoutedElements = (nodes, edges, options) => {
   nodes = Array.isArray(nodes) ? nodes : []; 
@@ -70,121 +64,154 @@ const getLayoutedElements = (nodes, edges, options) => {
   };
 };
 
-export default function targetsboard({ configuration, value, setValue }) {
-  
-  const reactFlowInstance = useRef(null);
-  const [nodes, setNodes] = useState(configuration.nodes);
-  const [edges, setEdges] = useState(configuration.edges);
-  
+
+const sortedKey = (ids) => [...ids].sort().join('|');
+const structureKey = (nodes, edges) =>
+  sortedKey(nodes.map((n) => n.id)) + '#' + sortedKey(edges.map((e) => e.id));
+
+// Merge a fresh node list from R into the current React Flow nodes: keep what
+// React Flow owns (position, measured size, selection), take status and data
+// from R, add new targets and drop removed ones.
+const syncNodes = (currentNodes, incomingNodes) => {
+  const byId = new Map(currentNodes.map((n) => [n.id, n]));
+  return incomingNodes.map((incoming) => {
+    const current = byId.get(incoming.id);
+    return current
+      ? { ...current, type: incoming.type, style: incoming.style, data: incoming.data }
+      : incoming;
+  });
+};
+
+function Flow({ configuration }) {
+  const { fitView } = useReactFlow();
+  const [nodes, setNodes] = useState(configuration.nodes ?? []);
+  const [edges, setEdges] = useState(configuration.edges ?? []);
+  const [direction, setDirection] = useState('LR');
+  // Lay out once all nodes have been measured: on first render, when the
+  // pipeline structure changes, and when a layout button is pressed.
+  const [layoutPending, setLayoutPending] = useState(true);
+
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+
   const onNodesChange = useCallback(
-    (changes) => {
-      return(setNodes((nds) => applyNodeChanges(changes, nds)))
-    },
+    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
     [],
   );
   const onEdgesChange = useCallback(
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [],
   );
-
   const onConnect = useCallback(
-    (params) => {
-      setEdges((eds) => addEdge({ ...params }, eds));
-    }, [setEdges]);
-
-  const handleInit = (instance) => { 
-    reactFlowInstance.current = instance; 
-  };
-
-  const onLayout = useCallback(
-    (direction) => {
-      const layouted = getLayoutedElements(nodes, edges, { direction });
-      setTimeout(() => {
-        setNodes([...layouted.nodes]);
-        setEdges([...layouted.edges]);
-        if(reactFlowInstance.current) {
-          reactFlowInstance.current.fitView();
-        }
-      }, 0);
-    },
-    [nodes, edges],
+    (params) => setEdges((eds) => addEdge({ ...params }, eds)),
+    [],
   );
 
+  const onLayout = useCallback((newDirection) => {
+    setDirection(newDirection);
+    setLayoutPending(true);
+  }, []);
+
+  // Our own nodes carry `measured` once React Flow has sized them (it comes
+  // back through onNodesChange). useNodesInitialized() turned true one
+  // render too early for nodes added later, so check the nodes directly.
+  const allMeasured = nodes.length > 0 && nodes.every((n) => n.measured?.width && n.measured?.height);
+
   useEffect(() => {
-    const selected_nodes = nodes.filter(item => item.selected).map(item => item.id);
-    window.Shiny.setInputValue("selected_nodes", selected_nodes);
+    if (!layoutPending || !allMeasured) return;
+    const layouted = getLayoutedElements(nodes, edges, { direction });
+    setNodes(layouted.nodes);
+    setLayoutPending(false);
+    window.requestAnimationFrame(() => fitView());
+  }, [layoutPending, allMeasured, nodes, edges, direction, fitView]);
 
-    const dispatched_nodes = nodes.filter(item => item.type === "dispatched");
-    const dispatched_nodes_ids = dispatched_nodes.map(item => item.id)
-    window.Shiny.setInputValue("dispatched_nodes", dispatched_nodes_ids);
+  // New data from R (statuses every tick; sometimes a changed pipeline).
+  useEffect(() => {
+    const incomingNodes = configuration.nodes ?? [];
+    const incomingEdges = configuration.edges ?? [];
+    const structureChanged =
+      structureKey(nodesRef.current, edgesRef.current) !==
+      structureKey(incomingNodes, incomingEdges);
 
-    const dispatched_nodes_incomers_ids = dispatched_nodes.map((node) => getIncomers(node, nodes, edges).map(item => item.id)).flat();
-    window.Shiny.setInputValue("dispatched_nodes_incomers", dispatched_nodes_incomers_ids);
-
-    setEdges((current_edges) => current_edges.map((current_edge) => {
-      const source_candidate_edges = dispatched_nodes_incomers_ids.includes(current_edge.source);
-      const target_candidate_edges = dispatched_nodes_ids.includes(current_edge.target);
-      return {
-      ...current_edge,
-      animated: source_candidate_edges & target_candidate_edges
+    setNodes((current) => syncNodes(current, incomingNodes));
+    if (structureChanged) {
+      setEdges(incomingEdges);
+      setLayoutPending(true);
     }
-  }));
-  }, [nodes]);
+  }, [configuration.nodes, configuration.edges]);
+
+  // Report selection to Shiny, as <id>_selected_nodes. Keyed on the ids, so
+  // dragging nodes around doesn't send anything.
+  const inputId = configuration.id;
+  const selectedKey = sortedKey(nodes.filter((n) => n.selected).map((n) => n.id));
+  const dispatchedKey = sortedKey(nodes.filter((n) => n.type === 'dispatched').map((n) => n.id));
+  const edgesKey = sortedKey(edges.map((e) => e.id));
 
   useEffect(() => {
-    setNodes((current_nodes) =>
-      current_nodes.map((current_node) => {
-        const new_node = configuration.nodes.find(item => item.id === current_node.id);
-        return { ...current_node, type: new_node.type, style: new_node.style, data: new_node.data };
-      }),
-    );
-  }, [configuration.nodes]);
+    if (!window.Shiny || !inputId) return;
+    window.Shiny.setInputValue(`${inputId}_selected_nodes`, selectedKey ? selectedKey.split('|') : null);
+  }, [inputId, selectedKey]);
 
-  const nodeTypes = { 
-    uptodate: UptodateNode, 
-    outdated: OutdatedNode, 
-    errored: ErroredNode,
-    dispatched: DispatchedNode
-  };
+  // Animate the edges feeding running (dispatched) targets.
+  useEffect(() => {
+    const currentNodes = nodesRef.current;
+    const dispatched = currentNodes.filter((n) => n.type === 'dispatched');
+    const dispatchedIds = new Set(dispatched.map((n) => n.id));
+    const incomerIds = new Set(
+      dispatched.flatMap((n) => getIncomers(n, currentNodes, edgesRef.current).map((i) => i.id)),
+    );
+
+    if (window.Shiny && inputId) {
+      window.Shiny.setInputValue(`${inputId}_dispatched_nodes`, [...dispatchedIds]);
+      window.Shiny.setInputValue(`${inputId}_dispatched_nodes_incomers`, [...incomerIds]);
+    }
+
+    setEdges((current) => current.map((edge) => {
+      const animated = incomerIds.has(edge.source) && dispatchedIds.has(edge.target);
+      return edge.animated === animated ? edge : { ...edge, animated };
+    }));
+  }, [inputId, dispatchedKey, edgesKey]);
 
   return (
-    <div className="providerflow">
-      <ReactFlowProvider>
-        <div className="reactflow-wrapper" style={{ height: configuration.height, width: configuration.width }}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            fitView
-            style={{ background: configuration.background_color }}
-            onInit={handleInit}
-            nodeTypes={nodeTypes}
-          >
-            <MiniMap /> 
-            <Background
-              id="1"
-              gap={15}
-              color={configuration.background_marks_color}
-              size={1}
-            />
-            <Controls />
-            <LayoutButtons onLayout={onLayout} />
-          </ReactFlow>
-        </div>
-      </ReactFlowProvider>
+    <div className="reactflow-wrapper" style={{ height: configuration.height, width: configuration.width }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        fitView
+        style={{ background: configuration.background_color }}
+        nodeTypes={nodeTypes}
+      >
+        <MiniMap />
+        <Background
+          id="1"
+          gap={15}
+          color={configuration.background_marks_color}
+          size={1}
+        />
+        <Controls />
+        <LayoutButtons onLayout={onLayout} />
+      </ReactFlow>
     </div>
   );
 }
 
-
-
-
+export default function targetsboard({ configuration }) {
+  return (
+    <div className="providerflow">
+      <ReactFlowProvider>
+        <Flow configuration={configuration} />
+      </ReactFlowProvider>
+    </div>
+  );
+}
 
 reactShinyInput(
   '.targetsboard',
   'targetsboard.targetsboard',
   targetsboard
 );
-

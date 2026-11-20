@@ -11,7 +11,7 @@ const BaseNode = ({
   extraContent 
 }) => {
   return (
-    <div className='base-node' style={{backgroundColor: backgroundColor, textColor: textColor}}>
+    <div className='base-node' style={{ backgroundColor: backgroundColor, color: textColor }}>
       <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
       {extraContent && <div className="extra-content">{extraContent}</div>}
         {data?.label}

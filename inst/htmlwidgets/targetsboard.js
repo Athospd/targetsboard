@@ -17211,7 +17211,7 @@ var BaseNode = function BaseNode(_ref) {
     className: "base-node",
     style: {
       backgroundColor: backgroundColor,
-      textColor: textColor
+      color: textColor
     }
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_2__.Handle, {
     type: "target",
@@ -17303,18 +17303,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _buttonStyles_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./buttonStyles.css */ "./srcjs/buttonStyles.css");
 
 
- // Assuming you have a separate CSS file for button styles
 
 var LayoutButtons = function LayoutButtons(_ref) {
   var onLayout = _ref.onLayout;
-  var verticalButtonRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)(null);
-  (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
-    if (verticalButtonRef.current) {
-      setTimeout(function () {
-        verticalButtonRef.current.click();
-      }, 10);
-    }
-  }, []);
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_2__.Panel, {
     position: "top-right"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -17324,7 +17315,6 @@ var LayoutButtons = function LayoutButtons(_ref) {
       return onLayout('TB');
     }
   }, "Vertical Layout"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
-    ref: verticalButtonRef,
     onClick: function onClick() {
       return onLayout('LR');
     }
@@ -23305,16 +23295,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _ErroredNode__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./ErroredNode */ "./srcjs/ErroredNode.js");
 /* harmony import */ var _DispatchedNode__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./DispatchedNode */ "./srcjs/DispatchedNode.js");
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
-function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
@@ -23332,13 +23322,14 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 
 
 
-// reactWidget('targetsboard', 'output', {
-//   ReactFlow: targetsboardWidget,
-//   MiniMap: MiniMap,
-//   Background: Background,
-//   Controls: Controls
-// });
-
+// Defined at module scope: a new object on every render makes React Flow
+// re-mount all nodes (and warn about it).
+var nodeTypes = {
+  uptodate: _UptodateNode__WEBPACK_IMPORTED_MODULE_6__["default"],
+  outdated: _OutdatedNode__WEBPACK_IMPORTED_MODULE_7__["default"],
+  errored: _ErroredNode__WEBPACK_IMPORTED_MODULE_8__["default"],
+  dispatched: _DispatchedNode__WEBPACK_IMPORTED_MODULE_9__["default"]
+};
 var getLayoutedElements = function getLayoutedElements(nodes, edges, options) {
   nodes = Array.isArray(nodes) ? nodes : [];
   edges = Array.isArray(edges) ? edges : [];
@@ -23381,19 +23372,60 @@ var getLayoutedElements = function getLayoutedElements(nodes, edges, options) {
     edges: edges
   };
 };
-function targetsboard(_ref) {
-  var configuration = _ref.configuration,
-    value = _ref.value,
-    setValue = _ref.setValue;
-  var reactFlowInstance = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(null);
-  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(configuration.nodes),
+var sortedKey = function sortedKey(ids) {
+  return _toConsumableArray(ids).sort().join('|');
+};
+var structureKey = function structureKey(nodes, edges) {
+  return sortedKey(nodes.map(function (n) {
+    return n.id;
+  })) + '#' + sortedKey(edges.map(function (e) {
+    return e.id;
+  }));
+};
+
+// Merge a fresh node list from R into the current React Flow nodes: keep what
+// React Flow owns (position, measured size, selection), take status and data
+// from R, add new targets and drop removed ones.
+var syncNodes = function syncNodes(currentNodes, incomingNodes) {
+  var byId = new Map(currentNodes.map(function (n) {
+    return [n.id, n];
+  }));
+  return incomingNodes.map(function (incoming) {
+    var current = byId.get(incoming.id);
+    return current ? _objectSpread(_objectSpread({}, current), {}, {
+      type: incoming.type,
+      style: incoming.style,
+      data: incoming.data
+    }) : incoming;
+  });
+};
+function Flow(_ref) {
+  var _configuration$nodes, _configuration$edges;
+  var configuration = _ref.configuration;
+  var _useReactFlow = (0,_xyflow_react__WEBPACK_IMPORTED_MODULE_10__.useReactFlow)(),
+    fitView = _useReactFlow.fitView;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)((_configuration$nodes = configuration.nodes) !== null && _configuration$nodes !== void 0 ? _configuration$nodes : []),
     _useState2 = _slicedToArray(_useState, 2),
     nodes = _useState2[0],
     setNodes = _useState2[1];
-  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(configuration.edges),
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)((_configuration$edges = configuration.edges) !== null && _configuration$edges !== void 0 ? _configuration$edges : []),
     _useState4 = _slicedToArray(_useState3, 2),
     edges = _useState4[0],
     setEdges = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('LR'),
+    _useState6 = _slicedToArray(_useState5, 2),
+    direction = _useState6[0],
+    setDirection = _useState6[1];
+  // Lay out once all nodes have been measured: on first render, when the
+  // pipeline structure changes, and when a layout button is pressed.
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(true),
+    _useState8 = _slicedToArray(_useState7, 2),
+    layoutPending = _useState8[0],
+    setLayoutPending = _useState8[1];
+  var nodesRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(nodes);
+  var edgesRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(edges);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
   var onNodesChange = (0,react__WEBPACK_IMPORTED_MODULE_1__.useCallback)(function (changes) {
     return setNodes(function (nds) {
       return (0,_xyflow_react__WEBPACK_IMPORTED_MODULE_10__.applyNodeChanges)(changes, nds);
@@ -23405,78 +23437,98 @@ function targetsboard(_ref) {
     });
   }, []);
   var onConnect = (0,react__WEBPACK_IMPORTED_MODULE_1__.useCallback)(function (params) {
-    setEdges(function (eds) {
+    return setEdges(function (eds) {
       return (0,_xyflow_react__WEBPACK_IMPORTED_MODULE_11__.addEdge)(_objectSpread({}, params), eds);
     });
-  }, [setEdges]);
-  var handleInit = function handleInit(instance) {
-    reactFlowInstance.current = instance;
-  };
-  var onLayout = (0,react__WEBPACK_IMPORTED_MODULE_1__.useCallback)(function (direction) {
+  }, []);
+  var onLayout = (0,react__WEBPACK_IMPORTED_MODULE_1__.useCallback)(function (newDirection) {
+    setDirection(newDirection);
+    setLayoutPending(true);
+  }, []);
+
+  // Our own nodes carry `measured` once React Flow has sized them (it comes
+  // back through onNodesChange). useNodesInitialized() turned true one
+  // render too early for nodes added later, so check the nodes directly.
+  var allMeasured = nodes.length > 0 && nodes.every(function (n) {
+    var _n$measured, _n$measured2;
+    return ((_n$measured = n.measured) === null || _n$measured === void 0 ? void 0 : _n$measured.width) && ((_n$measured2 = n.measured) === null || _n$measured2 === void 0 ? void 0 : _n$measured2.height);
+  });
+  (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
+    if (!layoutPending || !allMeasured) return;
     var layouted = getLayoutedElements(nodes, edges, {
       direction: direction
     });
-    setTimeout(function () {
-      setNodes(_toConsumableArray(layouted.nodes));
-      setEdges(_toConsumableArray(layouted.edges));
-      if (reactFlowInstance.current) {
-        reactFlowInstance.current.fitView();
-      }
-    }, 0);
-  }, [nodes, edges]);
+    setNodes(layouted.nodes);
+    setLayoutPending(false);
+    window.requestAnimationFrame(function () {
+      return fitView();
+    });
+  }, [layoutPending, allMeasured, nodes, edges, direction, fitView]);
+
+  // New data from R (statuses every tick; sometimes a changed pipeline).
   (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
-    var selected_nodes = nodes.filter(function (item) {
-      return item.selected;
-    }).map(function (item) {
-      return item.id;
+    var _configuration$nodes2, _configuration$edges2;
+    var incomingNodes = (_configuration$nodes2 = configuration.nodes) !== null && _configuration$nodes2 !== void 0 ? _configuration$nodes2 : [];
+    var incomingEdges = (_configuration$edges2 = configuration.edges) !== null && _configuration$edges2 !== void 0 ? _configuration$edges2 : [];
+    var structureChanged = structureKey(nodesRef.current, edgesRef.current) !== structureKey(incomingNodes, incomingEdges);
+    setNodes(function (current) {
+      return syncNodes(current, incomingNodes);
     });
-    window.Shiny.setInputValue("selected_nodes", selected_nodes);
-    var dispatched_nodes = nodes.filter(function (item) {
-      return item.type === "dispatched";
-    });
-    var dispatched_nodes_ids = dispatched_nodes.map(function (item) {
-      return item.id;
-    });
-    window.Shiny.setInputValue("dispatched_nodes", dispatched_nodes_ids);
-    var dispatched_nodes_incomers_ids = dispatched_nodes.map(function (node) {
-      return (0,_xyflow_react__WEBPACK_IMPORTED_MODULE_11__.getIncomers)(node, nodes, edges).map(function (item) {
-        return item.id;
-      });
-    }).flat();
-    window.Shiny.setInputValue("dispatched_nodes_incomers", dispatched_nodes_incomers_ids);
-    setEdges(function (current_edges) {
-      return current_edges.map(function (current_edge) {
-        var source_candidate_edges = dispatched_nodes_incomers_ids.includes(current_edge.source);
-        var target_candidate_edges = dispatched_nodes_ids.includes(current_edge.target);
-        return _objectSpread(_objectSpread({}, current_edge), {}, {
-          animated: source_candidate_edges & target_candidate_edges
-        });
-      });
-    });
-  }, [nodes]);
+    if (structureChanged) {
+      setEdges(incomingEdges);
+      setLayoutPending(true);
+    }
+  }, [configuration.nodes, configuration.edges]);
+
+  // Report selection to Shiny, as <id>_selected_nodes. Keyed on the ids, so
+  // dragging nodes around doesn't send anything.
+  var inputId = configuration.id;
+  var selectedKey = sortedKey(nodes.filter(function (n) {
+    return n.selected;
+  }).map(function (n) {
+    return n.id;
+  }));
+  var dispatchedKey = sortedKey(nodes.filter(function (n) {
+    return n.type === 'dispatched';
+  }).map(function (n) {
+    return n.id;
+  }));
+  var edgesKey = sortedKey(edges.map(function (e) {
+    return e.id;
+  }));
   (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
-    setNodes(function (current_nodes) {
-      return current_nodes.map(function (current_node) {
-        var new_node = configuration.nodes.find(function (item) {
-          return item.id === current_node.id;
-        });
-        return _objectSpread(_objectSpread({}, current_node), {}, {
-          type: new_node.type,
-          style: new_node.style,
-          data: new_node.data
+    if (!window.Shiny || !inputId) return;
+    window.Shiny.setInputValue("".concat(inputId, "_selected_nodes"), selectedKey ? selectedKey.split('|') : null);
+  }, [inputId, selectedKey]);
+
+  // Animate the edges feeding running (dispatched) targets.
+  (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
+    var currentNodes = nodesRef.current;
+    var dispatched = currentNodes.filter(function (n) {
+      return n.type === 'dispatched';
+    });
+    var dispatchedIds = new Set(dispatched.map(function (n) {
+      return n.id;
+    }));
+    var incomerIds = new Set(dispatched.flatMap(function (n) {
+      return (0,_xyflow_react__WEBPACK_IMPORTED_MODULE_11__.getIncomers)(n, currentNodes, edgesRef.current).map(function (i) {
+        return i.id;
+      });
+    }));
+    if (window.Shiny && inputId) {
+      window.Shiny.setInputValue("".concat(inputId, "_dispatched_nodes"), _toConsumableArray(dispatchedIds));
+      window.Shiny.setInputValue("".concat(inputId, "_dispatched_nodes_incomers"), _toConsumableArray(incomerIds));
+    }
+    setEdges(function (current) {
+      return current.map(function (edge) {
+        var animated = incomerIds.has(edge.source) && dispatchedIds.has(edge.target);
+        return edge.animated === animated ? edge : _objectSpread(_objectSpread({}, edge), {}, {
+          animated: animated
         });
       });
     });
-  }, [configuration.nodes]);
-  var nodeTypes = {
-    uptodate: _UptodateNode__WEBPACK_IMPORTED_MODULE_6__["default"],
-    outdated: _OutdatedNode__WEBPACK_IMPORTED_MODULE_7__["default"],
-    errored: _ErroredNode__WEBPACK_IMPORTED_MODULE_8__["default"],
-    dispatched: _DispatchedNode__WEBPACK_IMPORTED_MODULE_9__["default"]
-  };
+  }, [inputId, dispatchedKey, edgesKey]);
   return /*#__PURE__*/React.createElement("div", {
-    className: "providerflow"
-  }, /*#__PURE__*/React.createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_10__.ReactFlowProvider, null, /*#__PURE__*/React.createElement("div", {
     className: "reactflow-wrapper",
     style: {
       height: configuration.height,
@@ -23492,7 +23544,6 @@ function targetsboard(_ref) {
     style: {
       background: configuration.background_color
     },
-    onInit: handleInit,
     nodeTypes: nodeTypes
   }, /*#__PURE__*/React.createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_10__.MiniMap, null), /*#__PURE__*/React.createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_10__.Background, {
     id: "1",
@@ -23501,7 +23552,15 @@ function targetsboard(_ref) {
     size: 1
   }), /*#__PURE__*/React.createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_10__.Controls, null), /*#__PURE__*/React.createElement(_LayoutButtons__WEBPACK_IMPORTED_MODULE_5__["default"], {
     onLayout: onLayout
-  })))));
+  })));
+}
+function targetsboard(_ref2) {
+  var configuration = _ref2.configuration;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "providerflow"
+  }, /*#__PURE__*/React.createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_10__.ReactFlowProvider, null, /*#__PURE__*/React.createElement(Flow, {
+    configuration: configuration
+  })));
 }
 (0,reactR__WEBPACK_IMPORTED_MODULE_0__.reactShinyInput)('.targetsboard', 'targetsboard.targetsboard', targetsboard);
 })();

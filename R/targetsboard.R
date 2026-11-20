@@ -62,6 +62,7 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
         edges = edges
       ),
       list(
+        id = inputId,
         height = height,
         width = width,
         background_color = "#f0e5d7",
@@ -77,7 +78,10 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
 #' @export
 update_targetsboard <- function(session, inputId, value, configuration = NULL) {
   message <- list(value = value)
-  if (!is.null(configuration)) message$configuration <- configuration
+  if (!is.null(configuration)) {
+    configuration$id <- inputId # the widget names its Shiny inputs after it
+    message$configuration <- configuration
+  }
   session$sendInputMessage(inputId, message);
 }
 
@@ -129,55 +133,76 @@ dataframe_to_reactflow_edge_data <- function(dataframe) {
 
 #' tar_board
 #'
+#' Launches the board in a background R process. Its output goes to a log
+#' file: read it with `readLines(app$get_output_file())`.
+#'
 #' @export
 tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targets_only = TRUE, ...) {
   if(is.null(metadata))
     metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
 
+  log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, port) {
+    \(metadata, script, port, targets_only) {
       print(shiny::shinyApp(
-        targetsboard::app_ui(metadata, script), 
-        targetsboard::app_server(metadata), 
+        targetsboard::app_ui(metadata, script),
+        targetsboard::app_server(metadata, script, targets_only),
         options = list(port = port)
       ))
     },
     args = list(
       metadata = metadata, 
-      script = script, 
-      port = port
+      script = script,
+      port = port,
+      targets_only = targets_only
     ),
     supervise = TRUE,
     poll_connection = TRUE,
-    stdout = "|",
-    stderr = "|"
+    stdout = log_file,
+    stderr = "2>&1"
   )
+  message("targetsboard log: ", log_file)
   invisible(bg_process)
 }
 
 #' tar_visnetwork_bg
 #'
+#' @param script Path to the targets script.
+#' @param interval Seconds to wait between two `tar_visnetwork()` calls.
+#' @param ... Passed on to [targets::tar_visnetwork()].
+#'
 #' @export
-tar_visnetwork_bg <- function(script, ...) {
-  tar_vis_tempdir <- tempdir()
-  tar_vis_path <- fs::path(tar_vis_tempdir, "tar_visnetwork.rds")
+tar_visnetwork_bg <- function(script, interval = 1, ...) {
+  tar_vis_path <- tempfile("tar_visnetwork_", fileext = ".rds")
 
-  tar_visnetwork_instance <- \(script, tar_vis_tempdir, tar_vis_path, ...) {
-    while(TRUE) {
+  tar_visnetwork_instance <- \(script, tar_vis_path, interval, ...) {
+    previous <- NULL
+    while (TRUE) {
       tar_vis_obj <- targets::tar_visnetwork(script = script, ...)
-      saveRDS(tar_vis_obj, file = tar_vis_path)
-      
-      saveRDS(1, file = fs::path(tar_vis_tempdir, sample(c("a", "b", "c"), 1)))
+      # Only write when the graph changed, so readers aren't woken for nothing.
+      if (!identical(tar_vis_obj$x, previous)) {
+        # Write to a temp file and rename it into place, so the app never
+        # reads a half-written file. On Windows the rename fails while the
+        # app holds the file open: then retry on the next iteration.
+        tmp <- paste0(tar_vis_path, ".tmp")
+        saveRDS(tar_vis_obj, file = tmp)
+        if (file.rename(tmp, tar_vis_path)) {
+          previous <- tar_vis_obj$x
+        } else {
+          unlink(tmp)
+        }
+      }
+      Sys.sleep(interval)
     }
   }
 
   bg_process <- callr::r_bg(
     tar_visnetwork_instance,
-    args = list(script = script, tar_vis_tempdir = tar_vis_tempdir, tar_vis_path = tar_vis_path, ...),
+    args = list(script = script, tar_vis_path = tar_vis_path, interval = interval, ...),
     supervise = TRUE,
     poll_connection = TRUE,
-    stdout = "|",
-    stderr = "|"
+    stdout = sub("[.]rds$", ".log", tar_vis_path),
+    stderr = "2>&1"
   )
   invisible(list(process = bg_process, tar_vis_path = tar_vis_path))
 }

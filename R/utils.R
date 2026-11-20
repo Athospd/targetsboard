@@ -26,6 +26,7 @@
 #' @examples
 #' mean <- 3.5
 #' f("the mean is {mean}")
+#' @importFrom glue glue
 f <- glue::glue
 
 #' Not in operator

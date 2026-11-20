@@ -11,7 +11,8 @@ app_ui <- function(metadata, script = "_targets.R") {
       title = "Targets board",
       sidebar =  sidebar(
         title = "Control Panel",
-        textInput("script", "Script", script)
+        textInput("script", "Script", script),
+        actionButton("load_script", "Load", icon = icon("rotate"))
       ),
       accordion(
         open = c("DAG", "debug"),

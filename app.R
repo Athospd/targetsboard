@@ -8,5 +8,5 @@ saveRDS(metadata, "metadata.rds")
 metadata <- readRDS("metadata.rds")$x
 
 
-shinyApp(app_ui(metadata, script), app_server(metadata), options = list(port = 9999))
+shinyApp(app_ui(metadata, script), app_server(metadata, script), options = list(port = 9999))
 

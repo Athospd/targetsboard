@@ -1,58 +1,80 @@
 #' @export
-app_server <- function(metadata) {
-  nodes <- dataframe_to_reactflow_node_data(metadata$nodes)
-  edges <- dataframe_to_reactflow_edge_data(metadata$edges)
-  tar_visnetwork_assets <- NULL
+app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
+  # One background poller per app, shared by every browser session.
+  # Restarted only when someone loads a different script.
+  poller <- new.env()
+  poller_rds_path <- shiny::reactiveVal(NULL)
+
+  stop_poller <- function() {
+    if (inherits(poller$process, "r_process") && poller$process$is_alive())
+      poller$process$kill()
+    poller$process <- NULL
+  }
+
+  start_poller <- function(script) {
+    stop_poller()
+    assets <- tar_visnetwork_bg(script = script, targets_only = targets_only)
+    poller$process <- assets$process
+    poller$script <- script
+    poller_rds_path(assets$tar_vis_path)
+  }
 
   function(input, output, session) {
-    golem::add_resource_path(
-      'www', app_sys('app/www')
-    )
-    autoInvalidateLong <- reactiveTimer(3500)
+    if (is.null(poller$process)) {
+      start_poller(script)
+      shiny::onStop(stop_poller, session = NULL) # runs when the app stops
+    }
+
     autoInvalidateShort <- reactiveTimer(1000)
 
     ###############################################################
     visnetwork_metadata <- reactiveValues(
-      tar_visnetwork_app = NULL,
-      tar_vis_rds_path = NULL,
       metadata = metadata,
       nodes_tab = metadata$nodes,
       edges_tab = metadata$edges
     )
 
-    observe({   
-      print(!is.null(input$selected_nodes[1]))
-      bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$selected_nodes[1]))
+    observe({
+      bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$flow_selected_nodes[1]))
     })
 
     output$output_preview <- shiny::renderUI({
-      req(input$selected_nodes)
+      req(input$flow_selected_nodes)
       tar_output <- tryCatch(
-        targets::tar_read_raw(input$selected_nodes[1]),
+        targets::tar_read_raw(input$flow_selected_nodes[1]),
         error = function(e) shiny::p("No artifact available for this target.")
       )
 
       c(render_fun, output_ui_fun) %<-% render_and_output_bundle(tar_output)
-      random_name <- paste0("x", digest::sha1(runif(1)))
-      output[[random_name]] <- render_fun(tar_output)
-      tar_output_ui <- output_ui_fun(random_name)
-      shiny::tagList(tar_output_ui)
+      # Reuse one output id: assigning it again replaces the previous
+      # renderer instead of piling up a new output per click.
+      output$output_preview_content <- render_fun(tar_output)
+      output_ui_fun("output_preview_content")
     })
 
-    observe({
-      if(inherits(isolate(visnetwork_metadata$tar_visnetwork_app), "r_process"))
-        isolate(visnetwork_metadata$tar_visnetwork_app$kill())
-
-      tar_visnetwork_assets <- tar_visnetwork_bg(script = input$script, targets_only = TRUE)
-      visnetwork_metadata$tar_visnetwork_app <- tar_visnetwork_assets$process
-      visnetwork_metadata$tar_vis_rds_path <- tar_visnetwork_assets$tar_vis_path
+    observeEvent(input$load_script, {
+      new_script <- input$script
+      if (!file.exists(new_script)) {
+        shiny::showNotification(
+          paste0("Script not found: ", new_script),
+          type = "error"
+        )
+        return()
+      }
+      if (!identical(new_script, poller$script)) start_poller(new_script)
     })
 
     observe({
       autoInvalidateShort()
-      req(visnetwork_metadata$tar_vis_rds_path)
-      if(file.exists(visnetwork_metadata$tar_vis_rds_path)) {
-        visnetwork_metadata$metadata <- readRDS(visnetwork_metadata$tar_vis_rds_path)$x
+      rds_path <- poller_rds_path()
+      req(rds_path)
+      if(file.exists(rds_path)) {
+        new_metadata <- tryCatch(
+          readRDS(rds_path)$x,
+          error = function(e) NULL
+        )
+        req(new_metadata)
+        visnetwork_metadata$metadata <- new_metadata
         visnetwork_metadata$nodes_tab <- visnetwork_metadata$metadata$nodes
         visnetwork_metadata$edges_tab <- visnetwork_metadata$metadata$edges
       }
@@ -86,9 +108,21 @@ app_server <- function(metadata) {
       reactable::reactable(visnetwork_metadata$nodes_tab)
     })
 
+    # Re-read tar_meta() only when targets writes new metadata; checking the
+    # file's modification time every second is cheap.
+    tar_meta_data <- shiny::reactivePoll(
+      1000, session,
+      checkFunc = function() {
+        file.mtime(file.path(targets::tar_config_get("store"), "meta", "meta"))
+      },
+      valueFunc = function() {
+        tryCatch(targets::tar_meta(targets_only = TRUE), error = function(e) NULL)
+      }
+    )
+
     output$meta <- reactable::renderReactable({
-      autoInvalidateShort()
-      reactable::reactable(targets::tar_meta(targets_only = TRUE), wrap = FALSE)
+      req(tar_meta_data())
+      reactable::reactable(tar_meta_data(), wrap = FALSE)
     })
 
     output$debug <- shiny::renderPrint({
