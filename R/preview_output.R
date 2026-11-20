@@ -20,6 +20,7 @@ render_and_output_bundle.default <- function(x, ...) {
 
 #' @export
 render_and_output_bundle.ggplot <- function(x, ...) {
+  if (!rlang::is_installed("ggplot2")) return(render_and_output_bundle.default(x, ...))
   render_fun <- shiny::renderPlot
   output_ui_fun <- shiny::plotOutput
   return(list(render_fun = render_fun, output_ui_fun = output_ui_fun))
@@ -30,6 +31,7 @@ render_and_output_bundle.gg <- render_and_output_bundle.ggplot
 
 #' @export
 render_and_output_bundle.plotly <- function(x, ...) {
+  if (!rlang::is_installed("plotly")) return(render_and_output_bundle.default(x, ...))
   render_fun <- plotly::renderPlotly
   output_ui_fun <- plotly::plotlyOutput
   return(list(render_fun = render_fun, output_ui_fun = output_ui_fun))
@@ -68,6 +70,7 @@ render_and_output_bundle.shiny.tag <- function(x, ...) {
 
 #' @export
 render_and_output_bundle.data.frame <- function(x, ...) {
+  if (!rlang::is_installed("skimr")) return(render_and_output_bundle.default(x, ...))
   render_fun <- \(x) shiny::renderPrint({
     skimr::skim(x)
   })

@@ -5,9 +5,6 @@ app_server <- function(metadata) {
   tar_visnetwork_assets <- NULL
 
   function(input, output, session) {
-    golem::add_resource_path(
-      'www', app_sys('app/www')
-    )
     autoInvalidateLong <- reactiveTimer(3500)
     autoInvalidateShort <- reactiveTimer(1000)
 
