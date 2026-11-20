@@ -62,6 +62,7 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
         edges = edges
       ),
       list(
+        id = inputId,
         height = height,
         width = width,
         background_color = "#f0e5d7",
@@ -77,7 +78,10 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
 #' @export
 update_targetsboard <- function(session, inputId, value, configuration = NULL) {
   message <- list(value = value)
-  if (!is.null(configuration)) message$configuration <- configuration
+  if (!is.null(configuration)) {
+    configuration$id <- inputId # the widget names its Shiny inputs after it
+    message$configuration <- configuration
+  }
   session$sendInputMessage(inputId, message);
 }
 

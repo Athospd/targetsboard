@@ -36,13 +36,13 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
     )
 
     observe({
-      bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$selected_nodes[1]))
+      bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$flow_selected_nodes[1]))
     })
 
     output$output_preview <- shiny::renderUI({
-      req(input$selected_nodes)
+      req(input$flow_selected_nodes)
       tar_output <- tryCatch(
-        targets::tar_read_raw(input$selected_nodes[1]),
+        targets::tar_read_raw(input$flow_selected_nodes[1]),
         error = function(e) shiny::p("No artifact available for this target.")
       )
 
