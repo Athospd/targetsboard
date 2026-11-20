@@ -1,6 +1,8 @@
 var path = require('path');
 
-module.exports = {
+// `npm run build` makes the minified bundle that is committed and shipped;
+// `npm run dev` / `npm run watch` add a source map for local debugging.
+module.exports = (env, argv) => ({
     entry: path.join(__dirname, 'srcjs', 'targetsboard.jsx'),
     output: {
         path: path.join(__dirname, 'inst/htmlwidgets'),
@@ -27,8 +29,11 @@ module.exports = {
         'react-dom': 'window.ReactDOM',
         'reactR': 'window.reactR'
     },
+    // The bundle is served from localhost by the R package, so the size
+    // limits meant for public websites don't apply.
+    performance: { hints: false },
     stats: {
         colors: true
     },
-    devtool: 'source-map'
-};
+    devtool: argv.mode === 'development' ? 'source-map' : false
+});

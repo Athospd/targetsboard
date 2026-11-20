@@ -2,9 +2,12 @@
 ^\.Rproj\.user$
 ^node_modules$
 ^srcjs$
-^app\.R$
+^dev$
+^\.gitattributes$
+^package-lock\.json$
 ^package\.json$
 ^webpack\.config\.js$
-^yarn\.lock$
 ^LICENSE\.md$
 ^README\.Rmd$
+^_targets$
+^\.quarto$

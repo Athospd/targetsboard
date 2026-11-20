@@ -3,7 +3,7 @@ library(tarchetypes)
 library(crew)
 suppressPackageStartupMessages(library(tidymodels))
 
-tar_source("inst/test_targets/R")
+tar_source("inst/examples/pipelines/R")
 
 # Load required packages
 tar_option_set(
@@ -42,7 +42,7 @@ targets <- list(
   
   tar_target(train_test_ggplot, train_test_ggplot(train_data, test_data)),
   tar_target(train_test_plotly, train_test_plotly(train_data, test_data)),
-  tar_quarto(train_test_report_qmd, "inst/test_quarto/train_test_report.qmd"),
+  tar_quarto(train_test_report_qmd, "inst/examples/train_test_report.qmd"),
 
   # Recipe
   tar_target(recipe, {

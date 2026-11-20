@@ -1,9 +1,19 @@
 .Rproj.user
 node_modules
 .Rhistory
-.Rdata
+.RData
 .httr-oauth
 .DS_Store
 .quarto
 _targets
 /.quarto/
+
+# Rendered Quarto output
+*_files/
+inst/examples/*.html
+
+# Dev artefacts
+dev/metadata.rds
+
+# Local JS source maps (npm run dev); the shipped bundle has none
+inst/htmlwidgets/*.map
