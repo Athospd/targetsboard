@@ -1,0 +1,72 @@
+# The background poller recomputes tar_visnetwork() only when needed.
+local_poller <- function(.env = parent.frame()) {
+  poller <- tar_visnetwork_bg("_targets.R", interval = 0.2, settle = 0.5, targets_only = TRUE)
+  withr::defer(poller$process$kill(), envir = .env)
+  wait_for(function() file.exists(poller$tar_vis_path))
+  poller
+}
+
+written_at <- function(poller) file.mtime(poller$tar_vis_path)
+
+wait_for_rewrite <- function(poller, since) {
+  wait_for(function() !identical(written_at(poller), since))
+}
+
+test_that("the poller recomputes only when the code changes or on request", {
+  skip_on_cran()
+  local_pipeline()
+  poller <- local_poller()
+  expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b", "c"))
+
+  first <- written_at(poller)
+  Sys.sleep(1.5)
+  expect_identical(written_at(poller), first)
+  expect_true(poller$process$is_alive())
+
+  # A new target in the script.
+  Sys.sleep(1.1) # file times can have 1s resolution
+  writeLines(
+    c("library(targets)", "list(tar_target(a, 1), tar_target(b, a + 1), tar_target(c, b * 2), tar_target(d, c))"),
+    "_targets.R"
+  )
+  wait_for_rewrite(poller, first)
+  expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b", "c", "d"))
+
+  # A refresh request from the app.
+  second <- written_at(poller)
+  Sys.sleep(1.1)
+  writeLines("1", poller$refresh_path)
+  wait_for_rewrite(poller, second)
+})
+
+test_that("the poller recomputes once a run ends, with the progress it reflects", {
+  skip_on_cran()
+  local_pipeline()
+  poller <- local_poller()
+  expect_true(all(readRDS(poller$tar_vis_path)$x$nodes$status == "outdated"))
+
+  before <- written_at(poller)
+  targets::tar_make(reporter = "silent")
+  wait_for_rewrite(poller, before)
+
+  board <- readRDS(poller$tar_vis_path)
+  expect_true(all(board$x$nodes$status == "uptodate"))
+  expect_identical(board$progress_mtime, file.mtime("_targets/meta/progress"))
+})
+
+test_that("a broken script doesn't kill the poller", {
+  skip_on_cran()
+  local_pipeline()
+  poller <- local_poller()
+  before <- written_at(poller)
+
+  Sys.sleep(1.1)
+  writeLines("stop('broken')", "_targets.R")
+  Sys.sleep(2)
+  expect_true(poller$process$is_alive())
+  expect_identical(written_at(poller), before)
+
+  writeLines(c("library(targets)", "list(tar_target(z, 1))"), "_targets.R")
+  wait_for_rewrite(poller, before)
+  expect_equal(readRDS(poller$tar_vis_path)$x$nodes$id, "z")
+})

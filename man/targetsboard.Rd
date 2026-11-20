@@ -3,6 +3,7 @@
 \name{targetsboard}
 \alias{targetsboard}
 \alias{update_targetsboard}
+\alias{update_targetsboard_status}
 \title{DAG widget for Shiny}
 \usage{
 targetsboard(inputId, nodes, edges, height = "100\%", width = "100\%")
@@ -15,6 +16,8 @@ update_targetsboard(
   height = "100\%",
   width = "100\%"
 )
+
+update_targetsboard_status(session, inputId, statuses)
 }
 \arguments{
 \item{inputId}{The input slot of the widget.}
@@ -22,13 +25,23 @@ update_targetsboard(
 \item{nodes, edges}{The \code{nodes} and \code{edges} data frames of
 \code{targets::tar_visnetwork()$x}.}
 
-\item{height, width}{CSS size of the widget.}
+\item{height, width}{CSS size of the widget.
+
+\code{update_targetsboard()} replaces the whole graph, and lays it out again when
+targets were added or removed. \code{update_targetsboard_status()} only changes
+the status of some targets, which is much lighter: use it to follow a
+running pipeline.}
 
 \item{session}{The Shiny session.}
+
+\item{statuses}{A named character vector: target statuses, as in
+\code{targets::tar_progress()}, named by target. Targets not in the widget are
+ignored.}
 }
 \value{
 \code{targetsboard()} returns a Shiny UI element.
-\code{update_targetsboard()} is called for its side effect.
+\code{update_targetsboard()} and \code{update_targetsboard_status()} are called for
+their side effect.
 }
 \description{
 The interactive targets DAG used by the board, as a Shiny input you can

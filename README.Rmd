@@ -87,6 +87,15 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
+`tar_visnetwork()` hashes the whole pipeline, which gets slow on big ones. To
+follow a running pipeline, push only the statuses from `targets::tar_progress()`
+with `update_targetsboard_status()`: the widget updates them in place.
+
+```{r widget-status, eval = FALSE}
+progress <- targets::tar_progress()
+update_targetsboard_status(session, "dag", setNames(progress$progress, progress$name))
+```
+
 ## Development
 
 - The React front end lives in `srcjs/`. The built bundle in

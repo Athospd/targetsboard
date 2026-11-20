@@ -4,8 +4,8 @@ First cleanup of the 2024 prototype.
 
 ## Breaking changes
 
-* The public API is now `tar_board()`, `tar_board_app()`, `targetsboard()` and
-  `update_targetsboard()` (plus the `f()`, `%not_in%` and `%<-%` helpers).
+* The public API is now `tar_board()`, `tar_board_app()`, `targetsboard()`,
+  `update_targetsboard()` and `update_targetsboard_status()` (plus the `f()`, `%not_in%` and `%<-%` helpers).
   `app_ui()`, `app_server()`, `tar_visnetwork_bg()`, the
   `dataframe_to_reactflow_*()` converters and `render_and_output_bundle()`
   are internal, and the non-working React component wrappers (`MiniMap()`,
@@ -26,11 +26,20 @@ First cleanup of the 2024 prototype.
 * A **Load** button switches the pipeline script; the script box no longer
   reloads on every keystroke.
 * The board's output goes to a log file: `readLines(app$get_output_file())`.
+* `update_targetsboard_status()` updates target statuses in place, without
+  resending or laying out the graph again.
+* A **Refresh** button recomputes the graph on demand.
 
 ## Bug fixes and performance
 
-* The background poller no longer keeps a CPU core busy; it polls once a
-  second, is shared by all browser sessions and stops with the app.
+* The background poller no longer keeps a CPU core busy, is shared by all
+  browser sessions and stops with the app. It no longer recomputes
+  `tar_visnetwork()` every second: only when the script or a file in `R/`
+  changes, when a run ends, or on **Refresh**. In between, the board follows
+  runs through the cheap `<store>/meta/progress` file, twice a second. A
+  broken script no longer stops it.
+* Every targets status has a node style: `completed`, `skipped`, `canceled`
+  and others no longer fall back to React Flow's default node.
 * The board no longer freezes after a while (unread output pipes) or errors
   on half-written files.
 * Only the previewed HTML report's folder is served over HTTP, not the whole

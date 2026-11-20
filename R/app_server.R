@@ -21,6 +21,7 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
     assets <- tar_visnetwork_bg(script = script, targets_only = targets_only)
     poller$process <- assets$process
     poller$script <- script
+    poller$refresh_path <- assets$refresh_path
     poller_rds_path(assets$tar_vis_path)
   }
 
@@ -30,14 +31,58 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       shiny::onStop(stop_poller, session = NULL) # runs when the app stops
     }
 
-    autoInvalidateShort <- reactiveTimer(1000)
-
-    ###############################################################
-    visnetwork_metadata <- reactiveValues(
-      metadata = metadata,
-      nodes_tab = metadata$nodes,
-      edges_tab = metadata$edges
+    # The graph, as last recomputed by the poller: re-read only when the
+    # poller rewrites its file.
+    board <- shiny::reactiveVal(list(x = metadata, progress_mtime = progress_mtime()))
+    poller_board <- shiny::reactivePoll(
+      500, session,
+      checkFunc = function() {
+        path <- poller_rds_path()
+        if (is.null(path)) NA else file.mtime(path)
+      },
+      valueFunc = function() {
+        path <- poller_rds_path()
+        if (is.null(path) || !file.exists(path)) return(NULL)
+        tryCatch(readRDS(path), error = function(e) NULL)
+      }
     )
+    shiny::observeEvent(poller_board(), board(poller_board()))
+
+    # Live statuses, from the progress file targets writes during a run:
+    # cheap to check, so every half second.
+    progress <- shiny::reactivePoll(
+      500, session,
+      checkFunc = progress_mtime,
+      valueFunc = function() {
+        list(
+          mtime = progress_mtime(),
+          data = tryCatch(targets::tar_progress(), error = function(e) NULL)
+        )
+      }
+    )
+
+    # A new graph: send it whole, with the live statuses on top.
+    shiny::observeEvent(board(), {
+      current <- board()
+      statuses <- live_statuses(shiny::isolate(progress()), current$progress_mtime)
+      update_targetsboard(
+        session,
+        "flow",
+        nodes = overlay_statuses(current$x$nodes, statuses),
+        edges = current$x$edges
+      )
+    })
+
+    # New progress only: send just the statuses.
+    shiny::observeEvent(progress(), {
+      statuses <- live_statuses(progress(), shiny::isolate(board())$progress_mtime)
+      if (length(statuses)) update_targetsboard_status(session, "flow", statuses)
+    }, ignoreInit = TRUE)
+
+    shiny::observeEvent(input$refresh, {
+      path <- poller$refresh_path
+      if (!is.null(path)) writeLines(format(Sys.time(), "%H:%M:%OS6"), path)
+    })
 
     observe({
       bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$flow_selected_nodes[1]))
@@ -69,42 +114,15 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       if (!identical(new_script, poller$script)) start_poller(new_script)
     })
 
-    observe({
-      autoInvalidateShort()
-      rds_path <- poller_rds_path()
-      req(rds_path)
-      if(file.exists(rds_path)) {
-        new_metadata <- tryCatch(
-          readRDS(rds_path)$x,
-          error = function(e) NULL
-        )
-        req(new_metadata)
-        visnetwork_metadata$metadata <- new_metadata
-        visnetwork_metadata$nodes_tab <- visnetwork_metadata$metadata$nodes
-        visnetwork_metadata$edges_tab <- visnetwork_metadata$metadata$edges
-      }
-    })
-
-    observe({
-      update_targetsboard(
-        session,
-        "flow",
-        nodes = visnetwork_metadata$nodes_tab,
-        edges = visnetwork_metadata$edges_tab
-      )
-    })
-
     output$nodes <- reactable::renderReactable({
-      reactable::reactable(visnetwork_metadata$nodes_tab)
+      reactable::reactable(board()$x$nodes)
     })
 
     # Re-read tar_meta() only when targets writes new metadata; checking the
     # file's modification time every second is cheap.
     tar_meta_data <- shiny::reactivePoll(
       1000, session,
-      checkFunc = function() {
-        file.mtime(file.path(targets::tar_config_get("store"), "meta", "meta"))
-      },
+      checkFunc = function() file.mtime(store_file("meta")),
       valueFunc = function() {
         tryCatch(targets::tar_meta(targets_only = TRUE), error = function(e) NULL)
       }
@@ -117,9 +135,39 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
 
     output$debug <- shiny::renderPrint({
       c(
-        reactiveValuesToList(visnetwork_metadata),
+        board = board(),
         reactiveValuesToList(input)
       )
     })
   }
+}
+
+# A file in the targets store's meta folder, e.g. "progress" or "meta".
+store_file <- function(name) {
+  file.path(targets::tar_config_get("store"), "meta", name)
+}
+
+progress_mtime <- function() file.mtime(store_file("progress"))
+
+#' Statuses of the run in progress
+#'
+#' @param progress `list(mtime, data)`: the progress file's modification time
+#'   and `targets::tar_progress()`.
+#' @param since The progress file's modification time when the graph was last
+#'   recomputed: older progress is already in the graph, or stale.
+#' @return A named character vector of statuses, possibly empty.
+#' @noRd
+live_statuses <- function(progress, since) {
+  data <- progress$data
+  fresh <- !is.null(data) && nrow(data) > 0 && !is.na(progress$mtime) &&
+    (is.null(since) || is.na(since) || progress$mtime > since)
+  if (!fresh) return(stats::setNames(character(), character()))
+  stats::setNames(data$progress, data$name)
+}
+
+# Put live statuses on the nodes of tar_visnetwork()$x$nodes.
+overlay_statuses <- function(nodes, statuses) {
+  hit <- match(nodes$id, names(statuses))
+  nodes$status[!is.na(hit)] <- unname(statuses[hit[!is.na(hit)]])
+  nodes
 }
