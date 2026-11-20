@@ -105,12 +105,28 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
         target_type = .data$type,
         target_status = .data$status
       )),
-      type = .data$status # React Flow node type: picks the node component
+      type = status_to_node_type(.data$status) # picks the node component
     ) |>
     dplyr::mutate(
       !!!nodes_global_params
     ) |>
     purrr::transpose()
+}
+
+# The widget has one node component per type: uptodate, outdated, errored and
+# dispatched. Map every status targets reports (tar_visnetwork() and
+# tar_progress()) onto one of them; anything unknown shows as outdated.
+status_to_node_type <- function(status) {
+  types <- c(
+    uptodate = "uptodate", completed = "uptodate", skipped = "uptodate",
+    outdated = "outdated", canceled = "outdated", queued = "outdated",
+    none = "outdated",
+    errored = "errored",
+    dispatched = "dispatched"
+  )
+  type <- unname(types[status])
+  type[is.na(type)] <- "outdated"
+  type
 }
 
 #' Convert tar_visnetwork() edges to React Flow edges
