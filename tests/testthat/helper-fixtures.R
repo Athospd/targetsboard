@@ -25,6 +25,26 @@ local_pipeline <- function(make = FALSE, .env = parent.frame()) {
     file.path(dir, "_targets.R")
   )
   withr::local_dir(dir, .local_envir = .env)
-  if (make) targets::tar_make(reporter = "silent", callr_function = NULL)
+  if (make) targets::tar_make(reporter = "silent")
   dir
+}
+
+# app_server() for the pipeline in the working directory, with its shared
+# poller killed when the calling test ends.
+local_app_server <- function(.env = parent.frame()) {
+  metadata <- targets::tar_visnetwork(targets_only = TRUE)$x
+  server <- app_server(metadata, "_targets.R")
+  withr::defer(environment(server)$stop_poller(), envir = .env)
+  server
+}
+
+poller_of <- function(server) environment(server)$poller
+
+wait_for <- function(condition, timeout = 30) {
+  deadline <- Sys.time() + timeout
+  while (!condition()) {
+    if (Sys.time() > deadline) stop("Timed out waiting for condition")
+    Sys.sleep(0.25)
+  }
+  invisible(TRUE)
 }

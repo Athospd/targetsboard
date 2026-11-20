@@ -1,0 +1,92 @@
+test_that("one background poller is shared by all sessions", {
+  skip_on_cran()
+  local_pipeline()
+  server <- local_app_server()
+
+  shiny::testServer(server, {
+    rds_path <- environment(server)$poller_rds_path()
+    wait_for(function() file.exists(rds_path))
+
+    session$elapse(1100)
+    expect_setequal(visnetwork_metadata$nodes_tab$id, c("a", "b", "c"))
+  })
+
+  pid <- poller_of(server)$process$get_pid()
+  shiny::testServer(server, {
+    expect_equal(poller_of(server)$process$get_pid(), pid)
+  })
+
+  process <- poller_of(server)$process
+  environment(server)$stop_poller()
+  expect_false(process$is_alive())
+})
+
+test_that("Load restarts the poller only for an existing, different script", {
+  skip_on_cran()
+  local_pipeline()
+  file.copy("_targets.R", "other.R")
+  server <- local_app_server()
+
+  shiny::testServer(server, {
+    pid <- poller_of(server)$process$get_pid()
+
+    session$setInputs(script = "missing.R", load_script = 1)
+    expect_equal(poller_of(server)$process$get_pid(), pid)
+
+    session$setInputs(script = "_targets.R", load_script = 2)
+    expect_equal(poller_of(server)$process$get_pid(), pid)
+
+    session$setInputs(script = "other.R", load_script = 3)
+    expect_false(poller_of(server)$process$get_pid() == pid)
+    expect_equal(poller_of(server)$script, "other.R")
+  })
+})
+
+test_that("selecting a target previews its value in one reused output", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  shiny::testServer(server, {
+    session$setInputs(flow_selected_nodes = "c")
+    expect_match(output$output_preview$html, "output_preview_content")
+    expect_match(output$output_preview_content, "4")
+
+    session$setInputs(flow_selected_nodes = "b")
+    invisible(output$output_preview)
+    expect_match(output$output_preview_content, "2")
+  })
+})
+
+test_that("tar_meta() is re-read only when the metadata file changes", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  reads <- 0
+  real_tar_meta <- targets::tar_meta
+  local_mocked_bindings(
+    tar_meta = function(...) {
+      reads <<- reads + 1
+      real_tar_meta(...)
+    },
+    .package = "targets"
+  )
+
+  shiny::testServer(server, {
+    invisible(output$meta)
+    before <- reads
+    for (i in 1:3) {
+      session$elapse(1000)
+      invisible(output$meta)
+    }
+    expect_equal(reads, before)
+
+    Sys.sleep(1.1) # file times can have 1s resolution
+    targets::tar_invalidate(a)
+    targets::tar_make(reporter = "silent")
+    session$elapse(1000)
+    invisible(output$meta)
+    expect_equal(reads, before + 1)
+  })
+})
