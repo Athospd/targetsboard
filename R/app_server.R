@@ -1,4 +1,9 @@
-#' @export
+#' The board's server
+#'
+#' @param metadata `targets::tar_visnetwork()$x`, for the first render.
+#' @param script Path to the targets script.
+#' @param targets_only Show only targets, without functions and globals.
+#' @noRd
 app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
   # One background poller per app, shared by every browser session.
   # Restarted only when someone loads a different script.
@@ -81,26 +86,11 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
     })
 
     observe({
-      updated_nodes = dataframe_to_reactflow_node_data(visnetwork_metadata$nodes_tab)
-      updated_edges = dataframe_to_reactflow_edge_data(visnetwork_metadata$edges_tab)
-
       update_targetsboard(
         session,
         "flow",
-        value = 0,
-        configuration = c(
-          list(
-            nodes = updated_nodes,
-            edges = updated_edges
-          ),
-          list(
-            id = "flow",
-            height = "100%",
-            width = "100%",
-            background_color = "#f0e5d7",
-            background_marks_color = "#2f223d"
-          )
-        )
+        nodes = visnetwork_metadata$nodes_tab,
+        edges = visnetwork_metadata$edges_tab
       )
     })
 

@@ -17,7 +17,6 @@ Imports:
     dplyr,
     glue,
     htmltools,
-    htmlwidgets,
     purrr,
     reactable,
     reactR,

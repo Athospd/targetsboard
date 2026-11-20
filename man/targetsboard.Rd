@@ -2,10 +2,61 @@
 % Please edit documentation in R/targetsboard.R
 \name{targetsboard}
 \alias{targetsboard}
-\title{targetsboard}
+\alias{update_targetsboard}
+\title{DAG widget for Shiny}
 \usage{
 targetsboard(inputId, nodes, edges, height = "100\%", width = "100\%")
+
+update_targetsboard(
+  session,
+  inputId,
+  nodes,
+  edges,
+  height = "100\%",
+  width = "100\%"
+)
+}
+\arguments{
+\item{inputId}{The input slot of the widget.}
+
+\item{nodes, edges}{The \code{nodes} and \code{edges} data frames of
+\code{targets::tar_visnetwork()$x}.}
+
+\item{height, width}{CSS size of the widget.}
+
+\item{session}{The Shiny session.}
+}
+\value{
+\code{targetsboard()} returns a Shiny UI element.
+\code{update_targetsboard()} is called for its side effect.
 }
 \description{
-targetsboard
+The interactive targets DAG used by the board, as a Shiny input you can
+place in your own app. Nodes are coloured by status, running targets show a
+spinner and their incoming edges are animated.
+}
+\details{
+The widget reports the ids of the selected targets to the server as
+\verb{input$<inputId>_selected_nodes} (and the running ones as
+\verb{input$<inputId>_dispatched_nodes}).
+}
+\examples{
+\dontrun{
+library(shiny)
+net <- targets::tar_visnetwork(targets_only = TRUE)$x
+
+ui <- fluidPage(targetsboard("dag", net$nodes, net$edges, height = "600px"))
+
+server <- function(input, output, session) {
+  observe({
+    invalidateLater(2000)
+    net <- targets::tar_visnetwork(targets_only = TRUE)$x
+    update_targetsboard(session, "dag", net$nodes, net$edges, height = "600px")
+  })
+  observe(print(input$dag_selected_nodes))
+}
+
+shinyApp(ui, server)
+}
+
 }

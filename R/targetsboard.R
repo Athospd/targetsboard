@@ -1,48 +1,42 @@
-#' Called by HTMLWidgets to produce the widget's root element.
-#' @noRd
-widget_html.targetsboard <- function(id, style, class, ...) {
-  htmltools::tagList(
-    # Necessary for RStudio viewer version < 1.2
-    reactR::html_dependency_corejs(),
-    reactR::html_dependency_react(),
-    reactR::html_dependency_reacttools(),
-    htmltools::tags$div(id = id, class = class, style = style)
-  )
-}
-
-#' Shiny bindings for targetsboard
+#' DAG widget for Shiny
 #'
-#' Output and render functions for using targetsboard within Shiny
-#' applications and interactive Rmd documents.
+#' The interactive targets DAG used by the board, as a Shiny input you can
+#' place in your own app. Nodes are coloured by status, running targets show a
+#' spinner and their incoming edges are animated.
 #'
-#' @param outputId output variable to read from
-#' @param width,height Must be a valid CSS unit (like \code{'100\%'},
-#'   \code{'400px'}, \code{'auto'}) or a number, which will be coerced to a
-#'   string and have \code{'px'} appended.
-#' @param expr An expression that generates a targetsboard
-#' @param env The environment in which to evaluate \code{expr}.
-#' @param quoted Is \code{expr} a quoted expression (with \code{quote()})? This
-#'   is useful if you want to save an expression in a variable.
+#' The widget reports the ids of the selected targets to the server as
+#' `input$<inputId>_selected_nodes` (and the running ones as
+#' `input$<inputId>_dispatched_nodes`).
 #'
-#' @name targetsboard-shiny
+#' @param inputId The input slot of the widget.
+#' @param nodes,edges The `nodes` and `edges` data frames of
+#'   `targets::tar_visnetwork()$x`.
+#' @param height,width CSS size of the widget.
 #'
-#' @export
-targetsboardOutput <- function(outputId, width = '100%', height = '100%'){
-  htmlwidgets::shinyWidgetOutput(outputId, 'targetsboard', width, height, package = 'targetsboard')
-}
-
-#' @rdname targetsboard-shiny
-#' @export
-rendertargetsboard <- function(expr, env = parent.frame(), quoted = FALSE) {
-  if (!quoted) { expr <- substitute(expr) } # force quoted
-  htmlwidgets::shinyRenderWidget(expr, targetsboardOutput, env, quoted = TRUE)
-}
-
-#' targetsboard
+#' @return `targetsboard()` returns a Shiny UI element.
+#'   `update_targetsboard()` is called for its side effect.
+#'
+#' @examples
+#' \dontrun{
+#' library(shiny)
+#' net <- targets::tar_visnetwork(targets_only = TRUE)$x
+#'
+#' ui <- fluidPage(targetsboard("dag", net$nodes, net$edges, height = "600px"))
+#'
+#' server <- function(input, output, session) {
+#'   observe({
+#'     invalidateLater(2000)
+#'     net <- targets::tar_visnetwork(targets_only = TRUE)$x
+#'     update_targetsboard(session, "dag", net$nodes, net$edges, height = "600px")
+#'   })
+#'   observe(print(input$dag_selected_nodes))
+#' }
+#'
+#' shinyApp(ui, server)
+#' }
 #'
 #' @importFrom reactR createReactShinyInput
 #' @importFrom htmltools htmlDependency tags
-#'
 #' @export
 targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%") {
   reactR::createReactShinyInput(
@@ -56,39 +50,38 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
       script = "targetsboard.js"
     ),
     default = 0,
-    configuration = c(
-      list(
-        nodes = nodes,
-        edges = edges
-      ),
-      list(
-        id = inputId,
-        height = height,
-        width = width,
-        background_color = "#f0e5d7",
-        background_marks_color = "#2f223d"
-      )
-    ),
+    configuration = board_configuration(inputId, nodes, edges, height, width),
     container = function(...) htmltools::tags$div(style = 'height: 100%', ...)
   )
 }
 
-#' updatetargetsboardInput
-#'
+#' @rdname targetsboard
+#' @param session The Shiny session.
 #' @export
-update_targetsboard <- function(session, inputId, value, configuration = NULL) {
-  message <- list(value = value)
-  if (!is.null(configuration)) {
-    configuration$id <- inputId # the widget names its Shiny inputs after it
-    message$configuration <- configuration
-  }
-  session$sendInputMessage(inputId, message);
+update_targetsboard <- function(session, inputId, nodes, edges, height = "100%", width = "100%") {
+  session$sendInputMessage(inputId, list(
+    value = 0,
+    configuration = board_configuration(inputId, nodes, edges, height, width)
+  ))
 }
 
+# The widget's whole configuration: an update replaces it, so both the
+# constructor and the update send all of it.
+board_configuration <- function(inputId, nodes, edges, height, width) {
+  list(
+    id = inputId, # the widget names its Shiny inputs after it
+    nodes = dataframe_to_reactflow_node_data(nodes),
+    edges = dataframe_to_reactflow_edge_data(edges),
+    height = height,
+    width = width,
+    background_color = "#f0e5d7",
+    background_marks_color = "#2f223d"
+  )
+}
 
-#' dataframe_to_reactflow_node_data
-#'
-#' @export
+#' Convert tar_visnetwork() nodes to React Flow nodes
+#' @importFrom rlang .data
+#' @noRd
 dataframe_to_reactflow_node_data <- function(dataframe) {
 
   nodes_global_params <- list(
@@ -101,16 +94,15 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
     ) |>
     dplyr::rowwise() |>
     dplyr::summarise(
-      id = id,
+      id = .data$id,
       position = list(list(x = 0, y = 0)),
-      type = status,
-      # style = list(list(background = color, color = "white")),
+      type = .data$status,
       data = list(list(
-        label = label,
-        level = level,
-        description = description,
-        target_type = type,
-        target_status = status
+        label = .data$label,
+        level = .data$level,
+        description = .data$description,
+        target_type = .data$type,
+        target_status = .data$status
       ))
     ) |>
     dplyr::mutate(
@@ -119,39 +111,65 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
     purrr::transpose()
 }
 
-#' dataframe_to_reactflow_edge_data
-#'
-#' @export
+#' Convert tar_visnetwork() edges to React Flow edges
+#' @noRd
 dataframe_to_reactflow_edge_data <- function(dataframe) {
   dataframe |>
     dplyr::mutate(
-      id = f("{from}_{arrows}_{to}")
+      id = paste(.data$from, .data$arrows, .data$to, sep = "_")
     ) |>
-    dplyr::select(id, source = from, target = to) |>
+    dplyr::select(dplyr::all_of(c(id = "id", source = "from", target = "to"))) |>
     purrr::transpose()
 }
 
-#' tar_board
+#' Launch the targets board
 #'
-#' Launches the board in a background R process. Its output goes to a log
-#' file: read it with `readLines(app$get_output_file())`.
+#' `tar_board()` starts the board in a background R process and returns at
+#' once, so your session stays free to run `tar_make()` and friends while the
+#' board follows along. `tar_board_app()` returns the board as a Shiny app
+#' object instead, to run in the foreground or deploy.
 #'
+#' @param script Path to the targets script.
+#' @param port Port to serve the board on, at `http://127.0.0.1:<port>`.
+#' @param targets_only Show only targets, without functions and globals.
+#' @param metadata Optional: `targets::tar_visnetwork()$x` for the first
+#'   render. Computed from `script` when `NULL`.
+#' @param options Passed on to [shiny::shinyApp()], e.g. `list(port = 8080)`.
+#' @param ... Passed on to [targets::tar_visnetwork()] for the first render.
+#'
+#' @return `tar_board()`: the background process, a [callr::r_bg()] object.
+#'   Use `$is_alive()` and `$kill()` on it, and read the board's log with
+#'   `readLines(app$get_output_file())`.
+#'   `tar_board_app()`: a [shiny::shinyApp()] object.
+#'
+#' @examples
+#' \dontrun{
+#' app <- tar_board()
+#' browseURL("http://127.0.0.1:9999")
+#' targets::tar_make()
+#' app$kill()
+#'
+#' # or in the foreground:
+#' shiny::runApp(tar_board_app())
+#' }
 #' @export
-tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targets_only = TRUE, ...) {
-  if(is.null(metadata))
+tar_board <- function(script = "_targets.R", port = 9999, targets_only = TRUE, metadata = NULL, ...) {
+  # Computed here, so that a broken script errors in your session at once.
+  if (is.null(metadata))
     metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
     \(metadata, script, port, targets_only) {
-      print(shiny::shinyApp(
-        targetsboard::app_ui(metadata, script),
-        targetsboard::app_server(metadata, script, targets_only),
+      print(targetsboard::tar_board_app(
+        script = script,
+        targets_only = targets_only,
+        metadata = metadata,
         options = list(port = port)
       ))
     },
     args = list(
-      metadata = metadata, 
+      metadata = metadata,
       script = script,
       port = port,
       targets_only = targets_only
@@ -165,13 +183,28 @@ tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targe
   invisible(bg_process)
 }
 
-#' tar_visnetwork_bg
+#' @rdname tar_board
+#' @export
+tar_board_app <- function(script = "_targets.R", targets_only = TRUE, metadata = NULL, options = list(), ...) {
+  if (is.null(metadata))
+    metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
+
+  shiny::shinyApp(
+    app_ui(metadata, script),
+    app_server(metadata, script, targets_only),
+    options = options
+  )
+}
+
+#' Poll tar_visnetwork() in a background process
+#'
+#' Writes the result to an RDS file whenever the graph changes.
 #'
 #' @param script Path to the targets script.
 #' @param interval Seconds to wait between two `tar_visnetwork()` calls.
 #' @param ... Passed on to [targets::tar_visnetwork()].
-#'
-#' @export
+#' @return A list: the `process` ([callr::r_bg()]) and `tar_vis_path`.
+#' @noRd
 tar_visnetwork_bg <- function(script, interval = 1, ...) {
   tar_vis_path <- tempfile("tar_visnetwork_", fileext = ".rds")
 

@@ -1,10 +1,10 @@
-#' app_ui
-#' 
+#' The board's UI
+#'
+#' @param metadata `targets::tar_visnetwork()$x`, for the first render.
+#' @param script Path to the targets script.
 #' @import shiny bslib
-#' @export
+#' @noRd
 app_ui <- function(metadata, script = "_targets.R") {
-  nodes <- dataframe_to_reactflow_node_data(metadata$nodes)
-  edges <- dataframe_to_reactflow_edge_data(metadata$edges)
   shiny::tagList(  
     add_external_resources(),
     page_sidebar(
@@ -33,7 +33,7 @@ app_ui <- function(metadata, script = "_targets.R") {
                   position = "right",
                   uiOutput("output_preview")
                 ),
-                targetsboard('flow', nodes, edges)
+                targetsboard('flow', metadata$nodes, metadata$edges)
               )
             )
           )

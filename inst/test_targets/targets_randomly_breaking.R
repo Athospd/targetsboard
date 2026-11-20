@@ -3,9 +3,11 @@ library(tarchetypes)
 library(crew)
 suppressPackageStartupMessages(library(tidymodels))
 
+tar_source("inst/test_targets/R")
+
 # Load required packages
 tar_option_set(
-  packages = c("tidymodels", "targetsboard"),
+  packages = c("tidymodels"),
   error = "trim",
   controller = crew_controller_local(workers = 2)
 )
