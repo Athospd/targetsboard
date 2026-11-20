@@ -1,7 +1,7 @@
 library(targetsboard)
 
 
-a <- tar_visnetwork_bg(targets_only = TRUE, script = "inst/test_targets/targets_randomly_breaking.R")
+a <- tar_visnetwork_bg(targets_only = TRUE, script = "inst/examples/pipelines/targets_randomly_breaking.R")
 b <- a$process()
 
 
@@ -9,7 +9,7 @@ b <- a$process()
 
 tar_vis_tempdir <- tempdir()
 tar_vis_path <- fs::path(tar_vis_tempdir, "tar_visnetwork.rds")
-script = "inst/test_targets/targets_randomly_breaking.R"
+script = "inst/examples/pipelines/targets_randomly_breaking.R"
 tar_visnetwork_instance <- \() {
   while(TRUE) {
     tar_vis_obj <- targets::tar_visnetwork(script = script, targets_only = TRUE)

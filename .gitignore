@@ -7,3 +7,7 @@ node_modules
 .quarto
 _targets
 /.quarto/
+
+# Rendered Quarto output
+*_files/
+inst/examples/*.html
