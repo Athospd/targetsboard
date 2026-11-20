@@ -14,3 +14,6 @@ inst/examples/*.html
 
 # Dev artefacts
 dev/metadata.rds
+
+# Local JS source maps (npm run dev); the shipped bundle has none
+inst/htmlwidgets/*.map

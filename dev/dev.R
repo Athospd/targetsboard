@@ -1,14 +1,7 @@
-system("yarn run webpack --mode=development")
-# devtools::document()
-# pak::local_install(upgrade = FALSE, ask = FALSE)
-# library(targetsboard)
+# Rebuild the JS bundle (use `npm run dev` for a build with a source map),
+# regenerate docs and reload the package, then run the board.
+system("npm run build")
+devtools::document()
+devtools::load_all()
 
-# Detach all loaded packages and clean your environment
-golem::detach_all_attached()
-# rm(list=ls(all.names = TRUE))
-
-# Document and reload your package
-golem::document_and_reload()
-
-shiny::runApp()
-
+shiny::runApp("dev/app.R")
