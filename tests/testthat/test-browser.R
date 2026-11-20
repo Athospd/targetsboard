@@ -29,4 +29,18 @@ test_that("the board renders the DAG and reports node clicks", {
   expect_equal(app$get_value(input = "flow_selected_nodes"), "c")
   app$wait_for_value(output = "output_preview_content")
   expect_match(app$get_value(output = "output_preview_content"), "4")
+
+  # A status-only update retypes the node in place, without moving it.
+  before <- app$get_js("document.querySelector(\".react-flow__node[data-id='a']\").style.transform")
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [{id: 'a', type: 'dispatched', target_status: 'dispatched'}]}}))"
+  )
+  app$wait_for_js(
+    "document.querySelector(\".react-flow__node[data-id='a']\").classList.contains('react-flow__node-dispatched')"
+  )
+  expect_equal(
+    app$get_js("document.querySelector(\".react-flow__node[data-id='a']\").style.transform"),
+    before
+  )
 })

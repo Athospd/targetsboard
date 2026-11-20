@@ -65,6 +65,16 @@ const getLayoutedElements = (nodes, edges, options) => {
 };
 
 
+// Status-only updates from R (update_targetsboard_status()) arrive as a Shiny
+// custom message; each widget picks the ones addressed to its id.
+const STATUS_EVENT = 'targetsboard:status';
+if (window.Shiny && !window.__targetsboardStatusHandler) {
+  window.__targetsboardStatusHandler = true;
+  window.Shiny.addCustomMessageHandler(STATUS_EVENT, (message) => {
+    window.dispatchEvent(new CustomEvent(STATUS_EVENT, { detail: message }));
+  });
+}
+
 const sortedKey = (ids) => [...ids].sort().join('|');
 const structureKey = (nodes, edges) =>
   sortedKey(nodes.map((n) => n.id)) + '#' + sortedKey(edges.map((e) => e.id));
@@ -141,6 +151,25 @@ function Flow({ configuration }) {
       setLayoutPending(true);
     }
   }, [configuration.nodes, configuration.edges]);
+
+  // Patch statuses in place: no new nodes, no re-layout.
+  useEffect(() => {
+    const onStatus = (event) => {
+      const message = event.detail;
+      if (message?.id !== configuration.id) return;
+      const updates = new Map((message.nodes ?? []).map((u) => [u.id, u]));
+      setNodes((current) =>
+        current.map((node) => {
+          const update = updates.get(node.id);
+          return update
+            ? { ...node, type: update.type, data: { ...node.data, target_status: update.target_status } }
+            : node;
+        }),
+      );
+    };
+    window.addEventListener(STATUS_EVENT, onStatus);
+    return () => window.removeEventListener(STATUS_EVENT, onStatus);
+  }, [configuration.id]);
 
   // Report selection to Shiny, as <id>_selected_nodes. Keyed on the ids, so
   // dragging nodes around doesn't send anything.

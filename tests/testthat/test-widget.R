@@ -30,3 +30,22 @@ test_that("update_targetsboard() sends the full configuration", {
   expect_equal(sent$message$configuration$id, "dag")
   expect_length(sent$message$configuration$nodes, 3)
 })
+
+test_that("update_targetsboard_status() sends only ids, node types and statuses", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) {
+    sent <<- list(type = type, message = message)
+  })
+
+  update_targetsboard_status(session, "dag", c(raw = "completed", model = "dispatched"))
+
+  expect_equal(sent$type, "targetsboard:status")
+  expect_equal(sent$message$id, "dag")
+  expect_equal(sent$message$nodes, list(
+    list(id = "raw", type = "uptodate", target_status = "completed"),
+    list(id = "model", type = "dispatched", target_status = "dispatched")
+  ))
+
+  update_targetsboard_status(session, "dag", character())
+  expect_equal(sent$message$nodes, list())
+})

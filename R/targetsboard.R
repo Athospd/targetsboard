@@ -13,8 +13,14 @@
 #'   `targets::tar_visnetwork()$x`.
 #' @param height,width CSS size of the widget.
 #'
+#' `update_targetsboard()` replaces the whole graph, and lays it out again when
+#' targets were added or removed. `update_targetsboard_status()` only changes
+#' the status of some targets, which is much lighter: use it to follow a
+#' running pipeline.
+#'
 #' @return `targetsboard()` returns a Shiny UI element.
-#'   `update_targetsboard()` is called for its side effect.
+#'   `update_targetsboard()` and `update_targetsboard_status()` are called for
+#'   their side effect.
 #'
 #' @examples
 #' \dontrun{
@@ -62,6 +68,22 @@ update_targetsboard <- function(session, inputId, nodes, edges, height = "100%",
   session$sendInputMessage(inputId, list(
     value = 0,
     configuration = board_configuration(inputId, nodes, edges, height, width)
+  ))
+}
+
+#' @rdname targetsboard
+#' @param statuses A named character vector: target statuses, as in
+#'   `targets::tar_progress()`, named by target. Targets not in the widget are
+#'   ignored.
+#' @export
+update_targetsboard_status <- function(session, inputId, statuses) {
+  stopifnot(is.character(statuses), !is.null(names(statuses)) || length(statuses) == 0)
+  session$sendCustomMessage("targetsboard:status", list(
+    id = inputId,
+    nodes = unname(Map(
+      function(id, status) list(id = id, type = status_to_node_type(status), target_status = status),
+      names(statuses), unname(statuses)
+    ))
   ))
 }
 
