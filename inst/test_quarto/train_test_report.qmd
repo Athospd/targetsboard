@@ -6,7 +6,6 @@ output_format: html
 Train and Test EDA
 
 ```{r}
-library(targetsboard)
 library(ggplot2)
 train_data <- targets::tar_read(train_data)
 test_data <- targets::tar_read(test_data)

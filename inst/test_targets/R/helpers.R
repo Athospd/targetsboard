@@ -1,6 +1,6 @@
-#' @export
+# Helpers for targets_randomly_breaking.R, loaded with tar_source().
+
 train_test_ggplot <- function(train_data, test_data) {
-  rlang::check_installed("ggplot2")
   dplyr::bind_rows(
     train_data |> dplyr::mutate(set = "train"),
     test_data |> dplyr::mutate(set = "test")
@@ -9,9 +9,7 @@ train_test_ggplot <- function(train_data, test_data) {
       ggplot2::geom_density(ggplot2::aes(x = Sepal.Length), alpha = .6)
 }
  
-#' @export
 train_test_plotly <- function(train_data, test_data) {
-  rlang::check_installed(c("ggplot2", "plotly"))
   p <- dplyr::bind_rows(
     train_data |> dplyr::mutate(set = "train"),
     test_data |> dplyr::mutate(set = "test")
