@@ -241,33 +241,86 @@ tar_board_app <- function(script = "_targets.R", targets_only = TRUE, metadata =
   )
 }
 
-#' Poll tar_visnetwork() in a background process
+#' Recompute tar_visnetwork() in a background process, only when needed
 #'
-#' Writes the result to an RDS file whenever the graph changes.
+#' `tar_visnetwork()` hashes the whole pipeline to tell outdated targets from
+#' up-to-date ones, which is slow. So the process only recomputes it when:
+#' - the script, or an R file under `R/`, changed (new targets or functions),
+#' - a run ended: the progress file changed since the last recompute, has not
+#'   changed for `settle` seconds, and no target is dispatched,
+#' - the app asked for it, by writing to `refresh_path`.
+#' Between recomputes, the app follows a run through the cheap progress file.
+#'
+#' Each recompute is written to `tar_vis_path` as an RDS file holding
+#' `list(x = tar_visnetwork()$x, progress_mtime = )`: the modification time of
+#' the progress file it reflects, so the app knows which progress is newer.
 #'
 #' @param script Path to the targets script.
-#' @param interval Seconds to wait between two `tar_visnetwork()` calls.
+#' @param interval Seconds between two checks; checks are cheap file stats.
+#' @param settle Seconds without progress before a run counts as ended.
 #' @param ... Passed on to [targets::tar_visnetwork()].
-#' @return A list: the `process` ([callr::r_bg()]) and `tar_vis_path`.
+#' @return A list: the `process` ([callr::r_bg()]), `tar_vis_path` and
+#'   `refresh_path`.
 #' @noRd
-tar_visnetwork_bg <- function(script, interval = 1, ...) {
+tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
   tar_vis_path <- tempfile("tar_visnetwork_", fileext = ".rds")
+  refresh_path <- sub("[.]rds$", ".refresh", tar_vis_path)
 
-  tar_visnetwork_instance <- \(script, tar_vis_path, interval, ...) {
-    previous <- NULL
+  # Runs in the background process: self-contained, it can't call this
+  # package's internals.
+  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, ...) {
+    progress_file <- file.path(targets::tar_config_get("store"), "meta", "progress")
+
+    code_signature <- function() {
+      files <- c(script, sort(list.files("R", pattern = "[.][Rr]$", recursive = TRUE, full.names = TRUE)))
+      list(
+        files = files,
+        mtimes = file.mtime(files),
+        refresh = if (file.exists(refresh_path)) readLines(refresh_path, warn = FALSE)
+      )
+    }
+    running <- function() {
+      progress <- tryCatch(targets::tar_progress()$progress, error = function(e) character())
+      any(progress == "dispatched")
+    }
+
+    computed_code <- NULL
+    computed_progress <- NULL # progress mtime of the last recompute
+    seen_progress <- NULL     # and the one last seen, since when
+    seen_since <- Sys.time()
+
     while (TRUE) {
-      tar_vis_obj <- targets::tar_visnetwork(script = script, ...)
-      # Only write when the graph changed, so readers aren't woken for nothing.
-      if (!identical(tar_vis_obj$x, previous)) {
+      code <- code_signature()
+      progress_mtime <- file.mtime(progress_file)
+      if (!identical(progress_mtime, seen_progress)) {
+        seen_progress <- progress_mtime
+        seen_since <- Sys.time()
+      }
+      run_ended <- !is.null(computed_progress) &&
+        !identical(progress_mtime, computed_progress) &&
+        difftime(Sys.time(), seen_since, units = "secs") >= settle &&
+        !running()
+
+      if (!identical(code, computed_code) || run_ended) {
+        x <- tryCatch(
+          targets::tar_visnetwork(script = script, ...)$x,
+          error = function(e) {
+            message("tar_visnetwork() failed: ", conditionMessage(e))
+            NULL
+          }
+        )
         # Write to a temp file and rename it into place, so the app never
         # reads a half-written file. On Windows the rename fails while the
-        # app holds the file open: then retry on the next iteration.
-        tmp <- paste0(tar_vis_path, ".tmp")
-        saveRDS(tar_vis_obj, file = tmp)
-        if (file.rename(tmp, tar_vis_path)) {
-          previous <- tar_vis_obj$x
-        } else {
-          unlink(tmp)
+        # app holds the file open: then retry on the next check.
+        written <- is.null(x) || {
+          tmp <- paste0(tar_vis_path, ".tmp")
+          saveRDS(list(x = x, progress_mtime = progress_mtime), file = tmp)
+          file.rename(tmp, tar_vis_path) || { unlink(tmp); FALSE }
+        }
+        # A broken script is retried once it changes again, not every check.
+        if (written) {
+          computed_code <- code
+          computed_progress <- progress_mtime
         }
       }
       Sys.sleep(interval)
@@ -276,11 +329,14 @@ tar_visnetwork_bg <- function(script, interval = 1, ...) {
 
   bg_process <- callr::r_bg(
     tar_visnetwork_instance,
-    args = list(script = script, tar_vis_path = tar_vis_path, interval = interval, ...),
+    args = list(
+      script = script, tar_vis_path = tar_vis_path, refresh_path = refresh_path,
+      interval = interval, settle = settle, ...
+    ),
     supervise = TRUE,
     poll_connection = TRUE,
     stdout = sub("[.]rds$", ".log", tar_vis_path),
     stderr = "2>&1"
   )
-  invisible(list(process = bg_process, tar_vis_path = tar_vis_path))
+  invisible(list(process = bg_process, tar_vis_path = tar_vis_path, refresh_path = refresh_path))
 }
