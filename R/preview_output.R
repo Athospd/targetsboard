@@ -1,9 +1,20 @@
 is_html_file_path <- function(x) {
-  any(unlist(Map(\(x) grepl(".html$", x), x)))
+  any(grepl("[.]html?$", x, ignore.case = TRUE) & file.exists(x))
 }
- 
+
 extract_html_file_path <- function(x) {
-  x[unlist(Map(\(x) grepl(".html$", x), x))]
+  x[grepl("[.]html?$", x, ignore.case = TRUE) & file.exists(x)]
+}
+
+# Serve only the folder of this one report (so a non-self-contained Quarto
+# report still finds its _files/ assets) under its own URL prefix, and
+# return the URL of the report.
+serve_html_report <- function(path) {
+  path <- normalizePath(path, winslash = "/")
+  report_dir <- dirname(path)
+  prefix <- paste0("report_", substr(digest::digest(report_dir), 1, 12))
+  shiny::addResourcePath(prefix, report_dir)
+  paste0(prefix, "/", utils::URLencode(basename(path)))
 }
 
 #' @export
@@ -43,10 +54,9 @@ render_and_output_bundle.character <- function(x, ...) {
   if(is_html_file_path(x)) {
     render_fun <- \(x) shiny::renderUI({
       x <- extract_html_file_path(x)[1]
-      # shiny::addResourcePath("temp", fs::path_dir(fs::path_abs("inst/test_quarto/train_test_report.html")))
       tagList(
         shiny::p(x),
-        tags$iframe(src= f("root/{x}"),
+        tags$iframe(src = serve_html_report(x),
                     width = '100%', height = '800px', 
                     frameborder = 0, scrolling = 'auto')
       )

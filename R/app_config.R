@@ -16,7 +16,6 @@ app_sys <- function(...) {
 #' @noRd
 add_external_resources <- function() {
   shiny::addResourcePath("www", app_sys("app/www"))
-  shiny::addResourcePath("root", ".")
 
   shiny::tags$head(
     shiny::tags$title("Targets board"),
