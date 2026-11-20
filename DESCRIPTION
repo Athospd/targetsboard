@@ -23,6 +23,7 @@ Imports:
     rlang,
     shiny,
     targets,
+    visNetwork,
     zeallot
 Suggests:
     chromote,

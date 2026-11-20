@@ -124,6 +124,11 @@ dataframe_to_reactflow_edge_data <- function(dataframe) {
     purrr::transpose()
 }
 
+# targets::tar_visnetwork(), which the board relies on, needs visNetwork,
+# but targets only suggests it: so we import it ourselves.
+#' @importFrom visNetwork visNetwork
+NULL
+
 #' Launch the targets board
 #'
 #' `tar_board()` starts the board in a background R process and returns at
