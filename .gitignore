@@ -1,7 +1,7 @@
 .Rproj.user
 node_modules
 .Rhistory
-.Rdata
+.RData
 .httr-oauth
 .DS_Store
 .quarto
@@ -11,3 +11,6 @@ _targets
 # Rendered Quarto output
 *_files/
 inst/examples/*.html
+
+# Dev artefacts
+dev/metadata.rds

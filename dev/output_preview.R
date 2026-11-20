@@ -1,5 +1,5 @@
 
-meta <- readRDS("metadata.rds")
+meta <- readRDS("dev/metadata.rds")
 
 outputs <- purrr::map(meta$x$nodes$id, \(x) {
   exp <- quo(targets::tar_read(!!x))
