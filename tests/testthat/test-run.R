@@ -24,7 +24,8 @@ test_that("no store, or a finished run, is no active run", {
   local_pipeline()
   expect_null(active_run())
   targets::tar_make(reporter = "silent")
-  expect_null(active_run())
+  # Windows can keep a finished process visible for a moment.
+  expect_no_error(wait_for(function() is.null(active_run()), timeout = 10))
 })
 
 test_that("a run started elsewhere is found, and not once it is killed", {
