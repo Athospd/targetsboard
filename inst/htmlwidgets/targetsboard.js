@@ -17312,7 +17312,7 @@ var LayoutButtons = function LayoutButtons(_ref) {
     if (verticalButtonRef.current) {
       setTimeout(function () {
         verticalButtonRef.current.click();
-      }, 10);
+      }, 100);
     }
   }, []);
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_xyflow_react__WEBPACK_IMPORTED_MODULE_2__.Panel, {
@@ -23331,14 +23331,6 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 
 
 
-
-// reactWidget('targetsboard', 'output', {
-//   ReactFlow: targetsboardWidget,
-//   MiniMap: MiniMap,
-//   Background: Background,
-//   Controls: Controls
-// });
-
 var getLayoutedElements = function getLayoutedElements(nodes, edges, options) {
   nodes = Array.isArray(nodes) ? nodes : [];
   edges = Array.isArray(edges) ? edges : [];
@@ -23346,7 +23338,20 @@ var getLayoutedElements = function getLayoutedElements(nodes, edges, options) {
     return {};
   });
   g.setGraph({
-    rankdir: options.direction
+    rankdir: options.direction,
+    nodesep: 70,
+    // Separation between nodes
+    edgesep: 30,
+    // Separation between edges
+    ranksep: 100,
+    // Separation between ranks
+    marginx: 20,
+    // Margin left and right
+    marginy: 20,
+    // Margin top and bottom
+    ranker: "network-simplex",
+    // Minimize edge length
+    acyclicer: "greedy" // Acyclicity algorithm
   });
   edges.forEach(function (edge) {
     return g.setEdge(edge.source, edge.target);
@@ -23422,7 +23427,7 @@ function targetsboard(_ref) {
       if (reactFlowInstance.current) {
         reactFlowInstance.current.fitView();
       }
-    }, 0);
+    }, 10);
   }, [nodes, edges]);
   (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
     var selected_nodes = nodes.filter(function (item) {

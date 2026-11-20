@@ -166,8 +166,6 @@ tar_visnetwork_bg <- function(script, ...) {
     while(TRUE) {
       tar_vis_obj <- targets::tar_visnetwork(script = script, ...)
       saveRDS(tar_vis_obj, file = tar_vis_path)
-      
-      saveRDS(1, file = fs::path(tar_vis_tempdir, sample(c("a", "b", "c"), 1)))
     }
   }
 

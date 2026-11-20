@@ -63,18 +63,25 @@ foo <- function(source, id, outputs) {
 library(magrittr)
 fully_connected <- foo_input("a", inputs = 5) %>%
   foo("b", outputs = 4) %>%
-  foo("h3", outputs = 4) %>%
-  foo("h4", outputs = 4) %>%
-  foo("h5", outputs = 4) %>%
-  foo("h6", outputs = 4) %>%
-  foo("h7", outputs = 4) %>%
-  foo("hd", outputs = 4) %>%
-  foo("hf", outputs = 4) %>%
-  foo("hg", outputs = 4) %>%
-  foo("hx", outputs = 4) %>%
-  foo("hc", outputs = 4) %>%
-  foo("hv", outputs = 4) %>%
+  foo("h3", outputs = 5) %>%
+  foo("h4", outputs = 5) %>%
+  foo("h5", outputs = 5) %>%
+  foo("h6", outputs = 5) %>%
+  foo("h7", outputs = 5) %>%
+  foo("hd", outputs = 5) %>%
+  foo("hf", outputs = 5) %>%
+  foo("hg", outputs = 5) %>%
+  foo("hx", outputs = 5) %>%
+  foo("hc", outputs = 5) %>%
+  foo("hv", outputs = 5) %>%
   foo("ib", outputs = 1)
+
+
+# ig <- igraph::graph_from_data_frame(fully_connected$cummulative$edges, directed = TRUE)
+# plot(ig, layout =   layout_with_sugiyama,
+#   vertex.frame.color = "white", # Frame color of the nodes 
+#   vertex.label.family = "Arial", # Font family of the node labels 
+#   edge.arrow.width =0.01)
 
 gera_target <- function(from, to) {
   from <- purrr::map(from, as.symbol)

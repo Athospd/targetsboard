@@ -52,9 +52,9 @@ app_server <- function(metadata) {
       autoInvalidateShort()
       req(visnetwork_metadata$tar_vis_rds_path)
       if(file.exists(visnetwork_metadata$tar_vis_rds_path)) {
-        visnetwork_metadata$metadata <- readRDS(visnetwork_metadata$tar_vis_rds_path)$x
-        visnetwork_metadata$nodes_tab <- visnetwork_metadata$metadata$nodes
-        visnetwork_metadata$edges_tab <- visnetwork_metadata$metadata$edges
+        visnetwork_metadata$metadata <- readRDS(visnetwork_metadata$tar_vis_rds_path)
+        visnetwork_metadata$nodes_tab <- visnetwork_metadata$metadata$x$nodes
+        visnetwork_metadata$edges_tab <- visnetwork_metadata$metadata$x$edges
       }
     })
 
@@ -82,6 +82,10 @@ app_server <- function(metadata) {
       )
     })
 
+    output$vis_network <- visNetwork::renderVisNetwork({
+      visnetwork_metadata$metadata
+    })
+
     output$nodes <- reactable::renderReactable({
       reactable::reactable(visnetwork_metadata$nodes_tab)
     })
@@ -96,6 +100,10 @@ app_server <- function(metadata) {
         reactiveValuesToList(visnetwork_metadata),
         reactiveValuesToList(input)
       )
+    })
+
+    observeEvent(input$turn_off, { 
+      stopApp("App is turned off.") 
     })
   }
 }

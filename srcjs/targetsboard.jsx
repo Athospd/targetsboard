@@ -28,21 +28,17 @@ import OutdatedNode from './OutdatedNode';
 import ErroredNode from './ErroredNode';
 import DispatchedNode from './DispatchedNode';
 
-
-
-// reactWidget('targetsboard', 'output', {
-//   ReactFlow: targetsboardWidget,
-//   MiniMap: MiniMap,
-//   Background: Background,
-//   Controls: Controls
-// });
-
 const getLayoutedElements = (nodes, edges, options) => {
   nodes = Array.isArray(nodes) ? nodes : []; 
   edges = Array.isArray(edges) ? edges : [];
   
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: options.direction });
+  g.setGraph({ 
+    rankdir: options.direction,
+    ranksep: 100,              // Separation between ranks
+    ranker: "network-simplex", // Minimize edge length
+    acyclicer: "greedy",       // Acyclicity algorithm
+  });
  
   edges.forEach((edge) => g.setEdge(edge.source, edge.target));
   nodes.forEach((node) =>
@@ -105,7 +101,7 @@ export default function targetsboard({ configuration, value, setValue }) {
         if(reactFlowInstance.current) {
           reactFlowInstance.current.fitView();
         }
-      }, 0);
+      }, 10);
     },
     [nodes, edges],
   );

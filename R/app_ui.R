@@ -7,8 +7,10 @@ app_ui <- function(metadata, script = "_targets.R") {
   edges <- dataframe_to_reactflow_edge_data(metadata$edges)
   shiny::tagList(  
     add_external_resources(),
-    page_sidebar(
+    page_navbar(
       title = "Targets board",
+      nav_spacer(),
+      nav_item(actionButton("turn_off", NULL, icon = icon("power-off"))),
       sidebar =  sidebar(
         title = "Control Panel",
         textInput("script", "Script", script)
@@ -17,24 +19,19 @@ app_ui <- function(metadata, script = "_targets.R") {
         open = c("DAG", "debug"),
         accordion_panel(
           "DAG",
-          card(
-            class = "main-dag",
-            full_screen = TRUE,
-            height = "500px",
-            style = "resize:vertical;",
-            card_body(
-              class = "p-0",
-              layout_sidebar(
-                sidebar = sidebar(
-                  id = "output_preview_sidebar",
-                  width = "40%",
-                  open = FALSE,
-                  position = "right",
-                  uiOutput("output_preview")
-                ),
-                targetsboard('flow', nodes, edges)
+          navset_card_underline(
+            layout_sidebar(
+              sidebar = sidebar(
+                id = "output_preview_sidebar",
+                width = "40%",
+                open = FALSE,
+                position = "right",
+                uiOutput("output_preview")
               )
-            )
+            ),
+            nav_panel("vis1", targetsboard('flow', nodes, edges)),
+            nav_panel("vis2", visNetwork::visNetworkOutput("vis_network"))
+          
           )
         ),
         accordion_panel(

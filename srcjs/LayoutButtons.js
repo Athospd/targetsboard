@@ -9,7 +9,7 @@ const LayoutButtons = ({ onLayout }) => {
     if (verticalButtonRef.current) {
       setTimeout(() => {
         verticalButtonRef.current.click();
-      }, 10);
+      }, 100);
     }
   }, []);
 
