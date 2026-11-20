@@ -1,0 +1,32 @@
+# The JS bundle in inst/htmlwidgets is committed (so install_github needs no
+# Node). Fail when it doesn't match a fresh build of srcjs/.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+name: js-bundle
+
+permissions: read-all
+
+jobs:
+  js-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Check the committed bundle is up to date
+        run: |
+          if ! git diff --exit-code --stat -- inst/htmlwidgets; then
+            echo "::error::inst/htmlwidgets is out of date: run 'npm run build' and commit the result."
+            exit 1
+          fi
