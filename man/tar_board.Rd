@@ -2,17 +2,59 @@
 % Please edit documentation in R/targetsboard.R
 \name{tar_board}
 \alias{tar_board}
-\title{tar_board}
+\alias{tar_board_app}
+\title{Launch the targets board}
 \usage{
 tar_board(
   script = "_targets.R",
-  metadata = NULL,
   port = 9999,
   targets_only = TRUE,
+  metadata = NULL,
+  ...
+)
+
+tar_board_app(
+  script = "_targets.R",
+  targets_only = TRUE,
+  metadata = NULL,
+  options = list(),
   ...
 )
 }
+\arguments{
+\item{script}{Path to the targets script.}
+
+\item{port}{Port to serve the board on, at \verb{http://127.0.0.1:<port>}.}
+
+\item{targets_only}{Show only targets, without functions and globals.}
+
+\item{metadata}{Optional: \code{targets::tar_visnetwork()$x} for the first
+render. Computed from \code{script} when \code{NULL}.}
+
+\item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}} for the first render.}
+
+\item{options}{Passed on to \code{\link[shiny:shinyApp]{shiny::shinyApp()}}, e.g. \code{list(port = 8080)}.}
+}
+\value{
+\code{tar_board()}: the background process, a \code{\link[callr:r_bg]{callr::r_bg()}} object.
+Use \verb{$is_alive()} and \verb{$kill()} on it, and read the board's log with
+\code{readLines(app$get_output_file())}.
+\code{tar_board_app()}: a \code{\link[shiny:shinyApp]{shiny::shinyApp()}} object.
+}
 \description{
-Launches the board in a background R process. Its output goes to a log
-file: read it with \code{readLines(app$get_output_file())}.
+\code{tar_board()} starts the board in a background R process and returns at
+once, so your session stays free to run \code{tar_make()} and friends while the
+board follows along. \code{tar_board_app()} returns the board as a Shiny app
+object instead, to run in the foreground or deploy.
+}
+\examples{
+\dontrun{
+app <- tar_board()
+browseURL("http://127.0.0.1:9999")
+targets::tar_make()
+app$kill()
+
+# or in the foreground:
+shiny::runApp(tar_board_app())
+}
 }

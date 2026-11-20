@@ -17,10 +17,11 @@ serve_html_report <- function(path) {
   paste0(prefix, "/", utils::URLencode(basename(path)))
 }
 
-#' @export
+# How to show a target's value in the preview sidebar: a render function and
+# its matching output function, picked by the value's class.
 render_and_output_bundle <- function(x, ...) UseMethod("render_and_output_bundle")
 
-#' @export
+#' @exportS3Method
 render_and_output_bundle.default <- function(x, ...) {
   render_fun <- \(x) shiny::renderPrint({
     x
@@ -29,7 +30,7 @@ render_and_output_bundle.default <- function(x, ...) {
   return(list(render_fun = render_fun, output_ui_fun = output_ui_fun))
 }
 
-#' @export
+#' @exportS3Method
 render_and_output_bundle.ggplot <- function(x, ...) {
   if (!rlang::is_installed("ggplot2")) return(render_and_output_bundle.default(x, ...))
   render_fun <- shiny::renderPlot
@@ -37,10 +38,10 @@ render_and_output_bundle.ggplot <- function(x, ...) {
   return(list(render_fun = render_fun, output_ui_fun = output_ui_fun))
 }
  
-#' @export
+#' @exportS3Method
 render_and_output_bundle.gg <- render_and_output_bundle.ggplot
 
-#' @export
+#' @exportS3Method
 render_and_output_bundle.plotly <- function(x, ...) {
   if (!rlang::is_installed("plotly")) return(render_and_output_bundle.default(x, ...))
   render_fun <- plotly::renderPlotly
@@ -48,7 +49,7 @@ render_and_output_bundle.plotly <- function(x, ...) {
   return(list(render_fun = render_fun, output_ui_fun = output_ui_fun))
 }
  
-#' @export
+#' @exportS3Method
 render_and_output_bundle.character <- function(x, ...) {
   
   if(is_html_file_path(x)) {
@@ -71,14 +72,14 @@ render_and_output_bundle.character <- function(x, ...) {
 }
 
 
-#' @export
+#' @exportS3Method
 render_and_output_bundle.shiny.tag <- function(x, ...) {
   render_fun <- shiny::renderUI
   output_ui_fun <- shiny::uiOutput
   return(list(render_fun = render_fun, output_ui_fun = output_ui_fun))
 }
 
-#' @export
+#' @exportS3Method
 render_and_output_bundle.data.frame <- function(x, ...) {
   if (!rlang::is_installed("skimr")) return(render_and_output_bundle.default(x, ...))
   render_fun <- \(x) shiny::renderPrint({
