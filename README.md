@@ -12,12 +12,12 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 coverage](https://codecov.io/gh/Athospd/targetsboard/graph/badge.svg)](https://app.codecov.io/gh/Athospd/targetsboard)
 <!-- badges: end -->
 
-An experimental alternative to `targets::tar_watch()` to monitor (and,
-eventually, control) [targets](https://docs.ropensci.org/targets/)
-pipelines from a Shiny + React UI. The DAG is drawn with [React
-Flow](https://reactflow.dev): targets are coloured by status, running
-targets show a spinner and the edges feeding them are animated, and
-clicking a target previews its value.
+An experimental alternative to `targets::tar_watch()` to monitor and run
+[targets](https://docs.ropensci.org/targets/) pipelines from a Shiny +
+React UI. The DAG is drawn with [React Flow](https://reactflow.dev):
+targets are coloured by status, running targets show a spinner and the
+edges feeding them are animated, and clicking a target previews its
+value.
 
 <figure>
 <img src="man/figures/README-board.png"
@@ -51,6 +51,12 @@ app$is_alive()
 readLines(app$get_output_file())       # the board's log
 app$kill()                             # shut it down
 ```
+
+You can also run the pipeline from the board. **Run all** makes the
+whole pipeline, **Run selected** makes the targets selected in the DAG
+and whatever they depend on that is outdated, and **Stop** kills the run
+going, wherever it was started. Runs from the board go on if the board
+stops.
 
 `tar_board()` takes the pipeline `script` (default `_targets.R`), a
 `port` and `targets_only`. To run the board in the foreground, or deploy
