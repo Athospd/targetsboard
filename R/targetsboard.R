@@ -96,14 +96,16 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
     dplyr::summarise(
       id = .data$id,
       position = list(list(x = 0, y = 0)),
-      type = .data$status,
+      # `data` must come before `type` is overwritten: later expressions in
+      # summarise() see the new columns, also through .data.
       data = list(list(
         label = .data$label,
         level = .data$level,
         description = .data$description,
         target_type = .data$type,
         target_status = .data$status
-      ))
+      )),
+      type = .data$status # React Flow node type: picks the node component
     ) |>
     dplyr::mutate(
       !!!nodes_global_params
