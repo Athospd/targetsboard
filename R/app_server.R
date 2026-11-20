@@ -61,21 +61,32 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       }
     )
 
+    # Whether a run is going, whoever started it: checked twice a second.
+    running <- shiny::reactivePoll(
+      500, session,
+      checkFunc = function() !is.null(active_run()),
+      valueFunc = function() !is.null(active_run())
+    )
+
     # A new graph: send it whole, with the live statuses on top.
     shiny::observeEvent(board(), {
       current <- board()
+      is_running <- shiny::isolate(running())
+      nodes <- current$x$nodes
+      nodes$status <- settle_statuses(nodes$status, is_running)
       statuses <- live_statuses(shiny::isolate(progress()), current$progress_mtime)
       update_targetsboard(
         session,
         "flow",
-        nodes = overlay_statuses(current$x$nodes, statuses),
+        nodes = overlay_statuses(nodes, settle_statuses(statuses, is_running)),
         edges = current$x$edges
       )
     })
 
-    # New progress only: send just the statuses.
-    shiny::observeEvent(progress(), {
+    # New progress, or a run that stopped: send just the statuses.
+    shiny::observeEvent(list(progress(), running()), {
       statuses <- live_statuses(progress(), shiny::isolate(board())$progress_mtime)
+      statuses <- settle_statuses(statuses, running())
       if (length(statuses)) update_targetsboard_status(session, "flow", statuses)
     }, ignoreInit = TRUE)
 
