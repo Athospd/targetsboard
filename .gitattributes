@@ -1,0 +1,6 @@
+# Store text files with LF line endings in the repo, whatever the OS.
+* text=auto eol=lf
+
+*.png binary
+*.woff binary
+*.rds binary
