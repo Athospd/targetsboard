@@ -135,17 +135,18 @@ tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targe
     metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
 
   bg_process <- callr::r_bg(
-    \(metadata, script, port) {
+    \(metadata, script, port, targets_only) {
       print(shiny::shinyApp(
-        targetsboard::app_ui(metadata, script), 
-        targetsboard::app_server(metadata), 
+        targetsboard::app_ui(metadata, script),
+        targetsboard::app_server(metadata, script, targets_only),
         options = list(port = port)
       ))
     },
     args = list(
       metadata = metadata, 
-      script = script, 
-      port = port
+      script = script,
+      port = port,
+      targets_only = targets_only
     ),
     supervise = TRUE,
     poll_connection = TRUE,
@@ -163,8 +164,7 @@ tar_board <- function(script = "_targets.R", metadata = NULL, port = 9999, targe
 #'
 #' @export
 tar_visnetwork_bg <- function(script, interval = 1, ...) {
-  tar_vis_tempdir <- tempdir()
-  tar_vis_path <- fs::path(tar_vis_tempdir, "tar_visnetwork.rds")
+  tar_vis_path <- tempfile("tar_visnetwork_", fileext = ".rds")
 
   tar_visnetwork_instance <- \(script, tar_vis_path, interval, ...) {
     previous <- NULL

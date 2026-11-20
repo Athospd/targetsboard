@@ -1,17 +1,35 @@
 #' @export
-app_server <- function(metadata) {
-  nodes <- dataframe_to_reactflow_node_data(metadata$nodes)
-  edges <- dataframe_to_reactflow_edge_data(metadata$edges)
-  tar_visnetwork_assets <- NULL
+app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
+  # One background poller per app, shared by every browser session.
+  # Restarted only when someone loads a different script.
+  poller <- new.env()
+  poller_rds_path <- shiny::reactiveVal(NULL)
+
+  stop_poller <- function() {
+    if (inherits(poller$process, "r_process") && poller$process$is_alive())
+      poller$process$kill()
+    poller$process <- NULL
+  }
+
+  start_poller <- function(script) {
+    stop_poller()
+    assets <- tar_visnetwork_bg(script = script, targets_only = targets_only)
+    poller$process <- assets$process
+    poller$script <- script
+    poller_rds_path(assets$tar_vis_path)
+  }
 
   function(input, output, session) {
+    if (is.null(poller$process)) {
+      start_poller(script)
+      shiny::onStop(stop_poller, session = NULL) # runs when the app stops
+    }
+
     autoInvalidateLong <- reactiveTimer(3500)
     autoInvalidateShort <- reactiveTimer(1000)
 
     ###############################################################
     visnetwork_metadata <- reactiveValues(
-      tar_visnetwork_app = NULL,
-      tar_vis_rds_path = NULL,
       metadata = metadata,
       nodes_tab = metadata$nodes,
       edges_tab = metadata$edges
@@ -36,21 +54,25 @@ app_server <- function(metadata) {
       shiny::tagList(tar_output_ui)
     })
 
-    observe({
-      if(inherits(isolate(visnetwork_metadata$tar_visnetwork_app), "r_process"))
-        isolate(visnetwork_metadata$tar_visnetwork_app$kill())
-
-      tar_visnetwork_assets <- tar_visnetwork_bg(script = input$script, targets_only = TRUE)
-      visnetwork_metadata$tar_visnetwork_app <- tar_visnetwork_assets$process
-      visnetwork_metadata$tar_vis_rds_path <- tar_visnetwork_assets$tar_vis_path
+    observeEvent(input$load_script, {
+      new_script <- input$script
+      if (!file.exists(new_script)) {
+        shiny::showNotification(
+          paste0("Script not found: ", new_script),
+          type = "error"
+        )
+        return()
+      }
+      if (!identical(new_script, poller$script)) start_poller(new_script)
     })
 
     observe({
       autoInvalidateShort()
-      req(visnetwork_metadata$tar_vis_rds_path)
-      if(file.exists(visnetwork_metadata$tar_vis_rds_path)) {
+      rds_path <- poller_rds_path()
+      req(rds_path)
+      if(file.exists(rds_path)) {
         new_metadata <- tryCatch(
-          readRDS(visnetwork_metadata$tar_vis_rds_path)$x,
+          readRDS(rds_path)$x,
           error = function(e) NULL
         )
         req(new_metadata)
