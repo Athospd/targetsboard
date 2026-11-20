@@ -80,6 +80,7 @@ board_configuration <- function(inputId, nodes, edges, height, width) {
 }
 
 #' Convert tar_visnetwork() nodes to React Flow nodes
+#' @importFrom rlang .data
 #' @noRd
 dataframe_to_reactflow_node_data <- function(dataframe) {
 
@@ -93,16 +94,15 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
     ) |>
     dplyr::rowwise() |>
     dplyr::summarise(
-      id = id,
+      id = .data$id,
       position = list(list(x = 0, y = 0)),
-      type = status,
-      # style = list(list(background = color, color = "white")),
+      type = .data$status,
       data = list(list(
-        label = label,
-        level = level,
-        description = description,
-        target_type = type,
-        target_status = status
+        label = .data$label,
+        level = .data$level,
+        description = .data$description,
+        target_type = .data$type,
+        target_status = .data$status
       ))
     ) |>
     dplyr::mutate(
@@ -116,9 +116,9 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
 dataframe_to_reactflow_edge_data <- function(dataframe) {
   dataframe |>
     dplyr::mutate(
-      id = f("{from}_{arrows}_{to}")
+      id = paste(.data$from, .data$arrows, .data$to, sep = "_")
     ) |>
-    dplyr::select(id, source = from, target = to) |>
+    dplyr::select(dplyr::all_of(c(id = "id", source = "from", target = "to"))) |>
     purrr::transpose()
 }
 
