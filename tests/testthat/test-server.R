@@ -42,19 +42,19 @@ test_that("Load restarts the poller only for an existing, different script", {
   })
 })
 
-test_that("selecting a target previews its value in one reused output", {
+test_that("focusing a target previews its value in one reused output", {
   skip_on_cran()
   local_pipeline(make = TRUE)
   server <- local_app_server()
 
   shiny::testServer(server, {
-    session$setInputs(flow_selected_nodes = "c")
-    expect_match(output$output_preview$html, "output_preview_content")
-    expect_match(output$output_preview_content, "4")
+    session$setInputs(flow_focused_node = "c")
+    expect_match(output$value_preview$html, "value_preview_content")
+    expect_match(output$value_preview_content, "4")
 
-    session$setInputs(flow_selected_nodes = "b")
-    invisible(output$output_preview)
-    expect_match(output$output_preview_content, "2")
+    session$setInputs(flow_focused_node = "b")
+    invisible(output$value_preview)
+    expect_match(output$value_preview_content, "2")
   })
 })
 
@@ -123,5 +123,25 @@ test_that("Refresh asks the poller to recompute", {
     expect_false(file.exists(path))
     session$setInputs(refresh = 1)
     expect_true(file.exists(path))
+  })
+})
+
+test_that("targets whose last build raised warnings get a warning mark", {
+  skip_on_cran()
+  local_pipeline()
+  writeLines(
+    c(
+      "library(targets)",
+      "list(tar_target(a, {warning('careful'); 1}), tar_target(b, a + 1))"
+    ),
+    "_targets.R"
+  )
+  # In this process, so the warning is ours to silence rather than printed by
+  # the background process tar_make() would start.
+  suppressWarnings(targets::tar_make(reporter = "silent", callr_function = NULL))
+  server <- local_app_server()
+
+  shiny::testServer(server, {
+    expect_equal(warned_targets(), "a")
   })
 })

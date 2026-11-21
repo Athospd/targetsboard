@@ -17,7 +17,7 @@ foo_input <- function(id, inputs) {
   input_nums <- stringr::str_pad(1:inputs, n_zeros, "left", "0")
 
   nodes = data.frame(
-    id = f("{id}_w{input_nums}")
+    id = as.character(f("{id}_w{input_nums}"))
   )
 
   edges <- data.frame(
@@ -36,7 +36,7 @@ foo <- function(source, id, outputs) {
   output_nums <- stringr::str_pad(1:outputs, n_zeros, "left", "0")
 
   nodes  = data.frame(
-    id = f("{id}_w{output_nums}")
+    id = as.character(f("{id}_w{output_nums}"))
   )
 
   edges <- expand.grid(

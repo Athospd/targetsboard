@@ -1,7 +1,7 @@
 import React from 'react';
 import BaseNode from './BaseNode';
 
-const DispatchedNode = (props) => {
+const RunningNode = (props) => {
   return (
     <BaseNode 
       {...props} 
@@ -12,4 +12,4 @@ const DispatchedNode = (props) => {
   );
 };
 
-export default DispatchedNode;
+export default RunningNode;

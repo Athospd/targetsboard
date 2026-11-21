@@ -10,7 +10,6 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   getIncomers,
-  addEdge,
   useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -20,24 +19,30 @@ import LayoutButtons from './LayoutButtons';
 import UptodateNode from './UptodateNode';
 import OutdatedNode from './OutdatedNode';
 import ErroredNode from './ErroredNode';
-import DispatchedNode from './DispatchedNode';
+import RunningNode from './RunningNode';
 
-// Defined at module scope: a new object on every render makes React Flow
-// re-mount all nodes (and warn about it).
+// One node component per status the board shows. Defined at module scope: a
+// new object on every render makes React Flow re-mount all nodes (and warn
+// about it).
 const nodeTypes = {
   uptodate: UptodateNode,
   outdated: OutdatedNode,
   errored: ErroredNode,
-  dispatched: DispatchedNode
+  running: RunningNode
 };
 
+const handlePositions = (direction) => ({
+  sourcePosition: direction === 'LR' ? 'right' : 'bottom',
+  targetPosition: direction === 'LR' ? 'left' : 'top',
+});
+
 const getLayoutedElements = (nodes, edges, options) => {
-  nodes = Array.isArray(nodes) ? nodes : []; 
+  nodes = Array.isArray(nodes) ? nodes : [];
   edges = Array.isArray(edges) ? edges : [];
-  
+
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: options.direction });
- 
+
   edges.forEach((edge) => g.setEdge(edge.source, edge.target));
   nodes.forEach((node) =>
     g.setNode(node.id, {
@@ -46,9 +51,9 @@ const getLayoutedElements = (nodes, edges, options) => {
       height: node.measured?.height ?? 0,
     }),
   );
- 
+
   Dagre.layout(g);
- 
+
   return {
     nodes: nodes.map((node) => {
       const position = g.node(node.id);
@@ -56,14 +61,75 @@ const getLayoutedElements = (nodes, edges, options) => {
       // so it matches the React Flow node anchor point (top left).
       const x = position.x - (node.measured?.width ?? 0) / 2;
       const y = position.y - (node.measured?.height ?? 0) / 2;
-      const sourcePosition = options.direction === 'LR' ? 'right' : 'bottom'; 
-      const targetPosition = options.direction === 'LR' ? 'left' : 'top'
-      return { ...node, position: { x, y }, sourcePosition: sourcePosition, targetPosition: targetPosition };
+      return { ...node, position: { x, y }, ...handlePositions(options.direction) };
     }),
     edges,
   };
 };
 
+// Place only the targets in `newIds` and leave the others where they are, so
+// the author's picture of the graph survives edits to the pipeline. A new
+// target goes where a full layout would put it relative to a neighbour that is
+// already placed; without one, where the full layout would put it, shifted
+// the way the placed targets are.
+const placeNewNodes = (nodes, edges, newIds, direction) => {
+  const ideal = new Map(
+    getLayoutedElements(nodes, edges, { direction }).nodes.map((n) => [n.id, n.position]),
+  );
+  const placed = nodes.filter((n) => !newIds.has(n.id));
+  const byId = new Map(placed.map((n) => [n.id, n]));
+
+  const shift = { x: 0, y: 0 };
+  placed.forEach((n) => {
+    shift.x += (n.position.x - ideal.get(n.id).x) / placed.length;
+    shift.y += (n.position.y - ideal.get(n.id).y) / placed.length;
+  });
+
+  const anchors = new Map();
+  edges.forEach((e) => {
+    if (newIds.has(e.target) && byId.has(e.source) && !anchors.has(e.target))
+      anchors.set(e.target, e.source);
+    if (newIds.has(e.source) && byId.has(e.target) && !anchors.has(e.source))
+      anchors.set(e.source, e.target);
+  });
+
+  return nodes.map((node) => {
+    if (!newIds.has(node.id)) return node;
+    const own = ideal.get(node.id);
+    const anchor = byId.get(anchors.get(node.id));
+    const position = anchor
+      ? {
+          x: anchor.position.x + own.x - ideal.get(anchor.id).x,
+          y: anchor.position.y + own.y - ideal.get(anchor.id).y,
+        }
+      : { x: own.x + shift.x, y: own.y + shift.y };
+    return { ...node, position, ...handlePositions(direction) };
+  });
+};
+
+// The focused target with everything upstream and downstream of it.
+const lineageOf = (focusId, edges) => {
+  const lineage = new Set([focusId]);
+  const walk = (from, to) => {
+    const next = new Map();
+    edges.forEach((e) => {
+      if (!next.has(e[from])) next.set(e[from], []);
+      next.get(e[from]).push(e[to]);
+    });
+    const stack = [focusId];
+    while (stack.length) {
+      (next.get(stack.pop()) ?? []).forEach((id) => {
+        if (!lineage.has(id)) {
+          lineage.add(id);
+          stack.push(id);
+        }
+      });
+    }
+  };
+  walk('source', 'target'); // downstream
+  walk('target', 'source'); // upstream
+  return lineage;
+};
 
 // Status-only updates from R (update_targetsboard_status()) arrive as a Shiny
 // custom message; each widget picks the ones addressed to its id.
@@ -97,9 +163,12 @@ function Flow({ configuration }) {
   const [nodes, setNodes] = useState(configuration.nodes ?? []);
   const [edges, setEdges] = useState(configuration.edges ?? []);
   const [direction, setDirection] = useState('LR');
-  // Lay out once all nodes have been measured: on first render, when the
-  // pipeline structure changes, and when a layout button is pressed.
-  const [layoutPending, setLayoutPending] = useState(true);
+  const [focusId, setFocusId] = useState(null);
+  // Lay out once all nodes have been measured: everything ('all') on first
+  // render and when a Tidy button is pressed; only the new targets ('new')
+  // when the pipeline's structure changes.
+  const [layoutPending, setLayoutPending] = useState('all');
+  const newIdsRef = useRef(new Set());
 
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
@@ -114,14 +183,12 @@ function Flow({ configuration }) {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [],
   );
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge({ ...params }, eds)),
-    [],
-  );
+  const onNodeClick = useCallback((_, node) => setFocusId(node.id), []);
+  const onPaneClick = useCallback(() => setFocusId(null), []);
 
   const onLayout = useCallback((newDirection) => {
     setDirection(newDirection);
-    setLayoutPending(true);
+    setLayoutPending('all');
   }, []);
 
   // Our own nodes carry `measured` once React Flow has sized them (it comes
@@ -131,10 +198,14 @@ function Flow({ configuration }) {
 
   useEffect(() => {
     if (!layoutPending || !allMeasured) return;
-    const layouted = getLayoutedElements(nodes, edges, { direction });
-    setNodes(layouted.nodes);
-    setLayoutPending(false);
-    window.requestAnimationFrame(() => fitView());
+    if (layoutPending === 'all') {
+      setNodes(getLayoutedElements(nodes, edges, { direction }).nodes);
+      window.requestAnimationFrame(() => fitView());
+    } else {
+      setNodes(placeNewNodes(nodes, edges, newIdsRef.current, direction));
+    }
+    newIdsRef.current = new Set();
+    setLayoutPending(null);
   }, [layoutPending, allMeasured, nodes, edges, direction, fitView]);
 
   // New data from R (statuses every tick; sometimes a changed pipeline).
@@ -147,23 +218,44 @@ function Flow({ configuration }) {
 
     setNodes((current) => syncNodes(current, incomingNodes));
     if (structureChanged) {
+      const known = new Set(nodesRef.current.map((n) => n.id));
+      const added = incomingNodes.filter((n) => !known.has(n.id)).map((n) => n.id);
+      added.forEach((id) => newIdsRef.current.add(id));
       setEdges(incomingEdges);
-      setLayoutPending(true);
+      // Nothing placed yet: lay out everything. Otherwise place only the new.
+      setLayoutPending((pending) =>
+        pending === 'all' || known.size === 0 ? 'all' : added.length ? 'new' : pending,
+      );
     }
   }, [configuration.nodes, configuration.edges]);
 
-  // Patch statuses in place: no new nodes, no re-layout.
+  // A focused target that left the pipeline is no longer focused.
+  useEffect(() => {
+    if (focusId && !nodes.some((n) => n.id === focusId)) setFocusId(null);
+  }, [focusId, nodes]);
+
+  // Patch statuses and warning marks in place: no new nodes, no re-layout.
   useEffect(() => {
     const onStatus = (event) => {
       const message = event.detail;
       if (message?.id !== configuration.id) return;
       const updates = new Map((message.nodes ?? []).map((u) => [u.id, u]));
+      // `warnings`, when sent, lists every target that carries a warning mark.
+      const warned = Array.isArray(message.warnings) ? new Set(message.warnings) : null;
       setNodes((current) =>
         current.map((node) => {
           const update = updates.get(node.id);
-          return update
-            ? { ...node, type: update.type, data: { ...node.data, target_status: update.target_status } }
-            : node;
+          const warning = warned ? warned.has(node.id) : node.data?.warning;
+          if (!update && warning === node.data?.warning) return node;
+          return {
+            ...node,
+            type: update ? update.type : node.type,
+            data: {
+              ...node.data,
+              ...(update ? { target_status: update.target_status } : {}),
+              warning,
+            },
+          };
         }),
       );
     };
@@ -171,11 +263,12 @@ function Flow({ configuration }) {
     return () => window.removeEventListener(STATUS_EVENT, onStatus);
   }, [configuration.id]);
 
-  // Report selection to Shiny, as <id>_selected_nodes. Keyed on the ids, so
-  // dragging nodes around doesn't send anything.
+  // Report focus and selection to Shiny, as <id>_focused_node and
+  // <id>_selected_nodes. Keyed on the ids, so dragging nodes around doesn't
+  // send anything.
   const inputId = configuration.id;
   const selectedKey = sortedKey(nodes.filter((n) => n.selected).map((n) => n.id));
-  const dispatchedKey = sortedKey(nodes.filter((n) => n.type === 'dispatched').map((n) => n.id));
+  const runningKey = sortedKey(nodes.filter((n) => n.type === 'running').map((n) => n.id));
   const edgesKey = sortedKey(edges.map((e) => e.id));
 
   useEffect(() => {
@@ -183,34 +276,56 @@ function Flow({ configuration }) {
     window.Shiny.setInputValue(`${inputId}_selected_nodes`, selectedKey ? selectedKey.split('|') : null);
   }, [inputId, selectedKey]);
 
-  // Animate the edges feeding running (dispatched) targets.
+  useEffect(() => {
+    if (!window.Shiny || !inputId) return;
+    window.Shiny.setInputValue(`${inputId}_focused_node`, focusId);
+  }, [inputId, focusId]);
+
+  // Animate the edges feeding running targets.
   useEffect(() => {
     const currentNodes = nodesRef.current;
-    const dispatched = currentNodes.filter((n) => n.type === 'dispatched');
-    const dispatchedIds = new Set(dispatched.map((n) => n.id));
+    const running = currentNodes.filter((n) => n.type === 'running');
+    const runningIds = new Set(running.map((n) => n.id));
     const incomerIds = new Set(
-      dispatched.flatMap((n) => getIncomers(n, currentNodes, edgesRef.current).map((i) => i.id)),
+      running.flatMap((n) => getIncomers(n, currentNodes, edgesRef.current).map((i) => i.id)),
     );
 
     if (window.Shiny && inputId) {
-      window.Shiny.setInputValue(`${inputId}_dispatched_nodes`, [...dispatchedIds]);
-      window.Shiny.setInputValue(`${inputId}_dispatched_nodes_incomers`, [...incomerIds]);
+      window.Shiny.setInputValue(`${inputId}_running_nodes`, [...runningIds]);
     }
 
     setEdges((current) => current.map((edge) => {
-      const animated = incomerIds.has(edge.source) && dispatchedIds.has(edge.target);
+      const animated = incomerIds.has(edge.source) && runningIds.has(edge.target);
       return edge.animated === animated ? edge : { ...edge, animated };
     }));
-  }, [inputId, dispatchedKey, edgesKey]);
+  }, [inputId, runningKey, edgesKey]);
+
+  // Focus highlighting is derived, never stored: dim what lies outside the
+  // focused target's lineage.
+  const lineage = focusId ? lineageOf(focusId, edges) : null;
+  const shownNodes = lineage
+    ? nodes.map((n) => ({
+        ...n,
+        className: n.id === focusId ? 'tb-focused' : lineage.has(n.id) ? undefined : 'tb-dimmed',
+      }))
+    : nodes;
+  const shownEdges = lineage
+    ? edges.map((e) => ({
+        ...e,
+        className: lineage.has(e.source) && lineage.has(e.target) ? undefined : 'tb-dimmed',
+      }))
+    : edges;
 
   return (
     <div className="reactflow-wrapper" style={{ height: configuration.height, width: configuration.width }}>
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={shownNodes}
+        edges={shownEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        nodesConnectable={false}
         fitView
         style={{ background: configuration.background_color }}
         nodeTypes={nodeTypes}

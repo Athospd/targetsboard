@@ -1,20 +1,30 @@
 #' DAG widget for Shiny
 #'
 #' The interactive targets DAG used by the board, as a Shiny input you can
-#' place in your own app. Nodes are coloured by status, running targets show a
-#' spinner and their incoming edges are animated.
+#' place in your own app. Targets are coloured by status, running targets show
+#' a spinner and their incoming edges are animated, and targets whose last
+#' build raised warnings carry a warning mark.
 #'
-#' The widget reports the ids of the selected targets to the server as
-#' `input$<inputId>_selected_nodes` (and the running ones as
-#' `input$<inputId>_dispatched_nodes`).
+#' Clicking a target focuses it: what it depends on and what depends on it are
+#' highlighted, and the rest of the graph dims. Clicking the background clears
+#' the focus.
+#'
+#' The widget reports to the server, as Shiny inputs:
+#' - `input$<inputId>_focused_node`: the id of the focused target, or `NULL`;
+#' - `input$<inputId>_selected_nodes`: the ids of the selected targets
+#'   (several with Shift or Ctrl);
+#' - `input$<inputId>_running_nodes`: the ids of the running targets.
 #'
 #' @param inputId The input slot of the widget.
 #' @param nodes,edges The `nodes` and `edges` data frames of
 #'   `targets::tar_visnetwork()$x`.
 #' @param height,width CSS size of the widget.
+#' @param warnings Ids of the targets whose last build raised warnings, as in
+#'   the `warnings` field of `targets::tar_meta()`.
 #'
-#' `update_targetsboard()` replaces the whole graph, and lays it out again when
-#' targets were added or removed. `update_targetsboard_status()` only changes
+#' `update_targetsboard()` replaces the whole graph. Targets already drawn keep
+#' their place; new ones are placed next to their neighbours, and the
+#' "Tidy" buttons lay the whole graph out again. `update_targetsboard_status()` only changes
 #' the status of some targets, which is much lighter: use it to follow a
 #' running pipeline.
 #'
@@ -35,7 +45,7 @@
 #'     net <- targets::tar_visnetwork(targets_only = TRUE)$x
 #'     update_targetsboard(session, "dag", net$nodes, net$edges, height = "600px")
 #'   })
-#'   observe(print(input$dag_selected_nodes))
+#'   observe(print(input$dag_focused_node))
 #' }
 #'
 #' shinyApp(ui, server)
@@ -44,7 +54,7 @@
 #' @importFrom reactR createReactShinyInput
 #' @importFrom htmltools htmlDependency tags
 #' @export
-targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%") {
+targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%", warnings = character()) {
   reactR::createReactShinyInput(
     inputId = inputId,
     class = "targetsboard",
@@ -56,7 +66,7 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
       script = "targetsboard.js"
     ),
     default = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width),
+    configuration = board_configuration(inputId, nodes, edges, height, width, warnings),
     container = function(...) htmltools::tags$div(style = 'height: 100%', ...)
   )
 }
@@ -64,10 +74,11 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%")
 #' @rdname targetsboard
 #' @param session The Shiny session.
 #' @export
-update_targetsboard <- function(session, inputId, nodes, edges, height = "100%", width = "100%") {
+update_targetsboard <- function(session, inputId, nodes, edges, height = "100%", width = "100%",
+                                warnings = character()) {
   session$sendInputMessage(inputId, list(
     value = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width)
+    configuration = board_configuration(inputId, nodes, edges, height, width, warnings)
   ))
 }
 
@@ -75,24 +86,28 @@ update_targetsboard <- function(session, inputId, nodes, edges, height = "100%",
 #' @param statuses A named character vector: target statuses, as in
 #'   `targets::tar_progress()`, named by target. Targets not in the widget are
 #'   ignored.
+#' @param warnings For `update_targetsboard_status()`: `NULL` leaves the warning
+#'   marks as they are; otherwise the ids of all the targets that carry one.
 #' @export
-update_targetsboard_status <- function(session, inputId, statuses) {
+update_targetsboard_status <- function(session, inputId, statuses = character(), warnings = NULL) {
   stopifnot(is.character(statuses), !is.null(names(statuses)) || length(statuses) == 0)
-  session$sendCustomMessage("targetsboard:status", list(
+  message <- list(
     id = inputId,
     nodes = unname(Map(
       function(id, status) list(id = id, type = status_to_node_type(status), target_status = status),
       names(statuses), unname(statuses)
     ))
-  ))
+  )
+  if (!is.null(warnings)) message$warnings <- I(as.character(warnings)) # always an array
+  session$sendCustomMessage("targetsboard:status", message)
 }
 
 # The widget's whole configuration: an update replaces it, so both the
 # constructor and the update send all of it.
-board_configuration <- function(inputId, nodes, edges, height, width) {
+board_configuration <- function(inputId, nodes, edges, height, width, warnings = character()) {
   list(
     id = inputId, # the widget names its Shiny inputs after it
-    nodes = dataframe_to_reactflow_node_data(nodes),
+    nodes = dataframe_to_reactflow_node_data(nodes, warnings),
     edges = dataframe_to_reactflow_edge_data(edges),
     height = height,
     width = width,
@@ -104,7 +119,7 @@ board_configuration <- function(inputId, nodes, edges, height, width) {
 #' Convert tar_visnetwork() nodes to React Flow nodes
 #' @importFrom rlang .data
 #' @noRd
-dataframe_to_reactflow_node_data <- function(dataframe) {
+dataframe_to_reactflow_node_data <- function(dataframe, warnings = character()) {
 
   nodes_global_params <- list(
     `deletable?` = TRUE
@@ -125,7 +140,8 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
         level = .data$level,
         description = .data$description,
         target_type = .data$type,
-        target_status = .data$status
+        target_status = .data$status,
+        warning = .data$id %in% warnings
       )),
       type = status_to_node_type(.data$status) # picks the node component
     ) |>
@@ -135,16 +151,18 @@ dataframe_to_reactflow_node_data <- function(dataframe) {
     purrr::transpose()
 }
 
-# The widget has one node component per type: uptodate, outdated, errored and
-# dispatched. Map every status targets reports (tar_visnetwork() and
-# tar_progress()) onto one of them; anything unknown shows as outdated.
+# The widget has one node component per status the board shows: uptodate,
+# outdated, running and errored. Map every status targets reports
+# (tar_visnetwork() and tar_progress()) onto one of them; anything unknown
+# shows as outdated. Warnings are not a status: see the warning mark.
 status_to_node_type <- function(status) {
   types <- c(
     uptodate = "uptodate", completed = "uptodate", skipped = "uptodate",
+    warned = "uptodate", # older targets reported warnings as a status
     outdated = "outdated", canceled = "outdated", queued = "outdated",
     none = "outdated",
     errored = "errored",
-    dispatched = "dispatched"
+    dispatched = "running"
   )
   type <- unname(types[status])
   type[is.na(type)] <- "outdated"
@@ -199,6 +217,15 @@ NULL
 #' }
 #' @export
 tar_board <- function(script = "_targets.R", port = 9999, targets_only = TRUE, metadata = NULL, ...) {
+  # Else the background board dies at once on "address already in use" and
+  # the page at the port is whatever was there, often an older board.
+  if (port_in_use(port)) {
+    stop(
+      "Port ", port, " is already in use, maybe by a board you started before: ",
+      "`$kill()` it, or pick another `port`.",
+      call. = FALSE
+    )
+  }
   # Computed here, so that a broken script errors in your session at once.
   if (is.null(metadata))
     metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
@@ -226,6 +253,21 @@ tar_board <- function(script = "_targets.R", port = 9999, targets_only = TRUE, m
   )
   message("targetsboard log: ", log_file)
   invisible(bg_process)
+}
+
+#' Is something already listening on this port?
+#'
+#' Tries to connect rather than to bind: on Windows, binding succeeds even
+#' while another process listens on 127.0.0.1 at that port.
+#' @noRd
+port_in_use <- function(port) {
+  con <- tryCatch(
+    suppressWarnings(socketConnection("127.0.0.1", port, open = "r+b", timeout = 1)),
+    error = function(e) NULL
+  )
+  if (is.null(con)) return(FALSE)
+  close(con)
+  TRUE
 }
 
 #' @rdname tar_board

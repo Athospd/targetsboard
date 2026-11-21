@@ -21,12 +21,16 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/Athospd/targetsboard/graph/badge.svg)](https://app.codecov.io/gh/Athospd/targetsboard)
 <!-- badges: end -->
 
-An experimental alternative to `targets::tar_watch()` to monitor and run
-[targets](https://docs.ropensci.org/targets/) pipelines from a Shiny + React
-UI. The DAG is drawn with
-[React Flow](https://reactflow.dev): targets are coloured by status, running
-targets show a spinner and the edges feeding them are animated, and clicking a
-target previews its value.
+A board for the author of a [targets](https://docs.ropensci.org/targets/)
+pipeline, to understand it while working on it: its structure, what is
+outdated, what each target produced and what a run is doing. It is meant to
+replace `targets::tar_watch()` for the author. The DAG is drawn with
+[React Flow](https://reactflow.dev): targets are coloured by status (up to
+date, outdated, running or errored), running targets show a spinner and the
+edges feeding them are animated, and targets whose last build raised
+warnings carry a warning mark. Clicking a target focuses it: what it depends
+on and what depends on it stay highlighted, and its value is previewed.
+When the pipeline changes, targets already drawn keep their place.
 
 ![The board while tar_make() runs: model_a is running](man/figures/README-board.png)
 
@@ -86,7 +90,7 @@ server <- function(input, output, session) {
     net <- targets::tar_visnetwork(targets_only = TRUE)$x
     update_targetsboard(session, "dag", net$nodes, net$edges, height = "600px")
   })
-  observe(print(input$dag_selected_nodes)) # ids of the selected targets
+  observe(print(input$dag_focused_node)) # id of the focused target
 }
 
 shinyApp(ui, server)

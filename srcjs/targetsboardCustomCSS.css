@@ -94,3 +94,35 @@
   100% { transform: rotate(360deg); }
 }
 
+
+/* A warning mark: an up-to-date target whose last build raised warnings. */
+.base-node {
+  position: relative;
+}
+
+.warning-mark {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  border-radius: 50%;
+  background: #f2c94c;
+  color: #3f2f11;
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #f0e5d7;
+}
+
+/* Focus: the focused target, what it depends on and what depends on it stay
+   bright; the rest of the graph dims. */
+.react-flow__node.tb-dimmed,
+.react-flow__edge.tb-dimmed {
+  opacity: 0.2;
+}
+
+.react-flow__node.tb-focused .base-node {
+  box-shadow: 0 0 0 3px #2f223d;
+}

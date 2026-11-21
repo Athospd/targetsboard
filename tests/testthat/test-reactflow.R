@@ -3,7 +3,7 @@ test_that("nodes become React Flow nodes typed by status", {
 
   expect_length(nodes, 3)
   expect_equal(nodes[[1]]$id, "raw")
-  expect_equal(nodes[[2]]$type, "dispatched")
+  expect_equal(nodes[[2]]$type, "running")
   expect_equal(nodes[[1]]$position, list(x = 0, y = 0))
   expect_equal(nodes[[3]]$data$label, "report")
   expect_equal(nodes[[3]]$data$target_status, "outdated")
@@ -24,15 +24,15 @@ test_that("a pipeline without edges converts to an empty edge list", {
   expect_length(edges, 0)
 })
 
-test_that("every targets status maps to one of the widget's node types", {
+test_that("every targets status maps to one of the four statuses the board shows", {
   expect_equal(
     status_to_node_type(c(
       "uptodate", "completed", "skipped", "outdated", "canceled",
-      "errored", "dispatched", "something new", NA
+      "errored", "dispatched", "warned", "something new", NA
     )),
     c(
       "uptodate", "uptodate", "uptodate", "outdated", "outdated",
-      "errored", "dispatched", "outdated", "outdated"
+      "errored", "running", "uptodate", "outdated", "outdated"
     )
   )
 

@@ -32,11 +32,11 @@ app_ui <- function(metadata, script = "_targets.R") {
               class = "p-0",
               layout_sidebar(
                 sidebar = sidebar(
-                  id = "output_preview_sidebar",
+                  id = "value_preview_sidebar",
                   width = "40%",
                   open = FALSE,
                   position = "right",
-                  uiOutput("output_preview")
+                  uiOutput("value_preview")
                 ),
                 targetsboard('flow', metadata$nodes, metadata$edges)
               )
