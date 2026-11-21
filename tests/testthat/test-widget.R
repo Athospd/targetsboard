@@ -88,7 +88,7 @@ test_that("targetsboard_options() has defaults and checks its values", {
   expect_equal(unclass(options), list(
     color_mode = "light", minimap = TRUE, controls = TRUE, background = "dots",
     edge_type = "default", only_render_visible = FALSE, node_actions = list(),
-    toolbar_actions = list()
+    toolbar_actions = list(), download_image = FALSE
   ))
   expect_equal(targetsboard_options(edge_type = "step")$edge_type, "step")
   expect_error(targetsboard_options(color_mode = "blue"), "color_mode")
@@ -174,4 +174,43 @@ test_that("toolbar_actions become the toolbar's buttons, checked", {
   expect_equal(options$toolbar_actions, list(list(id = "run", label = "Run")))
   expect_equal(options$node_actions, list()) # independent of the menu
   expect_error(targetsboard_options(toolbar_actions = "Run"), "`toolbar_actions` must be")
+})
+
+test_that("targetsboard_export_image() asks the widget for an image", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) sent <<- message)
+  targetsboard_export_image(session, "dag")
+  expect_equal(sent, list(id = "dag", command = "export_image", format = "png"))
+  targetsboard_export_image(session, "dag", "svg")
+  expect_equal(sent$format, "svg")
+  expect_error(targetsboard_export_image(session, "dag", "gif"), "format")
+})
+
+test_that("save_targetsboard_image() writes base64 and URL-encoded images", {
+  png <- withr::local_tempfile(fileext = ".png")
+  bytes <- as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff))
+  image <- list(format = "png", data_url = paste0("data:image/png;base64,", jsonlite::base64_enc(bytes)))
+  expect_equal(save_targetsboard_image(image, png), png)
+  expect_equal(readBin(png, "raw", 100), bytes)
+
+  svg <- withr::local_tempfile(fileext = ".svg")
+  image <- list(format = "svg", data_url = paste0(
+    "data:image/svg+xml;charset=utf-8,", utils::URLencode("<svg><text>a & b</text></svg>", reserved = TRUE)
+  ))
+  save_targetsboard_image(image, svg)
+  expect_equal(readLines(svg, warn = FALSE), "<svg><text>a & b</text></svg>")
+
+  expect_error(save_targetsboard_image(list(format = "png", error = "boom"), png), "boom")
+  expect_error(save_targetsboard_image(list(data_url = "nope"), png), "_image")
+})
+
+test_that("save_targetsboard_image() writes a graph-sized SVG quickly, byte for byte", {
+  text <- paste0("<svg>", strrep("<text style=\"fill: #354823\">ação 100% &amp;</text>", 40000), "</svg>")
+  encoded <- utils::URLencode(enc2utf8(text), reserved = TRUE)
+  expect_gt(nchar(encoded), 3e6)
+  svg <- withr::local_tempfile(fileext = ".svg")
+  image <- list(format = "svg", data_url = paste0("data:image/svg+xml;charset=utf-8,", encoded))
+  elapsed <- system.time(save_targetsboard_image(image, svg))[["elapsed"]]
+  expect_lt(elapsed, 5)
+  expect_identical(readBin(svg, "raw", file.size(svg)), charToRaw(enc2utf8(text)))
 })

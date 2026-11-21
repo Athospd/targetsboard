@@ -7,11 +7,14 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  ControlButton,
+  getNodesBounds,
   applyNodeChanges,
   applyEdgeChanges,
   getIncomers,
   useReactFlow,
 } from '@xyflow/react';
+import { toPng, toSvg } from 'html-to-image';
 import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
@@ -51,7 +54,43 @@ const DEFAULT_OPTIONS = {
   only_render_visible: false,
   node_actions: [], // [{id, label}]: the right-click menu's items
   toolbar_actions: [], // [{id, label}]: the focused target's toolbar
+  download_image: false, // a download button in the zoom controls
 };
+
+// An image of the whole graph, whatever is in view: the viewport element,
+// drawn at one pixel per unit with a margin, the toolbar left out. A data
+// URL: PNG (at twice the resolution) or SVG.
+const IMAGE_MARGIN = 40;
+const DARK_BACKGROUND = '#141414'; // React Flow's own, in dark mode
+const graphImage = (wrapper, nodes, format, background) => {
+  const viewport = wrapper?.querySelector('.react-flow__viewport');
+  if (!viewport || nodes.length === 0) return Promise.reject(new Error('Nothing to draw.'));
+  const bounds = getNodesBounds(nodes);
+  const width = Math.ceil(bounds.width + 2 * IMAGE_MARGIN);
+  const height = Math.ceil(bounds.height + 2 * IMAGE_MARGIN);
+  const render = format === 'svg' ? toSvg : toPng;
+  return render(viewport, {
+    backgroundColor: background,
+    width,
+    height,
+    pixelRatio: 2,
+    // Leave the page's web fonts out: embedding them made an SVG of eight
+    // targets weigh 5.6 MB. The labels fall back to the font stack's system fonts.
+    skipFonts: true,
+    filter: (el) => !el.classList?.contains('react-flow__node-toolbar'),
+    style: {
+      width: `${width}px`,
+      height: `${height}px`,
+      transform: `translate(${IMAGE_MARGIN - bounds.x}px, ${IMAGE_MARGIN - bounds.y}px) scale(1)`,
+    },
+  });
+};
+
+const downloadIcon = (
+  <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+    <path d="M12 3v11m0 0l-4-4m4 4l4-4M4 17v3h16v-3" fill="none" stroke="currentColor" strokeWidth="2.5" />
+  </svg>
+);
 
 // Report an event to Shiny: with priority 'event', the same value twice
 // (double-clicking the same target again) still reaches the server.
@@ -226,7 +265,7 @@ const syncNodes = (currentNodes, incomingNodes) => {
 };
 
 function Flow({ configuration }) {
-  const { fitView } = useReactFlow();
+  const { fitView, getNodes } = useReactFlow();
   const [nodes, setNodes] = useState(configuration.nodes ?? []);
   const [edges, setEdges] = useState(configuration.edges ?? []);
   const [direction, setDirection] = useState('LR');
@@ -255,6 +294,27 @@ function Flow({ configuration }) {
   );
   const [menu, setMenu] = useState(null); // {node, x, y}
   const wrapperRef = useRef(null);
+  const colorModeRef = useRef('light');
+  const imageOf = useCallback(
+    (format) =>
+      graphImage(
+        wrapperRef.current,
+        getNodes(),
+        format,
+        colorModeRef.current === 'light' ? configuration.background_color : DARK_BACKGROUND,
+      ),
+    [getNodes, configuration.background_color],
+  );
+  const downloadImage = useCallback(() => {
+    imageOf('png')
+      .then((url) => {
+        const link = document.createElement('a');
+        link.download = 'targets-graph.png';
+        link.href = url;
+        link.click();
+      })
+      .catch(() => {});
+  }, [imageOf]);
   const inputId = configuration.id;
 
   const onNodeClick = useCallback((_, node) => {
@@ -385,6 +445,12 @@ function Flow({ configuration }) {
       if (message.command === 'focus') {
         setFocusId(message.node ?? null);
         setMenu(null);
+      } else if (message.command === 'export_image') {
+        // The image goes back to R as <id>_image, or the reason it failed.
+        const format = message.format === 'svg' ? 'svg' : 'png';
+        imageOf(format)
+          .then((data_url) => sendEvent(`${configuration.id}_image`, { format, data_url }))
+          .catch((e) => sendEvent(`${configuration.id}_image`, { format, error: String(e?.message ?? e) }));
       } else if (message.command === 'fit_view') {
         const known = new Set(nodesRef.current.map((n) => n.id));
         const ids = (message.nodes ?? []).filter((id) => known.has(id));
@@ -401,7 +467,7 @@ function Flow({ configuration }) {
     };
     window.addEventListener(COMMAND_EVENT, onCommand);
     return () => window.removeEventListener(COMMAND_EVENT, onCommand);
-  }, [configuration.id, fitView]);
+  }, [configuration.id, fitView, imageOf]);
 
   // A focused target that left the pipeline is no longer focused.
   useEffect(() => {
@@ -496,6 +562,7 @@ function Flow({ configuration }) {
   // The board's own colours are for light mode; dark mode keeps React Flow's.
   const colorMode = resolveColorMode(options.color_mode);
   const light = colorMode === 'light';
+  colorModeRef.current = colorMode;
 
   return (
     <div
@@ -538,7 +605,16 @@ function Flow({ configuration }) {
             size={1}
           />
         )}
-        {options.controls && <Controls />}
+        {options.controls && (
+          <Controls>
+            {options.download_image && (
+              <ControlButton onClick={downloadImage} title="Download image" aria-label="Download image"
+                className="tb-download-image">
+                {downloadIcon}
+              </ControlButton>
+            )}
+          </Controls>
+        )}
         <LayoutButtons onLayout={onLayout} />
       </ReactFlow>
       </NodeActionsContext.Provider>

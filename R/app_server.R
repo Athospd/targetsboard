@@ -329,7 +329,8 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 }
 
 # The board's display options: the widget's defaults, plus a right-click
-# menu on each target and a toolbar over the focused one.
+# menu on each target, a toolbar over the focused one, and a download
+# button for an image of the graph.
 board_options <- function() {
   targetsboard_options(
     node_actions = c(
@@ -338,7 +339,8 @@ board_options <- function() {
       value = "Show its value",
       copy_name = "Copy its name"
     ),
-    toolbar_actions = c(run = "Run", invalidate = "Invalidate", value = "Value")
+    toolbar_actions = c(run = "Run", invalidate = "Invalidate", value = "Value"),
+    download_image = TRUE
   )
 }
 

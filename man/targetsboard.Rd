@@ -126,7 +126,9 @@ also focuses it;
 \item \verb{input$<inputId>_node_action}: \code{list(action, node)}, when an action of
 the right-click menu or of the focused target's toolbar is chosen (see
 \code{node_actions} and \code{toolbar_actions} in \code{\link[=targetsboard_options]{targetsboard_options()}});
-\item \verb{input$<inputId>_viewport}: \code{list(x, y, zoom)}, after each pan or zoom.
+\item \verb{input$<inputId>_viewport}: \code{list(x, y, zoom)}, after each pan or zoom;
+\item \verb{input$<inputId>_image}: \code{list(format, data_url)}, the image asked for by
+\code{\link[=targetsboard_export_image]{targetsboard_export_image()}}, or \code{list(format, error)}.
 }
 
 The event inputs (double-click, right-click, action) fire again for the

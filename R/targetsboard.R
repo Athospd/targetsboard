@@ -20,7 +20,9 @@
 #' - `input$<inputId>_node_action`: `list(action, node)`, when an action of
 #'   the right-click menu or of the focused target's toolbar is chosen (see
 #'   `node_actions` and `toolbar_actions` in [targetsboard_options()]);
-#' - `input$<inputId>_viewport`: `list(x, y, zoom)`, after each pan or zoom.
+#' - `input$<inputId>_viewport`: `list(x, y, zoom)`, after each pan or zoom;
+#' - `input$<inputId>_image`: `list(format, data_url)`, the image asked for by
+#'   [targetsboard_export_image()], or `list(format, error)`.
 #'
 #' The event inputs (double-click, right-click, action) fire again for the
 #' same target, so `observeEvent()` sees every one.
@@ -155,6 +157,68 @@ targetsboard_fit_view <- function(session, inputId, nodes = NULL, padding = 0.2,
   )
 }
 
+#' Images of the DAG widget's graph
+#'
+#' `targetsboard_export_image()` asks the widget for an image of its whole
+#' graph, whatever is in view. The widget sends it back as
+#' `input$<inputId>_image`: `list(format, data_url)`, or `list(format, error)`
+#' if it could not draw it. `save_targetsboard_image()` writes that image to a
+#' file.
+#'
+#' @param session The Shiny session.
+#' @param inputId The input slot of the widget.
+#' @param format `"png"` or `"svg"`.
+#' @param image `input$<inputId>_image`.
+#' @param path File to write.
+#' @return `targetsboard_export_image()` is called for its side effect.
+#'   `save_targetsboard_image()` returns `path`, invisibly.
+#' @examples
+#' \dontrun{
+#' server <- function(input, output, session) {
+#'   observeEvent(input$snapshot, targetsboard_export_image(session, "dag"))
+#'   observeEvent(input$dag_image, save_targetsboard_image(input$dag_image, "dag.png"))
+#' }
+#' }
+#' @export
+targetsboard_export_image <- function(session, inputId, format = c("png", "svg")) {
+  send_command(session, inputId, "export_image", format = rlang::arg_match(format))
+}
+
+#' @rdname targetsboard_export_image
+#' @export
+save_targetsboard_image <- function(image, path) {
+  if (!is.null(image$error)) rlang::abort(paste("The widget could not draw the image:", image$error))
+  url <- image$data_url
+  if (!rlang::is_string(url) || !startsWith(url, "data:")) {
+    rlang::abort("`image` must be the widget's `<inputId>_image` input.")
+  }
+  comma <- regexpr(",", url, fixed = TRUE)
+  header <- substr(url, 1, comma - 1)
+  payload <- substr(url, comma + 1, nchar(url))
+  if (endsWith(header, ";base64")) {
+    writeBin(jsonlite::base64_dec(payload), path)
+  } else {
+    writeBin(url_decode(payload), path)
+  }
+  invisible(path)
+}
+
+# Percent-decoding into bytes, vectorised: utils::URLdecode() steps through
+# the string in R, and never finished on a graph's SVG, megabytes long.
+url_decode <- function(x) {
+  bytes <- charToRaw(x)
+  pct <- which(bytes == charToRaw("%"))
+  pct <- pct[pct + 2 <= length(bytes)]
+  if (length(pct) == 0) return(bytes)
+  # The value of a hex digit: 0-9 from its code, a-f and A-F from code %% 32.
+  digit <- function(b) {
+    code <- as.integer(b)
+    ifelse(code <= 57L, code - 48L, code %% 32L + 9L)
+  }
+  bytes[pct] <- as.raw(16L * digit(bytes[pct + 1]) + digit(bytes[pct + 2]))
+  bytes[-c(pct + 1, pct + 2)]
+}
+
 # A command to the widget: one custom message type, picked by `command`.
 # NULL arguments are left out (as JSON, NULL would become an empty object):
 # the widget reads a missing one as null.
@@ -201,6 +265,8 @@ update_targetsboard_options <- function(session, inputId, ...) {
 #' @param toolbar_actions Buttons over the focused target, as `node_actions`:
 #'   a named character vector of labels, named by action, reported the same
 #'   way. Empty, the default: no toolbar.
+#' @param download_image Add a button to the zoom controls (shown with
+#'   `controls`) that downloads an image of the whole graph, as PNG.
 #' @return A list of options for [targetsboard()].
 #' @export
 targetsboard_options <- function(color_mode = c("light", "dark", "system"),
@@ -210,7 +276,8 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
                                  edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
                                  only_render_visible = FALSE,
                                  node_actions = character(),
-                                 toolbar_actions = character()) {
+                                 toolbar_actions = character(),
+                                 download_image = FALSE) {
   flag <- function(x) {
     if (!rlang::is_bool(x)) {
       rlang::abort(sprintf("`%s` must be TRUE or FALSE.", deparse(substitute(x))))
@@ -226,7 +293,8 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
       edge_type = rlang::arg_match(edge_type),
       only_render_visible = flag(only_render_visible),
       node_actions = action_items(node_actions),
-      toolbar_actions = action_items(toolbar_actions, "toolbar_actions")
+      toolbar_actions = action_items(toolbar_actions, "toolbar_actions"),
+      download_image = flag(download_image)
     ),
     class = "targetsboard_options"
   )

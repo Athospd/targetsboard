@@ -12,7 +12,8 @@ targetsboard_options(
   edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
   only_render_visible = FALSE,
   node_actions = character(),
-  toolbar_actions = character()
+  toolbar_actions = character(),
+  download_image = FALSE
 )
 }
 \arguments{
@@ -41,6 +42,9 @@ the clipboard. Empty, the default: no menu.}
 \item{toolbar_actions}{Buttons over the focused target, as \code{node_actions}:
 a named character vector of labels, named by action, reported the same
 way. Empty, the default: no toolbar.}
+
+\item{download_image}{Add a button to the zoom controls (shown with
+\code{controls}) that downloads an image of the whole graph, as PNG.}
 }
 \value{
 A list of options for \code{\link[=targetsboard]{targetsboard()}}.

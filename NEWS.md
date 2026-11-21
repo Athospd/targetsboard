@@ -25,6 +25,11 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* The widget draws the whole graph as an image, whatever the zoom:
+  `targetsboard_export_image()` asks it for a PNG or an SVG, which arrives as
+  `input$<inputId>_image`, and `save_targetsboard_image()` writes that to a
+  file. With the new `download_image` of `targetsboard_options()`, a button in
+  its controls downloads the PNG; the board has it.
 * A toolbar over the focused target, from the new `toolbar_actions` of
   `targetsboard_options()`, reports its buttons as `<id>_node_action`, like
   the right-click menu. The board's toolbar runs the target, invalidates it

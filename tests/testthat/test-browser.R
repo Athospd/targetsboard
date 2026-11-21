@@ -468,3 +468,65 @@ test_that("a widget without toolbar actions has no toolbar", {
   app$wait_for_js(paste0(node_js("b"), ".classList.contains('tb-focused')"))
   expect_false(app$get_js("document.querySelector('.tb-node-toolbar') !== null"))
 })
+
+# The width and height in a PNG file's header.
+png_size <- function(path) {
+  header <- readBin(path, "raw", 24)
+  expect_equal(header[1:8], as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)))
+  int <- function(bytes) sum(as.integer(bytes) * 256^(3:0))
+  c(width = int(header[17:20]), height = int(header[21:24]))
+}
+
+test_that("the widget draws the whole graph as an image, for R and for download", {
+  dir <- local_chain_pipeline(8)
+  targets::tar_make(reporter = "silent")
+  app <- local_board_app(dir, "image")
+  app$wait_for_js(paste(
+    "new Set(Array.from(document.querySelectorAll('.react-flow__node'))",
+    ".map(n => n.style.transform)).size === 8"
+  ))
+  # Zoomed in on one target: the image is still of the whole chain.
+  app$click(selector = ".react-flow__node[data-id='t3']")
+  for (i in 1:6) app$click(selector = ".react-flow__controls-zoomin")
+  Sys.sleep(0.5)
+
+  # From R: PNG, at twice the resolution, wider than tall like the chain.
+  send_widget_message(app, "targetsboard:command", list(id = "flow", command = "export_image", format = "png"))
+  app$wait_for_value(input = "flow_image")
+  image <- app$get_value(input = "flow_image")
+  expect_null(image$error)
+  png <- withr::local_tempfile(fileext = ".png")
+  size <- png_size(save_targetsboard_image(image, png))
+  expect_gt(size[["width"]], 4 * size[["height"]])
+  expect_gt(size[["width"]], 8 * 150 * 2) # eight targets, at twice the size
+
+  send_widget_message(app, "targetsboard:command", list(id = "flow", command = "export_image", format = "svg"))
+  app$wait_for_js("Shiny.shinyapp.$inputValues['flow_image:shiny.event']?.format === 'svg' ||
+                   Shiny.shinyapp.$inputValues['flow_image']?.format === 'svg'")
+  svg <- withr::local_tempfile(fileext = ".svg")
+  save_targetsboard_image(app$get_value(input = "flow_image"), svg)
+  text <- paste(readLines(svg, warn = FALSE), collapse = "\n")
+  expect_match(text, "<svg", fixed = TRUE)
+  for (id in paste0("t", 1:8)) expect_match(text, paste0(">", id, "<"), fixed = TRUE)
+  expect_no_match(text, "tb-node-toolbar", fixed = TRUE) # the toolbar is left out
+
+  # The download button: a PNG named after the graph.
+  app$run_js(
+    "window.__download = null;
+     HTMLAnchorElement.prototype.click = function() {
+       window.__download = {name: this.download, href: this.href};
+     };"
+  )
+  app$click(selector = ".tb-download-image")
+  app$wait_for_js("window.__download !== null", timeout = 15 * 1000)
+  download <- app$get_js("window.__download")
+  expect_equal(download$name, "targets-graph.png")
+  expect_match(download$href, "^data:image/png;base64,")
+})
+
+test_that("a widget without download_image has no download button", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "nodownload", widget_app())
+  app$wait_for_js("document.querySelector('.react-flow__controls') !== null")
+  expect_false(app$get_js("document.querySelector('.tb-download-image') !== null"))
+})
