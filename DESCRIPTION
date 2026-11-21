@@ -16,6 +16,7 @@ Depends:
 Imports:
     bslib,
     callr,
+    cli,
     digest,
     dplyr,
     glue,

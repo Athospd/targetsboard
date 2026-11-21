@@ -4,7 +4,7 @@
 #' @param script Path to the targets script.
 #' @param targets_only Show only targets, without functions and globals.
 #' @noRd
-app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
+app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE) {
   # One background poller per app, shared by every browser session.
   # Restarted only when someone loads a different script.
   poller <- new.env()

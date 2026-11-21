@@ -25,6 +25,16 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* Like `targets::tar_watch()`, `tar_board()` serves the board on a random
+  free port (or the `shiny.port` option) instead of 9999, takes a `host`
+  (or the `shiny.host` option), waits until the board is up, opens it in the
+  browser (`browse = TRUE`) and prints its url and log (`verbose = TRUE`).
+  The url is kept on the returned process: `browseURL(attr(app, "url"))`.
+* Like `targets::tar_watch()`, `tar_board()` and `tar_board_app()` need no
+  arguments: `script` defaults to the project's configured script
+  (`targets::tar_config_get("script")`, so `_targets.yaml` is respected)
+  instead of `"_targets.R"`. Without a script yet, the board starts empty
+  and draws the pipeline once the script appears, instead of erroring.
 * Clicking a target focuses it: what it depends on and what depends on it
   stay highlighted and the rest of the graph dims. The widget reports it as
   `input$<inputId>_focused_node`; clicking the background clears it.

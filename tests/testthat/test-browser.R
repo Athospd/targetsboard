@@ -81,3 +81,29 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   app$wait_for_js(paste0("!", node("a"), ".classList.contains('tb-dimmed') && !",
                          node("c"), ".classList.contains('tb-focused')"))
 })
+
+test_that("a board started before its script draws the pipeline once it appears", {
+  skip_on_cran()
+  skip_if_not_installed("shinytest2")
+  skip_if_not_installed("chromote")
+  skip_if(is.null(chromote::find_chrome()), "Chrome not found")
+
+  dir <- withr::local_tempdir()
+  writeLines("targetsboard::tar_board_app()", file.path(dir, "app.R"))
+
+  app <- shinytest2::AppDriver$new(dir, name = "empty", load_timeout = 60 * 1000)
+  withr::defer(app$stop())
+  app$wait_for_js("document.querySelector('.react-flow') !== null")
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 0)
+
+  writeLines(
+    c("library(targets)", "list(tar_target(a, 1), tar_target(b, a))"),
+    file.path(dir, "_targets.R")
+  )
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
+  # Laid out as a whole: the two targets don't sit on top of each other.
+  positions <- app$get_js(
+    "Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.style.transform)"
+  )
+  expect_length(unique(unlist(positions)), 2)
+})

@@ -4,7 +4,7 @@
 #' @param script Path to the targets script.
 #' @import shiny bslib
 #' @noRd
-app_ui <- function(metadata, script = "_targets.R") {
+app_ui <- function(metadata, script = targets::tar_config_get("script")) {
   shiny::tagList(  
     add_external_resources(),
     page_sidebar(

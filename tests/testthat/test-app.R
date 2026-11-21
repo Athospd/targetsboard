@@ -27,3 +27,100 @@ test_that("tar_board() refuses a port that is already in use", {
 test_that("port_in_use() is FALSE when nothing listens", {
   expect_false(port_in_use(1L)) # reserved: nothing listens there
 })
+
+test_that("with no arguments, the board shows the project's configured script", {
+  skip_on_cran()
+  local_pipeline()
+  file.rename("_targets.R", "pipeline.R")
+  targets::tar_config_set(script = "pipeline.R")
+
+  seen <- NULL
+  local_mocked_bindings(initial_metadata = function(script, ...) {
+    seen <<- script
+    empty_metadata()
+  })
+  tar_board_app()
+  expect_equal(seen, "pipeline.R")
+
+  # tar_board() hands the same script to the board's background process.
+  local_mocked_bindings(port_in_use = function(port, host) FALSE)
+  local_mocked_bindings(r_bg = function(func, args, ...) args, .package = "callr")
+  args <- suppressMessages(tar_board(browse = FALSE))
+  expect_equal(args$script, "pipeline.R")
+})
+
+test_that("without a script yet, the board starts empty", {
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+
+  expect_message(metadata <- initial_metadata("_targets.R"), "No targets script")
+  expect_equal(nrow(metadata$nodes), 0)
+  expect_equal(nrow(metadata$edges), 0)
+  expect_length(dataframe_to_reactflow_node_data(metadata$nodes), 0)
+  expect_length(dataframe_to_reactflow_edge_data(metadata$edges), 0)
+
+  app <- suppressMessages(tar_board_app())
+  expect_s3_class(app, "shiny.appobj")
+})
+
+test_that("a script that exists but is broken still errors", {
+  skip_on_cran()
+  local_pipeline()
+  writeLines("stop('broken pipeline')", "_targets.R")
+  expect_error(initial_metadata("_targets.R"), "broken pipeline")
+})
+
+test_that("tar_board() picks its port and host like tar_watch() and keeps the url", {
+  local_mocked_bindings(port_in_use = function(port, host) FALSE)
+  local_mocked_bindings(r_bg = function(func, args, ...) args, .package = "callr")
+  metadata <- list(nodes = fake_nodes(), edges = fake_edges())
+
+  args <- tar_board(metadata = metadata, browse = FALSE, verbose = FALSE)
+  expect_true(is.numeric(args$port))
+  expect_equal(args$host, "127.0.0.1")
+  expect_equal(attr(args, "url"), paste0("http://127.0.0.1:", args$port))
+
+  withr::local_options(shiny.port = 4321, shiny.host = "0.0.0.0")
+  args <- tar_board(metadata = metadata, browse = FALSE, verbose = FALSE)
+  expect_equal(args$port, 4321)
+  expect_equal(args$host, "0.0.0.0")
+  expect_equal(attr(args, "url"), "http://127.0.0.1:4321") # browsable
+})
+
+test_that("wait_for_board() returns once the port answers", {
+  port <- NULL
+  for (p in sample(20000:40000, 20)) {
+    server <- tryCatch(serverSocket(p), error = function(e) NULL)
+    if (!is.null(server)) { port <- p; break }
+  }
+  skip_if(is.null(port), "found no free port to listen on")
+  on.exit(close(server))
+
+  alive <- list(is_alive = function() TRUE)
+  expect_true(wait_for_board(alive, "127.0.0.1", port, tempfile(), verbose = FALSE))
+})
+
+test_that("wait_for_board() fails with the board's log if the board dies", {
+  log <- withr::local_tempfile(lines = c("Listening on http://127.0.0.1:1", "Error: the board broke"))
+  dead <- list(is_alive = function() FALSE)
+  expect_error(
+    wait_for_board(dead, "127.0.0.1", 1L, log, verbose = FALSE),
+    "stopped before it was up.*the board broke"
+  )
+})
+
+test_that("tar_board() waits for the board, then opens it in the browser", {
+  skip_on_cran()
+  local_pipeline()
+  opened <- NULL
+  local_mocked_bindings(open_url = function(url) opened <<- url)
+
+  app <- suppressMessages(tar_board())
+  withr::defer(app$kill())
+
+  url <- attr(app, "url")
+  expect_equal(opened, url)
+  port <- as.integer(sub(".*:", "", url))
+  expect_true(port_in_use(port)) # up as soon as tar_board() returns
+  expect_match(paste(readLines(url, warn = FALSE), collapse = ""), "Targets board")
+})
