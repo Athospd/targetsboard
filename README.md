@@ -56,10 +56,12 @@ browseURL(attr(app, "url"))            # reopen it after closing the tab
 app$kill()                             # shut it down
 ```
 
-You can also run the pipeline from the board. **Run all** makes the
-whole pipeline, **Run selected** makes the targets selected in the DAG
-and whatever they depend on that is outdated, and **Stop** kills the run
-going, wherever it was started. Runs from the board go on if the board
+You can also run the pipeline from the board. **Run all** makes the whole
+pipeline, **Run selected** makes the targets selected in the DAG and whatever
+they depend on that is outdated, and **Stop** kills the run going, wherever it
+was started. **Invalidate selected** makes the selected targets outdated with
+`targets::tar_invalidate()`, so the next run builds them again: it asks first,
+and is disabled while a run is going. Runs from the board go on if the board
 stops.
 
 Like `targets::tar_watch()`, `tar_board()` needs no arguments: it shows

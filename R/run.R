@@ -85,3 +85,17 @@ settle_statuses <- function(statuses, running) {
   if (!running) statuses[statuses == "dispatched"] <- "canceled"
   statuses
 }
+
+#' Invalidate targets: the next run builds them again
+#'
+#' `targets::tar_invalidate()` deletes their metadata records, so they and
+#' what depends on them are outdated. Their files stay in the store, but
+#' `tar_read()` can no longer read them until they are built again.
+#' Names that are no longer targets are ignored.
+#'
+#' @param names Target names.
+#' @noRd
+invalidate_targets <- function(names) {
+  targets::tar_invalidate(names = dplyr::any_of(names))
+  invisible(names)
+}

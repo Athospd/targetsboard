@@ -174,3 +174,69 @@ test_that("a failed run is reported with its error", {
     expect_match(notes, "error Run failed:[[:space:]]*<code>boom</code>", all = FALSE)
   })
 })
+
+test_that("invalidate_targets() makes targets outdated, leaving their files", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+
+  invalidate_targets(c("b", "not_a_target"))
+
+  expect_false("b" %in% targets::tar_meta(targets_only = TRUE)$name)
+  expect_setequal(targets::tar_outdated(), c("b", "c"))
+  expect_true(file.exists("_targets/objects/b"))
+  expect_error(targets::tar_read(b)) # but without metadata, it can't be read
+})
+
+test_that("the board invalidates the selected targets once confirmed", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  notes <- character()
+  modal <- NULL
+  local_mocked_bindings(
+    showNotification = function(ui, ..., type = "default") {
+      notes <<- c(notes, paste(type, paste(as.character(ui), collapse = " ")))
+    },
+    showModal = function(ui, ...) modal <<- as.character(ui),
+    removeModal = function(...) NULL,
+    .package = "shiny"
+  )
+
+  shiny::testServer(server, {
+    session$setInputs(flow_selected_nodes = c("b", "c"), invalidate = 1)
+    expect_match(modal, "Invalidate targets?", fixed = TRUE)
+    expect_match(modal, "<code>b</code>", fixed = TRUE)
+    expect_true(all(c("b", "c") %in% targets::tar_meta(targets_only = TRUE)$name)) # not yet
+
+    session$setInputs(invalidate_confirm = 1)
+    expect_false(any(c("b", "c") %in% targets::tar_meta(targets_only = TRUE)$name))
+    expect_true(file.exists(poller_of(server)$refresh_path)) # the graph is recomputed
+    expect_match(notes, "Invalidated 2 targets", all = FALSE)
+  })
+})
+
+test_that("the board refuses to invalidate while a run is going", {
+  skip_on_cran()
+  local_slow_pipeline()
+  server <- local_app_server()
+
+  notes <- character()
+  invalidated <- NULL
+  local_mocked_bindings(invalidate_targets = function(names) invalidated <<- names)
+  local_mocked_bindings(
+    showNotification = function(ui, ..., type = "default") {
+      notes <<- c(notes, paste(type, paste(as.character(ui), collapse = " ")))
+    },
+    removeModal = function(...) NULL,
+    .package = "shiny"
+  )
+
+  process <- local_console_run()
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$setInputs(flow_selected_nodes = "b", invalidate_confirm = 1)
+    expect_null(invalidated)
+    expect_match(notes, "stop it before invalidating", all = FALSE)
+  })
+})

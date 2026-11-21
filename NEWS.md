@@ -25,6 +25,11 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* An **Invalidate selected** button, under **Stop**, makes the selected
+  targets outdated with `targets::tar_invalidate()`, so the next run builds
+  them and what depends on them again; until then, their values can no
+  longer be read. It asks for confirmation, is disabled while a run is going,
+  and refreshes the graph.
 * The graph is laid out like `tar_visnetwork()`'s: each target in the column
   of its level, and each column stacked compactly and centred, with edge
   crossings reduced. Dagre, which spread dense pipelines (every target of a

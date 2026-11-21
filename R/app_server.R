@@ -109,6 +109,10 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         disabled = is_running || length(input$flow_selected_nodes) == 0
       )
       shiny::updateActionButton(session, "stop", disabled = !is_running)
+      shiny::updateActionButton(
+        session, "invalidate",
+        disabled = is_running || length(input$flow_selected_nodes) == 0
+      )
     })
 
     launch_run <- function(names = NULL) {
@@ -155,9 +159,45 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       }
     }, ignoreInit = TRUE)
 
-    shiny::observeEvent(input$refresh, {
+    # Ask the poller to recompute the graph now.
+    request_refresh <- function() {
       path <- poller$refresh_path
       if (!is.null(path)) writeLines(format(Sys.time(), "%H:%M:%OS6"), path)
+    }
+    shiny::observeEvent(input$refresh, request_refresh())
+
+    # Invalidate the selected targets, after a confirmation: the next run
+    # builds them again, which can take long.
+    shiny::observeEvent(input$invalidate, {
+      names <- input$flow_selected_nodes
+      shiny::req(names)
+      shiny::showModal(shiny::modalDialog(
+        title = "Invalidate targets?",
+        shiny::p(
+          "The next run will build these targets again, and what depends on them.",
+          "Until then, their values can no longer be read."
+        ),
+        shiny::tags$ul(lapply(names, \(name) shiny::tags$li(shiny::tags$code(name)))),
+        footer = shiny::tagList(
+          shiny::modalButton("Cancel"),
+          shiny::actionButton("invalidate_confirm", "Invalidate", class = "btn-danger")
+        )
+      ))
+    })
+    shiny::observeEvent(input$invalidate_confirm, {
+      shiny::removeModal()
+      names <- input$flow_selected_nodes
+      shiny::req(names)
+      if (busy()) {
+        shiny::showNotification("A run is going: stop it before invalidating.", type = "warning")
+        return()
+      }
+      invalidate_targets(names)
+      request_refresh()
+      shiny::showNotification(
+        paste0("Invalidated ", length(names), if (length(names) == 1) " target." else " targets."),
+        type = "message"
+      )
     })
 
     # The value of the focused target, in the sidebar.
