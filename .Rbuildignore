@@ -13,3 +13,5 @@
 ^\.quarto$
 ^\.github$
 ^codecov\.yml$
+^GLOSSARY\.md$
+^docs$
