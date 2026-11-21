@@ -70,3 +70,21 @@ test_that("a broken script doesn't kill the poller", {
   wait_for_rewrite(poller, before)
   expect_equal(readRDS(poller$tar_vis_path)$x$nodes$id, "z")
 })
+
+test_that("a killed run still counts as ended", {
+  skip_on_cran()
+  local_pipeline()
+  writeLines(
+    c("library(targets)", "list(tar_target(a, 1), tar_target(b, {Sys.sleep(60); a}))"),
+    "_targets.R"
+  )
+  poller <- local_poller()
+  process <- targets::tar_make(callr_function = callr::r_bg, reporter = "silent")
+  withr::defer(process$kill_tree())
+  wait_for(function() any(targets::tar_progress()$progress == "dispatched"))
+
+  before <- written_at(poller)
+  process$kill_tree()
+  wait_for_rewrite(poller, before)
+  expect_identical(readRDS(poller$tar_vis_path)$progress_mtime, file.mtime("_targets/meta/progress"))
+})

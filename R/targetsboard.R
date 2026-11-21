@@ -247,7 +247,7 @@ tar_board_app <- function(script = "_targets.R", targets_only = TRUE, metadata =
 #' up-to-date ones, which is slow. So the process only recomputes it when:
 #' - the script, or an R file under `R/`, changed (new targets or functions),
 #' - a run ended: the progress file changed since the last recompute, has not
-#'   changed for `settle` seconds, and no target is dispatched,
+#'   changed for `settle` seconds, and the pipeline process is gone,
 #' - the app asked for it, by writing to `refresh_path`.
 #' Between recomputes, the app follows a run through the cheap progress file.
 #'
@@ -279,9 +279,20 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
         refresh = if (file.exists(refresh_path)) readLines(refresh_path, warn = FALSE)
       )
     }
+    # Is the pipeline process targets recorded still running? (A copy of
+    # active_run(): a killed run leaves targets marked dispatched for good.)
     running <- function() {
-      progress <- tryCatch(targets::tar_progress()$progress, error = function(e) character())
-      any(progress == "dispatched")
+      info <- tryCatch(targets::tar_process(), error = function(e) NULL)
+      if (is.null(info)) return(FALSE)
+      pid <- suppressWarnings(as.integer(info$value[info$name == "pid"]))
+      created <- as.POSIXct(info$value[info$name == "created"], tz = "UTC")
+      if (length(pid) != 1 || is.na(pid) || length(created) != 1 || is.na(created)) return(FALSE)
+      handle <- tryCatch(ps::ps_handle(pid), error = function(e) NULL)
+      if (is.null(handle)) return(FALSE)
+      started <- tryCatch(ps::ps_create_time(handle), error = function(e) NA)
+      isTRUE(tryCatch(ps::ps_is_running(handle), error = function(e) FALSE)) &&
+        !is.na(started) &&
+        abs(as.numeric(difftime(started, created, units = "secs"))) <= 2
     }
 
     computed_code <- NULL

@@ -29,6 +29,14 @@ First cleanup of the 2024 prototype.
 * `update_targetsboard_status()` updates target statuses in place, without
   resending or laying out the graph again.
 * A **Refresh** button recomputes the graph on demand.
+* **Run all**, **Run selected** and **Stop** buttons run the pipeline from
+  the board: `tar_make()` of everything, or of the selected targets and what
+  they depend on. Stop also stops a run started outside the board. The
+  buttons follow whether a run is going, and the board tells how its own runs
+  ended.
+* The board tells a running pipeline by its process (`tar_process()`), not
+  by targets marked dispatched: a killed run's targets show as canceled
+  instead of running forever.
 
 ## Bug fixes and performance
 
