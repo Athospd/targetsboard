@@ -13,7 +13,24 @@
 #' - `input$<inputId>_focused_node`: the id of the focused target, or `NULL`;
 #' - `input$<inputId>_selected_nodes`: the ids of the selected targets
 #'   (several with Shift or Ctrl);
-#' - `input$<inputId>_running_nodes`: the ids of the running targets.
+#' - `input$<inputId>_running_nodes`: the ids of the running targets;
+#' - `input$<inputId>_double_clicked_node`: the id of a target double-clicked;
+#' - `input$<inputId>_context_node`: the id of a target right-clicked, which
+#'   also focuses it;
+#' - `input$<inputId>_node_action`: `list(action, node)`, when an action of
+#'   the right-click menu or of the focused target's toolbar is chosen (see
+#'   `node_actions` and `toolbar_actions` in [targetsboard_options()]);
+#' - `input$<inputId>_viewport`: `list(x, y, zoom)`, after each pan or zoom;
+#' - `input$<inputId>_image`: `list(format, data_url)`, the image asked for by
+#'   [targetsboard_export_image()], or `list(format, error)`;
+#' - `input$<inputId>_layout`: `list(direction, viewport, positions)`, where
+#'   the targets are (`positions`, named by target, each `list(x, y)`), the
+#'   view (`list(x, y, zoom)`) and the direction of the last layout (`"LR"` or
+#'   `"TB"`): once the targets are laid out, and after each drag, pan or zoom.
+#'   Give it back as `layout` to draw the graph as it was.
+#'
+#' The event inputs (double-click, right-click, action) fire again for the
+#' same target, so `observeEvent()` sees every one.
 #'
 #' @param inputId The input slot of the widget.
 #' @param nodes,edges The `nodes` and `edges` data frames of
@@ -21,16 +38,27 @@
 #' @param height,width CSS size of the widget.
 #' @param warnings Ids of the targets whose last build raised warnings, as in
 #'   the `warnings` field of `targets::tar_meta()`.
+#' @param layout Optional: a layout the widget reported as
+#'   `input$<inputId>_layout`. The targets in it are drawn where they were, in
+#'   its direction, and the others next to their neighbours; when it has them
+#'   all, its view is restored too, else the graph is fitted into view. The
+#'   "Tidy" buttons lay the graph out afresh.
+#' @param options Display options, from [targetsboard_options()]. For
+#'   `update_targetsboard()`, `NULL` keeps the current ones.
 #'
 #' `update_targetsboard()` replaces the whole graph. Targets already drawn keep
 #' their place; new ones are placed next to their neighbours, and the
 #' "Tidy" buttons lay the whole graph out again. `update_targetsboard_status()` only changes
 #' the status of some targets, which is much lighter: use it to follow a
-#' running pipeline.
+#' running pipeline. `update_targetsboard_options()` changes only the display
+#' options it names, e.g. `color_mode` to follow `bslib::input_dark_mode()`.
+#' `update_targetsboard_focus()` focuses a target from the server, and
+#' `targetsboard_fit_view()` brings targets into view: together, they can show
+#' a target picked elsewhere in the app.
 #'
 #' @return `targetsboard()` returns a Shiny UI element.
-#'   `update_targetsboard()` and `update_targetsboard_status()` are called for
-#'   their side effect.
+#'   The update functions and `targetsboard_fit_view()` are called for their
+#'   side effect.
 #'
 #' @examples
 #' \dontrun{
@@ -54,7 +82,11 @@
 #' @importFrom reactR createReactShinyInput
 #' @importFrom htmltools htmlDependency tags
 #' @export
-targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%", warnings = character()) {
+targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%", warnings = character(),
+                         options = targetsboard_options(), layout = NULL) {
+  if (!is.null(layout) && !is_board_layout(layout)) {
+    rlang::abort("`layout` must be a layout the widget reported as `input$<inputId>_layout`.")
+  }
   reactR::createReactShinyInput(
     inputId = inputId,
     class = "targetsboard",
@@ -66,7 +98,7 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%",
       script = "targetsboard.js"
     ),
     default = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width, warnings),
+    configuration = board_configuration(inputId, nodes, edges, height, width, warnings, options, layout),
     container = function(...) htmltools::tags$div(style = 'height: 100%', ...)
   )
 }
@@ -75,10 +107,10 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%",
 #' @param session The Shiny session.
 #' @export
 update_targetsboard <- function(session, inputId, nodes, edges, height = "100%", width = "100%",
-                                warnings = character()) {
+                                warnings = character(), options = NULL) {
   session$sendInputMessage(inputId, list(
     value = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width, warnings)
+    configuration = board_configuration(inputId, nodes, edges, height, width, warnings, options)
   ))
 }
 
@@ -102,10 +134,202 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
   session$sendCustomMessage("targetsboard:status", message)
 }
 
+#' @rdname targetsboard
+#' @param node For `update_targetsboard_focus()`: the id of the target to
+#'   focus, as a click does, or `NULL` to clear the focus.
+#' @export
+update_targetsboard_focus <- function(session, inputId, node = NULL) {
+  if (!is.null(node) && !rlang::is_string(node)) {
+    rlang::abort("`node` must be one target id, or NULL.")
+  }
+  send_command(session, inputId, "focus", node = node)
+}
+
+#' @rdname targetsboard
+#' @param nodes For `targetsboard_fit_view()`: ids of the targets to fit in
+#'   view; `NULL`, all of them. Ids not in the widget are ignored.
+#' @param padding For `targetsboard_fit_view()`: room around them, as a
+#'   fraction of the view.
+#' @param duration For `targetsboard_fit_view()`: length of the animation, in
+#'   milliseconds.
+#' @param max_zoom For `targetsboard_fit_view()`: the most it zooms in, so a
+#'   single target doesn't fill the view.
+#' @export
+targetsboard_fit_view <- function(session, inputId, nodes = NULL, padding = 0.2,
+                                  duration = 400, max_zoom = 1.5) {
+  if (!is.null(nodes) && !is.character(nodes)) {
+    rlang::abort("`nodes` must be a character vector of target ids, or NULL.")
+  }
+  stopifnot(rlang::is_scalar_double(padding) || rlang::is_scalar_integer(padding))
+  stopifnot(rlang::is_scalar_double(duration) || rlang::is_scalar_integer(duration))
+  stopifnot(rlang::is_scalar_double(max_zoom) || rlang::is_scalar_integer(max_zoom))
+  send_command(
+    session, inputId, "fit_view",
+    nodes = if (!is.null(nodes)) I(nodes), # always an array
+    padding = padding, duration = duration, max_zoom = max_zoom
+  )
+}
+
+#' Images of the DAG widget's graph
+#'
+#' `targetsboard_export_image()` asks the widget for an image of its whole
+#' graph, whatever is in view. The widget sends it back as
+#' `input$<inputId>_image`: `list(format, data_url)`, or `list(format, error)`
+#' if it could not draw it. `save_targetsboard_image()` writes that image to a
+#' file.
+#'
+#' @param session The Shiny session.
+#' @param inputId The input slot of the widget.
+#' @param format `"png"` or `"svg"`.
+#' @param image `input$<inputId>_image`.
+#' @param path File to write.
+#' @return `targetsboard_export_image()` is called for its side effect.
+#'   `save_targetsboard_image()` returns `path`, invisibly.
+#' @examples
+#' \dontrun{
+#' server <- function(input, output, session) {
+#'   observeEvent(input$snapshot, targetsboard_export_image(session, "dag"))
+#'   observeEvent(input$dag_image, save_targetsboard_image(input$dag_image, "dag.png"))
+#' }
+#' }
+#' @export
+targetsboard_export_image <- function(session, inputId, format = c("png", "svg")) {
+  send_command(session, inputId, "export_image", format = rlang::arg_match(format))
+}
+
+#' @rdname targetsboard_export_image
+#' @export
+save_targetsboard_image <- function(image, path) {
+  if (!is.null(image$error)) rlang::abort(paste("The widget could not draw the image:", image$error))
+  url <- image$data_url
+  if (!rlang::is_string(url) || !startsWith(url, "data:")) {
+    rlang::abort("`image` must be the widget's `<inputId>_image` input.")
+  }
+  comma <- regexpr(",", url, fixed = TRUE)
+  header <- substr(url, 1, comma - 1)
+  payload <- substr(url, comma + 1, nchar(url))
+  if (endsWith(header, ";base64")) {
+    writeBin(jsonlite::base64_dec(payload), path)
+  } else {
+    writeBin(url_decode(payload), path)
+  }
+  invisible(path)
+}
+
+# Percent-decoding into bytes, vectorised: utils::URLdecode() steps through
+# the string in R, and never finished on a graph's SVG, megabytes long.
+url_decode <- function(x) {
+  bytes <- charToRaw(x)
+  pct <- which(bytes == charToRaw("%"))
+  pct <- pct[pct + 2 <= length(bytes)]
+  if (length(pct) == 0) return(bytes)
+  # The value of a hex digit: 0-9 from its code, a-f and A-F from code %% 32.
+  digit <- function(b) {
+    code <- as.integer(b)
+    ifelse(code <= 57L, code - 48L, code %% 32L + 9L)
+  }
+  bytes[pct] <- as.raw(16L * digit(bytes[pct + 1]) + digit(bytes[pct + 2]))
+  bytes[-c(pct + 1, pct + 2)]
+}
+
+# A command to the widget: one custom message type, picked by `command`.
+# NULL arguments are left out (as JSON, NULL would become an empty object):
+# the widget reads a missing one as null.
+send_command <- function(session, inputId, command, ...) {
+  args <- Filter(Negate(is.null), list(...))
+  session$sendCustomMessage(
+    "targetsboard:command",
+    c(list(id = inputId, command = command), args)
+  )
+}
+
+#' @rdname targetsboard
+#' @param ... For `update_targetsboard_options()`: the options to change, as
+#'   arguments of [targetsboard_options()].
+#' @export
+update_targetsboard_options <- function(session, inputId, ...) {
+  changed <- list(...)
+  if (length(changed) == 0) return(invisible())
+  stopifnot(!is.null(names(changed)), all(nzchar(names(changed))))
+  options <- do.call(targetsboard_options, changed) # validates them
+  session$sendCustomMessage(
+    "targetsboard:options",
+    list(id = inputId, options = unclass(options)[names(changed)])
+  )
+}
+
+#' Display options of the DAG widget
+#'
+#' @param color_mode `"light"`, `"dark"`, or `"system"` to follow the
+#'   browser's preference. The board's own beige background is for light mode.
+#' @param minimap Show the minimap, with targets coloured by status.
+#' @param controls Show the zoom controls.
+#' @param background The background pattern: `"dots"`, `"lines"`, `"cross"`
+#'   or `"none"`.
+#' @param edge_type How edges are drawn: `"default"` (curves),
+#'   `"smoothstep"`, `"step"`, `"straight"` or `"simplebezier"`.
+#' @param only_render_visible Render only the targets in view, which keeps big
+#'   pipelines responsive.
+#' @param node_actions The right-click menu of a target: a named character
+#'   vector of labels, named by action. Choosing one sets
+#'   `input$<inputId>_node_action` to `list(action = , node = )`, except
+#'   `copy_name`, which the widget does itself: it copies the target's name to
+#'   the clipboard. Empty, the default: no menu.
+#' @param toolbar_actions Buttons over the focused target, as `node_actions`:
+#'   a named character vector of labels, named by action, reported the same
+#'   way. Empty, the default: no toolbar.
+#' @param download_image Add a button to the zoom controls (shown with
+#'   `controls`) that downloads an image of the whole graph, as PNG.
+#' @return A list of options for [targetsboard()].
+#' @export
+targetsboard_options <- function(color_mode = c("light", "dark", "system"),
+                                 minimap = TRUE,
+                                 controls = TRUE,
+                                 background = c("dots", "lines", "cross", "none"),
+                                 edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
+                                 only_render_visible = FALSE,
+                                 node_actions = character(),
+                                 toolbar_actions = character(),
+                                 download_image = FALSE) {
+  flag <- function(x) {
+    if (!rlang::is_bool(x)) {
+      rlang::abort(sprintf("`%s` must be TRUE or FALSE.", deparse(substitute(x))))
+    }
+    x
+  }
+  structure(
+    list(
+      color_mode = rlang::arg_match(color_mode),
+      minimap = flag(minimap),
+      controls = flag(controls),
+      background = rlang::arg_match(background),
+      edge_type = rlang::arg_match(edge_type),
+      only_render_visible = flag(only_render_visible),
+      node_actions = action_items(node_actions),
+      toolbar_actions = action_items(toolbar_actions, "toolbar_actions"),
+      download_image = flag(download_image)
+    ),
+    class = "targetsboard_options"
+  )
+}
+
+# A named character vector of labels, named by action, as the widget's list
+# of {id, label} items.
+action_items <- function(actions, arg = "node_actions") {
+  if (length(actions) == 0) return(list())
+  ids <- names(actions)
+  if (!is.character(actions) || is.null(ids) || any(!nzchar(ids)) || anyDuplicated(ids)) {
+    rlang::abort(sprintf("`%s` must be a character vector of labels, named by unique actions.", arg))
+  }
+  unname(Map(function(id, label) list(id = id, label = label), ids, unname(actions)))
+}
+
 # The widget's whole configuration: an update replaces it, so both the
-# constructor and the update send all of it.
-board_configuration <- function(inputId, nodes, edges, height, width, warnings = character()) {
-  list(
+# constructor and the update send all of it, except the options, which an
+# update may leave out to keep the current ones.
+board_configuration <- function(inputId, nodes, edges, height, width, warnings = character(),
+                                options = NULL, layout = NULL) {
+  config <- list(
     id = inputId, # the widget names its Shiny inputs after it
     nodes = dataframe_to_reactflow_node_data(nodes, warnings),
     edges = dataframe_to_reactflow_edge_data(edges),
@@ -114,6 +338,13 @@ board_configuration <- function(inputId, nodes, edges, height, width, warnings =
     background_color = "#f0e5d7",
     background_marks_color = "#2f223d"
   )
+  if (!is.null(options)) {
+    stopifnot(inherits(options, "targetsboard_options"))
+    config$options <- unclass(options)
+  }
+  # Read once, when the widget is first drawn: updates leave it out.
+  config$layout <- layout
+  config
 }
 
 #' Convert tar_visnetwork() nodes to React Flow nodes
@@ -373,7 +604,9 @@ tar_board_app <- function(script = targets::tar_config_get("script"), targets_on
   if (is.null(metadata)) metadata <- initial_metadata(script, targets_only, ...)
 
   shiny::shinyApp(
-    app_ui(metadata, script),
+    # A function of the request: each page load opens the board with the
+    # layout saved last, not the one there was when the app started.
+    function(request) app_ui(metadata, script, layout = read_board_layout()),
     app_server(metadata, script, targets_only),
     options = options
   )

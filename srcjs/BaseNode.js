@@ -1,7 +1,9 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
+import { FocusedNodeToolbar } from './NodeActions';
 
 const BaseNode = ({
+  id,
   data,
   isConnectable,
   sourcePosition = Position.Top,
@@ -12,6 +14,7 @@ const BaseNode = ({
 }) => {
   return (
     <div className='base-node' style={{ backgroundColor: backgroundColor, color: textColor }}>
+      <FocusedNodeToolbar id={id} />
       <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
       {extraContent && <div className="extra-content">{extraContent}</div>}
       {data?.warning && (

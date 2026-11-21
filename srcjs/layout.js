@@ -77,12 +77,17 @@ const orderColumns = (columns, edges) => {
 };
 
 // Lay out the whole graph. `direction` is 'LR' (columns left to right) or
-// 'TB' (rows top to bottom). Nodes need their measured size.
+// 'TB' (rows top to bottom). Nodes need their measured size; one not
+// measured (off screen, when only visible targets are rendered) takes the
+// size of one that is: all targets have the same width.
 export const layoutGraph = (nodes, edges, { direction = 'LR' } = {}) => {
   nodes = Array.isArray(nodes) ? nodes : [];
   edges = Array.isArray(edges) ? edges : [];
   const horizontal = direction === 'LR';
-  const size = (n) => ({ w: n.measured?.width ?? 0, h: n.measured?.height ?? 0 });
+  const known = nodes.find((n) => n.measured?.width && n.measured?.height)?.measured;
+  const fallback = { w: known?.width ?? 0, h: known?.height ?? 0 };
+  const size = (n) =>
+    n.measured?.width && n.measured?.height ? { w: n.measured.width, h: n.measured.height } : fallback;
 
   const level = levelsOf(nodes, edges);
   const levels = [...new Set(level.values())].sort((a, b) => a - b);

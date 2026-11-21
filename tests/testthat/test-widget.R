@@ -81,3 +81,136 @@ test_that("targets and edges can't be deleted from the read-only board", {
   expect_false(any(vapply(config$nodes, function(n) n$deletable, TRUE)))
   expect_false(any(vapply(config$edges, function(e) e$deletable, TRUE)))
 })
+
+test_that("targetsboard_options() has defaults and checks its values", {
+  options <- targetsboard_options()
+  expect_s3_class(options, "targetsboard_options")
+  expect_equal(unclass(options), list(
+    color_mode = "light", minimap = TRUE, controls = TRUE, background = "dots",
+    edge_type = "default", only_render_visible = FALSE, node_actions = list(),
+    toolbar_actions = list(), download_image = FALSE
+  ))
+  expect_equal(targetsboard_options(edge_type = "step")$edge_type, "step")
+  expect_error(targetsboard_options(color_mode = "blue"), "color_mode")
+  expect_error(targetsboard_options(background = "stripes"), "background")
+  expect_error(targetsboard_options(minimap = "yes"), "`minimap` must be TRUE or FALSE")
+})
+
+test_that("targetsboard() sends its options; update_targetsboard() keeps them by default", {
+  html <- as.character(targetsboard(
+    "dag", fake_nodes(), fake_edges(),
+    options = targetsboard_options(color_mode = "dark", minimap = FALSE)
+  ))
+  expect_match(html, '"color_mode":"dark"', fixed = TRUE)
+  expect_match(html, '"minimap":false', fixed = TRUE)
+
+  sent <- NULL
+  session <- list(sendInputMessage = function(inputId, message) sent <<- message)
+  update_targetsboard(session, "dag", fake_nodes(), fake_edges())
+  expect_null(sent$configuration$options) # the widget keeps its own
+  update_targetsboard(
+    session, "dag", fake_nodes(), fake_edges(),
+    options = targetsboard_options(edge_type = "step")
+  )
+  expect_equal(sent$configuration$options$edge_type, "step")
+  expect_error(update_targetsboard(
+    session, "dag", fake_nodes(), fake_edges(),
+    options = list(minimap = FALSE)
+  ))
+})
+
+test_that("update_targetsboard_options() sends only the options it names, checked", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) {
+    sent <<- list(type = type, message = message)
+  })
+
+  update_targetsboard_options(session, "dag", color_mode = "dark", minimap = FALSE)
+  expect_equal(sent$type, "targetsboard:options")
+  expect_equal(sent$message, list(id = "dag", options = list(color_mode = "dark", minimap = FALSE)))
+
+  expect_error(update_targetsboard_options(session, "dag", edge_type = "zigzag"), "edge_type")
+  expect_error(update_targetsboard_options(session, "dag", "dark"))
+})
+
+test_that("node_actions become the menu's items, checked", {
+  options <- targetsboard_options(node_actions = c(run = "Run it", copy_name = "Copy"))
+  expect_equal(options$node_actions, list(
+    list(id = "run", label = "Run it"),
+    list(id = "copy_name", label = "Copy")
+  ))
+  expect_match(as.character(targetsboard("dag", fake_nodes(), fake_edges(), options = options)),
+               '"node_actions":[{"id":"run","label":"Run it"}', fixed = TRUE)
+  expect_error(targetsboard_options(node_actions = c("Run it")), "named")
+  expect_error(targetsboard_options(node_actions = c(run = "a", run = "b")), "unique")
+  expect_error(targetsboard_options(node_actions = list(run = 1)), "character")
+})
+
+test_that("update_targetsboard_focus() and targetsboard_fit_view() send commands", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) {
+    sent <<- list(type = type, message = message)
+  })
+
+  update_targetsboard_focus(session, "dag", "raw")
+  expect_equal(sent$type, "targetsboard:command")
+  expect_equal(sent$message, list(id = "dag", command = "focus", node = "raw"))
+  update_targetsboard_focus(session, "dag", NULL)
+  expect_equal(sent$message, list(id = "dag", command = "focus")) # the widget reads null
+  expect_error(update_targetsboard_focus(session, "dag", c("a", "b")), "one target id")
+
+  targetsboard_fit_view(session, "dag", "raw")
+  expect_equal(sent$message$command, "fit_view")
+  expect_equal(jsonlite::toJSON(sent$message$nodes), jsonlite::toJSON(I("raw"))) # an array
+  expect_equal(sent$message[c("padding", "duration", "max_zoom")],
+               list(padding = 0.2, duration = 400, max_zoom = 1.5))
+  targetsboard_fit_view(session, "dag")
+  expect_false("nodes" %in% names(sent$message)) # all targets
+  expect_error(targetsboard_fit_view(session, "dag", 1), "character")
+})
+
+test_that("toolbar_actions become the toolbar's buttons, checked", {
+  options <- targetsboard_options(toolbar_actions = c(run = "Run"))
+  expect_equal(options$toolbar_actions, list(list(id = "run", label = "Run")))
+  expect_equal(options$node_actions, list()) # independent of the menu
+  expect_error(targetsboard_options(toolbar_actions = "Run"), "`toolbar_actions` must be")
+})
+
+test_that("targetsboard_export_image() asks the widget for an image", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) sent <<- message)
+  targetsboard_export_image(session, "dag")
+  expect_equal(sent, list(id = "dag", command = "export_image", format = "png"))
+  targetsboard_export_image(session, "dag", "svg")
+  expect_equal(sent$format, "svg")
+  expect_error(targetsboard_export_image(session, "dag", "gif"), "format")
+})
+
+test_that("save_targetsboard_image() writes base64 and URL-encoded images", {
+  png <- withr::local_tempfile(fileext = ".png")
+  bytes <- as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff))
+  image <- list(format = "png", data_url = paste0("data:image/png;base64,", jsonlite::base64_enc(bytes)))
+  expect_equal(save_targetsboard_image(image, png), png)
+  expect_equal(readBin(png, "raw", 100), bytes)
+
+  svg <- withr::local_tempfile(fileext = ".svg")
+  image <- list(format = "svg", data_url = paste0(
+    "data:image/svg+xml;charset=utf-8,", utils::URLencode("<svg><text>a & b</text></svg>", reserved = TRUE)
+  ))
+  save_targetsboard_image(image, svg)
+  expect_equal(readLines(svg, warn = FALSE), "<svg><text>a & b</text></svg>")
+
+  expect_error(save_targetsboard_image(list(format = "png", error = "boom"), png), "boom")
+  expect_error(save_targetsboard_image(list(data_url = "nope"), png), "_image")
+})
+
+test_that("save_targetsboard_image() writes a graph-sized SVG quickly, byte for byte", {
+  text <- paste0("<svg>", strrep("<text style=\"fill: #354823\">ação 100% &amp;</text>", 40000), "</svg>")
+  encoded <- utils::URLencode(enc2utf8(text), reserved = TRUE)
+  expect_gt(nchar(encoded), 3e6)
+  svg <- withr::local_tempfile(fileext = ".svg")
+  image <- list(format = "svg", data_url = paste0("data:image/svg+xml;charset=utf-8,", encoded))
+  elapsed <- system.time(save_targetsboard_image(image, svg))[["elapsed"]]
+  expect_lt(elapsed, 5)
+  expect_identical(readBin(svg, "raw", file.size(svg)), charToRaw(enc2utf8(text)))
+})

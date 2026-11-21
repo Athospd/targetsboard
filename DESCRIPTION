@@ -21,6 +21,7 @@ Imports:
     dplyr,
     glue,
     htmltools,
+    jsonlite,
     parallelly,
     ps,
     purrr,
@@ -34,7 +35,6 @@ Imports:
 Suggests:
     chromote,
     ggplot2,
-    jsonlite,
     plotly,
     shinytest2,
     skimr,

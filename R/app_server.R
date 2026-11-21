@@ -166,11 +166,12 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     }
     shiny::observeEvent(input$refresh, request_refresh())
 
-    # Invalidate the selected targets, after a confirmation: the next run
-    # builds them again, which can take long.
-    shiny::observeEvent(input$invalidate, {
-      names <- input$flow_selected_nodes
-      shiny::req(names)
+    # Invalidate targets, after a confirmation: the next run builds them
+    # again, which can take long. The confirmation is for the targets it
+    # names, whatever is selected by then.
+    to_invalidate <- shiny::reactiveVal(NULL)
+    ask_to_invalidate <- function(names) {
+      to_invalidate(names)
       shiny::showModal(shiny::modalDialog(
         title = "Invalidate targets?",
         shiny::p(
@@ -183,15 +184,20 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
           shiny::actionButton("invalidate_confirm", "Invalidate", class = "btn-danger")
         )
       ))
+    }
+    shiny::observeEvent(input$invalidate, {
+      shiny::req(input$flow_selected_nodes)
+      ask_to_invalidate(input$flow_selected_nodes)
     })
     shiny::observeEvent(input$invalidate_confirm, {
       shiny::removeModal()
-      names <- input$flow_selected_nodes
-      shiny::req(names)
       if (busy()) {
         shiny::showNotification("A run is going: stop it before invalidating.", type = "warning")
         return()
       }
+      names <- to_invalidate()
+      shiny::req(names)
+      to_invalidate(NULL)
       invalidate_targets(names)
       request_refresh()
       shiny::showNotification(
@@ -200,13 +206,38 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       )
     })
 
-    # The value of the focused target, in the sidebar.
+    # The value preview: opened by a double-click on a target, or its menu's
+    # "Show its value". While open, it follows the focused target; it closes
+    # with the focus, or by its own toggle.
+    preview_open <- shiny::reactiveVal(FALSE)
+    shiny::observeEvent(input$flow_double_clicked_node, preview_open(TRUE))
+    shiny::observeEvent(input$flow_focused_node, {
+      if (is.null(input$flow_focused_node)) preview_open(FALSE)
+    }, ignoreNULL = FALSE)
+    shiny::observeEvent(input$value_preview_sidebar, {
+      if (isFALSE(input$value_preview_sidebar)) preview_open(FALSE)
+    })
     observe({
-      bslib::toggle_sidebar("value_preview_sidebar", open = !is.null(input$flow_focused_node))
+      bslib::toggle_sidebar(
+        "value_preview_sidebar",
+        open = preview_open() && !is.null(input$flow_focused_node)
+      )
+    })
+
+    # The actions of a target's right-click menu and of the focused target's
+    # toolbar (board_options()).
+    shiny::observeEvent(input$flow_node_action, {
+      node <- input$flow_node_action$node
+      switch(
+        input$flow_node_action$action,
+        run = launch_run(node),
+        invalidate = ask_to_invalidate(node),
+        value = preview_open(TRUE)
+      )
     })
 
     output$value_preview <- shiny::renderUI({
-      req(input$flow_focused_node)
+      req(preview_open(), input$flow_focused_node)
       value <- tryCatch(
         targets::tar_read_raw(input$flow_focused_node),
         error = function(e) shiny::p("No value stored for this target yet.")
@@ -238,6 +269,26 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       board()$widget
     })
 
+    # A target picked in the tar_meta() table: show it on the board, focused,
+    # with what it depends on and what depends on it directly in view.
+    shiny::observeEvent(input$meta_row_clicked, {
+      name <- input$meta_row_clicked
+      edges <- board()$x$edges
+      neighbours <- unique(c(name, edges$from[edges$to == name], edges$to[edges$from == name]))
+      bslib::nav_select("view", "board")
+      update_targetsboard_focus(session, "flow", name)
+      targetsboard_fit_view(session, "flow", neighbours)
+    })
+
+    # The graph follows the page's dark mode switch.
+    shiny::observeEvent(input$dark_mode, {
+      update_targetsboard_options(session, "flow", color_mode = input$dark_mode)
+    })
+
+    # Keep where the author left the targets, for the next time the board
+    # opens: in the store's user folder, `_targets/user/`.
+    shiny::observeEvent(input$flow_layout, write_board_layout(input$flow_layout))
+
     # The power button: stop the board. In tar_board()'s background process,
     # that ends the process too.
     shiny::observeEvent(input$turn_off, shiny::stopApp("The board is turned off."))
@@ -261,7 +312,15 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 
     output$meta <- reactable::renderReactable({
       req(tar_meta_data())
-      reactable::reactable(tar_meta_data(), wrap = FALSE)
+      reactable::reactable(
+        tar_meta_data(),
+        wrap = FALSE,
+        # A click on a row shows its target on the board, even twice in a row.
+        onClick = reactable::JS(
+          "function(row) { Shiny.setInputValue('meta_row_clicked', row.values.name, {priority: 'event'}); }"
+        ),
+        rowStyle = list(cursor = "pointer")
+      )
     })
 
     output$debug <- shiny::renderPrint({
@@ -271,6 +330,22 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       )
     })
   }
+}
+
+# The board's display options: the widget's defaults, plus a right-click
+# menu on each target, a toolbar over the focused one, and a download
+# button for an image of the graph.
+board_options <- function() {
+  targetsboard_options(
+    node_actions = c(
+      run = "Run this target",
+      invalidate = "Invalidate this target",
+      value = "Show its value",
+      copy_name = "Copy its name"
+    ),
+    toolbar_actions = c(run = "Run", invalidate = "Invalidate", value = "Value"),
+    download_image = TRUE
+  )
 }
 
 # A file in the targets store's meta folder, e.g. "progress" or "meta".

@@ -4,6 +4,9 @@
 \alias{targetsboard}
 \alias{update_targetsboard}
 \alias{update_targetsboard_status}
+\alias{update_targetsboard_focus}
+\alias{targetsboard_fit_view}
+\alias{update_targetsboard_options}
 \title{DAG widget for Shiny}
 \usage{
 targetsboard(
@@ -12,7 +15,9 @@ targetsboard(
   edges,
   height = "100\%",
   width = "100\%",
-  warnings = character()
+  warnings = character(),
+  options = targetsboard_options(),
+  layout = NULL
 )
 
 update_targetsboard(
@@ -22,7 +27,8 @@ update_targetsboard(
   edges,
   height = "100\%",
   width = "100\%",
-  warnings = character()
+  warnings = character(),
+  options = NULL
 )
 
 update_targetsboard_status(
@@ -31,6 +37,19 @@ update_targetsboard_status(
   statuses = character(),
   warnings = NULL
 )
+
+update_targetsboard_focus(session, inputId, node = NULL)
+
+targetsboard_fit_view(
+  session,
+  inputId,
+  nodes = NULL,
+  padding = 0.2,
+  duration = 400,
+  max_zoom = 1.5
+)
+
+update_targetsboard_options(session, inputId, ...)
 }
 \arguments{
 \item{inputId}{The input slot of the widget.}
@@ -43,16 +62,53 @@ update_targetsboard_status(
 \item{warnings}{For \code{update_targetsboard_status()}: \code{NULL} leaves the warning
 marks as they are; otherwise the ids of all the targets that carry one.}
 
+\item{options}{Display options, from \code{\link[=targetsboard_options]{targetsboard_options()}}. For
+\code{update_targetsboard()}, \code{NULL} keeps the current ones.
+
+\code{update_targetsboard()} replaces the whole graph. Targets already drawn keep
+their place; new ones are placed next to their neighbours, and the
+"Tidy" buttons lay the whole graph out again. \code{update_targetsboard_status()} only changes
+the status of some targets, which is much lighter: use it to follow a
+running pipeline. \code{update_targetsboard_options()} changes only the display
+options it names, e.g. \code{color_mode} to follow \code{bslib::input_dark_mode()}.
+\code{update_targetsboard_focus()} focuses a target from the server, and
+\code{targetsboard_fit_view()} brings targets into view: together, they can show
+a target picked elsewhere in the app.}
+
+\item{layout}{Optional: a layout the widget reported as
+\verb{input$<inputId>_layout}. The targets in it are drawn where they were, in
+its direction, and the others next to their neighbours; when it has them
+all, its view is restored too, else the graph is fitted into view. The
+"Tidy" buttons lay the graph out afresh.}
+
 \item{session}{The Shiny session.}
 
 \item{statuses}{A named character vector: target statuses, as in
 \code{targets::tar_progress()}, named by target. Targets not in the widget are
 ignored.}
+
+\item{node}{For \code{update_targetsboard_focus()}: the id of the target to
+focus, as a click does, or \code{NULL} to clear the focus.}
+
+\item{padding}{For \code{targetsboard_fit_view()}: room around them, as a
+fraction of the view.}
+
+\item{duration}{For \code{targetsboard_fit_view()}: length of the animation, in
+milliseconds.}
+
+\item{max_zoom}{For \code{targetsboard_fit_view()}: the most it zooms in, so a
+single target doesn't fill the view.}
+
+\item{...}{For \code{update_targetsboard_options()}: the options to change, as
+arguments of \code{\link[=targetsboard_options]{targetsboard_options()}}.}
+
+\item{nodes}{For \code{targetsboard_fit_view()}: ids of the targets to fit in
+view; \code{NULL}, all of them. Ids not in the widget are ignored.}
 }
 \value{
 \code{targetsboard()} returns a Shiny UI element.
-\code{update_targetsboard()} and \code{update_targetsboard_status()} are called for
-their side effect.
+The update functions and \code{targetsboard_fit_view()} are called for their
+side effect.
 }
 \description{
 The interactive targets DAG used by the board, as a Shiny input you can
@@ -70,8 +126,25 @@ The widget reports to the server, as Shiny inputs:
 \item \verb{input$<inputId>_focused_node}: the id of the focused target, or \code{NULL};
 \item \verb{input$<inputId>_selected_nodes}: the ids of the selected targets
 (several with Shift or Ctrl);
-\item \verb{input$<inputId>_running_nodes}: the ids of the running targets.
+\item \verb{input$<inputId>_running_nodes}: the ids of the running targets;
+\item \verb{input$<inputId>_double_clicked_node}: the id of a target double-clicked;
+\item \verb{input$<inputId>_context_node}: the id of a target right-clicked, which
+also focuses it;
+\item \verb{input$<inputId>_node_action}: \code{list(action, node)}, when an action of
+the right-click menu or of the focused target's toolbar is chosen (see
+\code{node_actions} and \code{toolbar_actions} in \code{\link[=targetsboard_options]{targetsboard_options()}});
+\item \verb{input$<inputId>_viewport}: \code{list(x, y, zoom)}, after each pan or zoom;
+\item \verb{input$<inputId>_image}: \code{list(format, data_url)}, the image asked for by
+\code{\link[=targetsboard_export_image]{targetsboard_export_image()}}, or \code{list(format, error)};
+\item \verb{input$<inputId>_layout}: \code{list(direction, viewport, positions)}, where
+the targets are (\code{positions}, named by target, each \code{list(x, y)}), the
+view (\code{list(x, y, zoom)}) and the direction of the last layout (\code{"LR"} or
+\code{"TB"}): once the targets are laid out, and after each drag, pan or zoom.
+Give it back as \code{layout} to draw the graph as it was.
 }
+
+The event inputs (double-click, right-click, action) fire again for the
+same target, so \code{observeEvent()} sees every one.
 }
 \examples{
 \dontrun{

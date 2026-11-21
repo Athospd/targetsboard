@@ -1,20 +1,25 @@
 import { reactShinyInput } from 'reactR';
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
   MiniMap,
   Background,
+  BackgroundVariant,
   Controls,
+  ControlButton,
+  getNodesBounds,
   applyNodeChanges,
   applyEdgeChanges,
   getIncomers,
   useReactFlow,
 } from '@xyflow/react';
+import { toPng, toSvg } from 'html-to-image';
 import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
 import { layoutGraph } from './layout';
+import { NodeActionsContext } from './NodeActions';
 
 import UptodateNode from './UptodateNode';
 import OutdatedNode from './OutdatedNode';
@@ -30,6 +35,118 @@ const nodeTypes = {
   errored: ErroredNode,
   running: RunningNode
 };
+
+// The node colours of each status, for the minimap.
+const STATUS_COLORS = {
+  uptodate: '#354823',
+  outdated: '#78B7C5',
+  errored: '#C93312',
+  running: '#d49536',
+};
+
+// Display options, as targetsboard_options() sets them in R.
+const DEFAULT_OPTIONS = {
+  color_mode: 'light',
+  minimap: true,
+  controls: true,
+  background: 'dots',
+  edge_type: 'default',
+  only_render_visible: false,
+  node_actions: [], // [{id, label}]: the right-click menu's items
+  toolbar_actions: [], // [{id, label}]: the focused target's toolbar
+  download_image: false, // a download button in the zoom controls
+};
+
+// An image of the whole graph, whatever is in view: the viewport element,
+// drawn at one pixel per unit with a margin, the toolbar left out. A data
+// URL: PNG (at twice the resolution) or SVG.
+const IMAGE_MARGIN = 40;
+const DARK_BACKGROUND = '#141414'; // React Flow's own, in dark mode
+const graphImage = (wrapper, nodes, format, background) => {
+  const viewport = wrapper?.querySelector('.react-flow__viewport');
+  if (!viewport || nodes.length === 0) return Promise.reject(new Error('Nothing to draw.'));
+  const bounds = getNodesBounds(nodes);
+  const width = Math.ceil(bounds.width + 2 * IMAGE_MARGIN);
+  const height = Math.ceil(bounds.height + 2 * IMAGE_MARGIN);
+  const render = format === 'svg' ? toSvg : toPng;
+  return render(viewport, {
+    backgroundColor: background,
+    width,
+    height,
+    pixelRatio: 2,
+    // Leave the page's web fonts out: embedding them made an SVG of eight
+    // targets weigh 5.6 MB. The labels fall back to the font stack's system fonts.
+    skipFonts: true,
+    filter: (el) => !el.classList?.contains('react-flow__node-toolbar'),
+    style: {
+      width: `${width}px`,
+      height: `${height}px`,
+      transform: `translate(${IMAGE_MARGIN - bounds.x}px, ${IMAGE_MARGIN - bounds.y}px) scale(1)`,
+    },
+  });
+};
+
+const downloadIcon = (
+  <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+    <path d="M12 3v11m0 0l-4-4m4 4l4-4M4 17v3h16v-3" fill="none" stroke="currentColor" strokeWidth="2.5" />
+  </svg>
+);
+
+// Report an event to Shiny: with priority 'event', the same value twice
+// (double-clicking the same target again) still reaches the server.
+const sendEvent = (name, value) =>
+  window.Shiny?.setInputValue?.(name, value, { priority: 'event' });
+
+// The right-click menu of a target. `copy_name` is done here: the server
+// can't reach the clipboard. Every other action goes to Shiny as
+// <id>_node_action.
+function NodeMenu({ menu, actions, onAction, onClose }) {
+  // Opened where the click was, then moved back inside the widget if it
+  // overflows: measured once drawn, before the browser paints it.
+  const ref = useRef(null);
+  const [place, setPlace] = useState({ left: menu.x, top: menu.y });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const parent = el?.offsetParent;
+    if (!el || !parent) return;
+    const maxLeft = parent.clientWidth - el.offsetWidth;
+    const maxTop = parent.clientHeight - el.offsetHeight;
+    setPlace({
+      left: Math.max(0, Math.min(menu.x, maxLeft)),
+      top: Math.max(0, Math.min(menu.y, maxTop)),
+    });
+  }, [menu.x, menu.y]);
+  useEffect(() => {
+    const onKey = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="tb-node-menu" role="menu" ref={ref} style={place}>
+      {actions.map((action) => (
+        <button
+          key={action.id}
+          role="menuitem"
+          data-action={action.id}
+          onClick={() => onAction(action.id, menu.node)}
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+const BACKGROUND_VARIANTS = {
+  dots: BackgroundVariant.Dots,
+  lines: BackgroundVariant.Lines,
+  cross: BackgroundVariant.Cross,
+};
+
+// 'system' follows the browser's preference.
+const resolveColorMode = (mode) =>
+  mode === 'system'
+    ? window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    : mode;
 
 const handlePositions = (direction) => ({
   sourcePosition: direction === 'LR' ? 'right' : 'bottom',
@@ -100,15 +217,35 @@ const lineageOf = (focusId, edges) => {
   return lineage;
 };
 
-// Status-only updates from R (update_targetsboard_status()) arrive as a Shiny
-// custom message; each widget picks the ones addressed to its id.
+// Light updates from R arrive as Shiny custom messages: statuses
+// (update_targetsboard_status()) and display options
+// (update_targetsboard_options()). Each widget picks the ones addressed to
+// its id.
 const STATUS_EVENT = 'targetsboard:status';
+const OPTIONS_EVENT = 'targetsboard:options';
+// Commands from R: focus a target (update_targetsboard_focus()), fit the
+// view to targets (targetsboard_fit_view()).
+const COMMAND_EVENT = 'targetsboard:command';
 if (window.Shiny && !window.__targetsboardStatusHandler) {
   window.__targetsboardStatusHandler = true;
-  window.Shiny.addCustomMessageHandler(STATUS_EVENT, (message) => {
-    window.dispatchEvent(new CustomEvent(STATUS_EVENT, { detail: message }));
-  });
+  [STATUS_EVENT, OPTIONS_EVENT, COMMAND_EVENT].forEach((type) =>
+    window.Shiny.addCustomMessageHandler(type, (message) => {
+      window.dispatchEvent(new CustomEvent(type, { detail: message }));
+    }),
+  );
 }
+
+// Run `fn` once `el` is shown and sized: a widget in a hidden tab has no size
+// to fit a view to, so wait (up to 5 s) for its tab to show, then give
+// React Flow two frames to notice the new size.
+const whenVisible = (el, fn, deadline = Date.now() + 5000) => {
+  if (!el) return;
+  if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+    requestAnimationFrame(() => requestAnimationFrame(fn));
+  } else if (Date.now() < deadline) {
+    setTimeout(() => whenVisible(el, fn, deadline), 50);
+  }
+};
 
 const sortedKey = (ids) => [...ids].sort().join('|');
 const structureKey = (nodes, edges) =>
@@ -127,16 +264,42 @@ const syncNodes = (currentNodes, incomingNodes) => {
   });
 };
 
+// The positions of a layout given by R (targetsboard(layout = )), checked:
+// a Map of target id to {x, y}.
+const savedPositions = (layout) =>
+  new Map(
+    Object.entries(layout?.positions ?? {}).filter(
+      ([, p]) => Number.isFinite(p?.x) && Number.isFinite(p?.y),
+    ).map(([id, p]) => [id, { x: p.x, y: p.y }]),
+  );
+const savedViewport = (viewport) =>
+  ['x', 'y', 'zoom'].every((k) => Number.isFinite(viewport?.[k])) ? viewport : null;
+
 function Flow({ configuration }) {
-  const { fitView } = useReactFlow();
+  const { fitView, getNodes, getViewport, setViewport } = useReactFlow();
   const [nodes, setNodes] = useState(configuration.nodes ?? []);
   const [edges, setEdges] = useState(configuration.edges ?? []);
-  const [direction, setDirection] = useState('LR');
+  // A saved layout is read once, when the widget is first drawn.
+  const savedLayout = useRef(configuration.layout);
+  const [direction, setDirection] = useState(
+    ['LR', 'TB'].includes(configuration.layout?.direction) ? configuration.layout.direction : 'LR',
+  );
+  const directionRef = useRef(direction);
+  directionRef.current = direction;
   const [focusId, setFocusId] = useState(null);
+  const [options, setOptions] = useState({ ...DEFAULT_OPTIONS, ...configuration.options });
   // Lay out once all nodes have been measured: everything ('all') on first
   // render and when a Tidy button is pressed; only the new targets ('new')
-  // when the pipeline's structure changes.
-  const [layoutPending, setLayoutPending] = useState('all');
+  // when the pipeline's structure changes. With a saved layout, the first
+  // render puts the targets back where they were ('restore').
+  const [layoutPending, setLayoutPending] = useState(
+    savedPositions(configuration.layout).size > 0 ? 'restore' : 'all',
+  );
+  // Once the laid-out targets are drawn: true fits the view to the graph, a
+  // viewport ({x, y, zoom}) restores that one.
+  const [fitPending, setFitPending] = useState(false);
+  // Report the layout once the new positions are drawn.
+  const [reportPending, setReportPending] = useState(false);
   const newIdsRef = useRef(new Set());
 
   const nodesRef = useRef(nodes);
@@ -152,8 +315,92 @@ function Flow({ configuration }) {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [],
   );
-  const onNodeClick = useCallback((_, node) => setFocusId(node.id), []);
-  const onPaneClick = useCallback(() => setFocusId(null), []);
+  const [menu, setMenu] = useState(null); // {node, x, y}
+  const wrapperRef = useRef(null);
+  const colorModeRef = useRef('light');
+  const imageOf = useCallback(
+    (format) =>
+      graphImage(
+        wrapperRef.current,
+        getNodes(),
+        format,
+        colorModeRef.current === 'light' ? configuration.background_color : DARK_BACKGROUND,
+      ),
+    [getNodes, configuration.background_color],
+  );
+  const downloadImage = useCallback(() => {
+    imageOf('png')
+      .then((url) => {
+        const link = document.createElement('a');
+        link.download = 'targets-graph.png';
+        link.href = url;
+        link.click();
+      })
+      .catch(() => {});
+  }, [imageOf]);
+  const inputId = configuration.id;
+
+  const onNodeClick = useCallback((_, node) => {
+    setFocusId(node.id);
+    setMenu(null);
+  }, []);
+  const onPaneClick = useCallback(() => {
+    setFocusId(null);
+    setMenu(null);
+  }, []);
+  // A double-click also focuses its target, whatever clicks came before.
+  const onNodeDoubleClick = useCallback(
+    (_, node) => {
+      setFocusId(node.id);
+      sendEvent(`${inputId}_double_clicked_node`, node.id);
+    },
+    [inputId],
+  );
+  // Right-click focuses the target, reports it, and opens the menu if R
+  // gave it actions.
+  const onNodeContextMenu = useCallback(
+    (event, node) => {
+      event.preventDefault();
+      setFocusId(node.id);
+      sendEvent(`${inputId}_context_node`, node.id);
+      const box = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+      setMenu({ node: node.id, x: event.clientX - box.left, y: event.clientY - box.top });
+    },
+    [inputId],
+  );
+  // An action of the menu or the toolbar.
+  const onMenuAction = useCallback(
+    (action, node) => {
+      setMenu(null);
+      if (action === 'copy_name') {
+        navigator.clipboard?.writeText(node).catch(() => {});
+        return;
+      }
+      sendEvent(`${inputId}_node_action`, { action, node });
+    },
+    [inputId],
+  );
+  const closeMenu = useCallback(() => setMenu(null), []);
+  // The layout, for R to keep: positions by target, the view, the direction.
+  const reportLayout = useCallback(() => {
+    const positions = {};
+    getNodes().forEach((n) => {
+      positions[n.id] = { x: n.position.x, y: n.position.y };
+    });
+    window.Shiny?.setInputValue?.(`${inputId}_layout`, {
+      direction: directionRef.current,
+      viewport: getViewport(),
+      positions,
+    });
+  }, [inputId, getNodes, getViewport]);
+  // Where the view is, after each pan or zoom.
+  const onMoveEnd = useCallback(
+    (_, viewport) => {
+      window.Shiny?.setInputValue?.(`${inputId}_viewport`, viewport);
+      reportLayout();
+    },
+    [inputId, reportLayout],
+  );
 
   const onLayout = useCallback((newDirection) => {
     setDirection(newDirection);
@@ -163,19 +410,53 @@ function Flow({ configuration }) {
   // Our own nodes carry `measured` once React Flow has sized them (it comes
   // back through onNodesChange). useNodesInitialized() turned true one
   // render too early for nodes added later, so check the nodes directly.
-  const allMeasured = nodes.length > 0 && nodes.every((n) => n.measured?.width && n.measured?.height);
+  // Targets rendered only when visible are never measured off screen: then
+  // one measured target is enough, the layout sizes the others like it.
+  const isMeasured = (n) => n.measured?.width && n.measured?.height;
+  const allMeasured = nodes.length > 0 &&
+    (options.only_render_visible ? nodes.some(isMeasured) : nodes.every(isMeasured));
 
   useEffect(() => {
     if (!layoutPending || !allMeasured) return;
-    if (layoutPending === 'all') {
+    const saved = layoutPending === 'restore' ? savedPositions(savedLayout.current) : null;
+    const unsaved = saved && new Set(nodes.filter((n) => !saved.has(n.id)).map((n) => n.id));
+    if (layoutPending === 'all' || unsaved?.size === nodes.length) {
       setNodes(layoutGraph(nodes, edges, { direction }).nodes);
-      window.requestAnimationFrame(() => fitView());
+      setFitPending(true);
+    } else if (saved) {
+      // Saved targets where they were; targets the layout doesn't know (new
+      // in the pipeline since) next to their neighbours. The saved view only
+      // if it shows every target as it was.
+      const restored = nodes.map((n) =>
+        saved.has(n.id) ? { ...n, position: saved.get(n.id), ...handlePositions(direction) } : n,
+      );
+      setNodes(unsaved.size ? placeNewNodes(restored, edges, unsaved, direction) : restored);
+      setFitPending((unsaved.size === 0 && savedViewport(savedLayout.current?.viewport)) || true);
     } else {
       setNodes(placeNewNodes(nodes, edges, newIdsRef.current, direction));
+      setReportPending(true);
     }
     newIdsRef.current = new Set();
     setLayoutPending(null);
-  }, [layoutPending, allMeasured, nodes, edges, direction, fitView]);
+  }, [layoutPending, allMeasured, nodes, edges, direction]);
+
+  // Runs after the render that drew the new positions: React Flow's store,
+  // updated by its own (child) effects, has them by now. Fitting in the next
+  // animation frame instead raced that render, and now and then fitted the
+  // targets still stacked at the origin: zoomed all the way in.
+  useEffect(() => {
+    if (!fitPending) return;
+    if (fitPending === true) fitView();
+    else setViewport(fitPending);
+    setFitPending(false);
+    setReportPending(true);
+  }, [fitPending, nodes, fitView, setViewport]);
+
+  useEffect(() => {
+    if (!reportPending) return;
+    setReportPending(false);
+    requestAnimationFrame(reportLayout);
+  }, [reportPending, reportLayout]);
 
   // New data from R (statuses every tick; sometimes a changed pipeline).
   useEffect(() => {
@@ -191,12 +472,63 @@ function Flow({ configuration }) {
       const added = incomingNodes.filter((n) => !known.has(n.id)).map((n) => n.id);
       added.forEach((id) => newIdsRef.current.add(id));
       setEdges(incomingEdges);
-      // Nothing placed yet: lay out everything. Otherwise place only the new.
+      // Nothing placed yet: lay out everything (or restore the saved
+      // layout). Otherwise place only the new.
       setLayoutPending((pending) =>
-        pending === 'all' || known.size === 0 ? 'all' : added.length ? 'new' : pending,
+        pending === 'all' || pending === 'restore'
+          ? pending
+          : known.size === 0 ? 'all' : added.length ? 'new' : pending,
       );
     }
   }, [configuration.nodes, configuration.edges]);
+
+  // Options sent with a whole new configuration replace the current ones;
+  // without any, the current ones stay.
+  useEffect(() => {
+    if (configuration.options) setOptions({ ...DEFAULT_OPTIONS, ...configuration.options });
+  }, [configuration.options]);
+
+  // update_targetsboard_options() changes only the options it names.
+  useEffect(() => {
+    const onOptions = (event) => {
+      if (event.detail?.id !== configuration.id) return;
+      setOptions((current) => ({ ...current, ...event.detail.options }));
+    };
+    window.addEventListener(OPTIONS_EVENT, onOptions);
+    return () => window.removeEventListener(OPTIONS_EVENT, onOptions);
+  }, [configuration.id]);
+
+  // Commands from R.
+  useEffect(() => {
+    const onCommand = (event) => {
+      const message = event.detail;
+      if (message?.id !== configuration.id) return;
+      if (message.command === 'focus') {
+        setFocusId(message.node ?? null);
+        setMenu(null);
+      } else if (message.command === 'export_image') {
+        // The image goes back to R as <id>_image, or the reason it failed.
+        const format = message.format === 'svg' ? 'svg' : 'png';
+        imageOf(format)
+          .then((data_url) => sendEvent(`${configuration.id}_image`, { format, data_url }))
+          .catch((e) => sendEvent(`${configuration.id}_image`, { format, error: String(e?.message ?? e) }));
+      } else if (message.command === 'fit_view') {
+        const known = new Set(nodesRef.current.map((n) => n.id));
+        const ids = (message.nodes ?? []).filter((id) => known.has(id));
+        if (message.nodes && ids.length === 0) return; // none of them drawn
+        const fit = () =>
+          fitView({
+            nodes: message.nodes ? ids.map((id) => ({ id })) : undefined,
+            padding: message.padding,
+            duration: message.duration,
+            maxZoom: message.max_zoom,
+          });
+        whenVisible(wrapperRef.current, fit);
+      }
+    };
+    window.addEventListener(COMMAND_EVENT, onCommand);
+    return () => window.removeEventListener(COMMAND_EVENT, onCommand);
+  }, [configuration.id, fitView, imageOf]);
 
   // A focused target that left the pipeline is no longer focused.
   useEffect(() => {
@@ -235,7 +567,6 @@ function Flow({ configuration }) {
   // Report focus and selection to Shiny, as <id>_focused_node and
   // <id>_selected_nodes. Keyed on the ids, so dragging nodes around doesn't
   // send anything.
-  const inputId = configuration.id;
   const selectedKey = sortedKey(nodes.filter((n) => n.selected).map((n) => n.id));
   const runningKey = sortedKey(nodes.filter((n) => n.type === 'running').map((n) => n.id));
   const edgesKey = sortedKey(edges.map((e) => e.id));
@@ -269,6 +600,11 @@ function Flow({ configuration }) {
     }));
   }, [inputId, runningKey, edgesKey]);
 
+  const nodeActions = useMemo(
+    () => ({ focusId, actions: options.toolbar_actions, onAction: onMenuAction }),
+    [focusId, options.toolbar_actions, onMenuAction],
+  );
+
   // Focus highlighting is derived, never stored: dim what lies outside the
   // focused target's lineage.
   const lineage = focusId ? lineageOf(focusId, edges) : null;
@@ -278,15 +614,24 @@ function Flow({ configuration }) {
         className: n.id === focusId ? 'tb-focused' : lineage.has(n.id) ? undefined : 'tb-dimmed',
       }))
     : nodes;
-  const shownEdges = lineage
-    ? edges.map((e) => ({
-        ...e,
-        className: lineage.has(e.source) && lineage.has(e.target) ? undefined : 'tb-dimmed',
-      }))
-    : edges;
+  const shownEdges = edges.map((e) => ({
+    ...e,
+    type: options.edge_type,
+    className: !lineage || (lineage.has(e.source) && lineage.has(e.target)) ? undefined : 'tb-dimmed',
+  }));
+
+  // The board's own colours are for light mode; dark mode keeps React Flow's.
+  const colorMode = resolveColorMode(options.color_mode);
+  const light = colorMode === 'light';
+  colorModeRef.current = colorMode;
 
   return (
-    <div className="reactflow-wrapper" style={{ height: configuration.height, width: configuration.width }}>
+    <div
+      className="reactflow-wrapper"
+      ref={wrapperRef}
+      style={{ height: configuration.height, width: configuration.width, position: 'relative' }}
+    >
+      <NodeActionsContext.Provider value={nodeActions}>
       <ReactFlow
         nodes={shownNodes}
         edges={shownEdges}
@@ -294,23 +639,50 @@ function Flow({ configuration }) {
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneContextMenu={closeMenu}
+        onMoveStart={closeMenu}
+        onMoveEnd={onMoveEnd}
+        onNodeDragStop={reportLayout}
+        zoomOnDoubleClick={false} // a double-click is for the target
         nodesConnectable={false}
         deleteKeyCode={null} // read-only: Backspace and Delete remove nothing
         fitView
         minZoom={0.05} // fit big pipelines whole, as tar_visnetwork() does
-        style={{ background: configuration.background_color }}
+        colorMode={colorMode}
+        onlyRenderVisibleElements={options.only_render_visible}
+        style={light ? { background: configuration.background_color } : undefined}
         nodeTypes={nodeTypes}
       >
-        <MiniMap />
-        <Background
-          id="1"
-          gap={15}
-          color={configuration.background_marks_color}
-          size={1}
-        />
-        <Controls />
+        {options.minimap && (
+          <MiniMap nodeColor={(n) => STATUS_COLORS[n.type] ?? STATUS_COLORS.outdated} pannable zoomable />
+        )}
+        {options.background !== 'none' && (
+          <Background
+            id="1"
+            gap={15}
+            variant={BACKGROUND_VARIANTS[options.background]}
+            color={light ? configuration.background_marks_color : undefined}
+            size={1}
+          />
+        )}
+        {options.controls && (
+          <Controls>
+            {options.download_image && (
+              <ControlButton onClick={downloadImage} title="Download image" aria-label="Download image"
+                className="tb-download-image">
+                {downloadIcon}
+              </ControlButton>
+            )}
+          </Controls>
+        )}
         <LayoutButtons onLayout={onLayout} />
       </ReactFlow>
+      </NodeActionsContext.Provider>
+      {menu && options.node_actions.length > 0 && (
+        <NodeMenu key={`${menu.node}@${menu.x},${menu.y}`} menu={menu} actions={options.node_actions} onAction={onMenuAction} onClose={closeMenu} />
+      )}
     </div>
   );
 }
