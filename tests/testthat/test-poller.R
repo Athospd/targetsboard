@@ -17,6 +17,8 @@ test_that("the poller recomputes only when the code changes or on request", {
   local_pipeline()
   poller <- local_poller()
   expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b", "c"))
+  # The whole widget too, for the tar_visnetwork tab.
+  expect_s3_class(readRDS(poller$tar_vis_path)$widget, "visNetwork")
 
   first <- written_at(poller)
   Sys.sleep(1.5)

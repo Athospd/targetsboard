@@ -145,3 +145,30 @@ test_that("targets whose last build raised warnings get a warning mark", {
     expect_equal(warned_targets(), "a")
   })
 })
+
+test_that("the tar_visnetwork tab shows tar_visnetwork()'s own widget", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    widget <- targets::tar_visnetwork(targets_only = TRUE)
+    board(list(x = widget$x, widget = widget, progress_mtime = progress_mtime()))
+    expect_match(output$vis_network, "hierarchical", fixed = TRUE) # tar_visnetwork()'s layout
+  })
+})
+
+test_that("the power button turns the board off", {
+  skip_on_cran()
+  local_pipeline()
+  server <- local_app_server()
+
+  stopped <- NULL
+  local_mocked_bindings(stopApp = function(returnValue = NULL) stopped <<- returnValue, .package = "shiny")
+
+  shiny::testServer(server, {
+    session$setInputs(turn_off = 1)
+    expect_equal(stopped, "The board is turned off.")
+  })
+})

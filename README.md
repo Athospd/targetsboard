@@ -53,7 +53,7 @@ targets::tar_make()                    # the board follows along
 app$is_alive()
 readLines(app$get_output_file())       # the board's log
 browseURL(attr(app, "url"))            # reopen it after closing the tab
-app$kill()                             # shut it down
+app$kill()                             # shut it down, or press the power button
 ```
 
 You can also run the pipeline from the board. **Run all** makes the whole

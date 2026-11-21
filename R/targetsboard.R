@@ -393,8 +393,9 @@ tar_board_app <- function(script = targets::tar_config_get("script"), targets_on
 #' Between recomputes, the app follows a run through the cheap progress file.
 #'
 #' Each recompute is written to `tar_vis_path` as an RDS file holding
-#' `list(x = tar_visnetwork()$x, progress_mtime = )`: the modification time of
-#' the progress file it reflects, so the app knows which progress is newer.
+#' `list(x = tar_visnetwork()$x, widget = tar_visnetwork(), progress_mtime = )`:
+#' `widget` for the `tar_visnetwork` tab, and the modification time of the
+#' progress file it reflects, so the app knows which progress is newer.
 #'
 #' @param script Path to the targets script.
 #' @param interval Seconds between two checks; checks are cheap file stats.
@@ -454,8 +455,8 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
         !running()
 
       if (!identical(code, computed_code) || run_ended) {
-        x <- tryCatch(
-          targets::tar_visnetwork(script = script, ...)$x,
+        widget <- tryCatch(
+          targets::tar_visnetwork(script = script, ...),
           error = function(e) {
             message("tar_visnetwork() failed: ", conditionMessage(e))
             NULL
@@ -464,9 +465,9 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
         # Write to a temp file and rename it into place, so the app never
         # reads a half-written file. On Windows the rename fails while the
         # app holds the file open: then retry on the next check.
-        written <- is.null(x) || {
+        written <- is.null(widget) || {
           tmp <- paste0(tar_vis_path, ".tmp")
-          saveRDS(list(x = x, progress_mtime = progress_mtime), file = tmp)
+          saveRDS(list(x = widget$x, widget = widget, progress_mtime = progress_mtime), file = tmp)
           file.rename(tmp, tar_vis_path) || { unlink(tmp); FALSE }
         }
         # A broken script is retried once it changes again, not every check.
