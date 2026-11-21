@@ -1,5 +1,5 @@
 import { reactShinyInput } from 'reactR';
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -48,7 +48,53 @@ const DEFAULT_OPTIONS = {
   background: 'dots',
   edge_type: 'default',
   only_render_visible: false,
+  node_actions: [], // [{id, label}]: the right-click menu's items
 };
+
+// Report an event to Shiny: with priority 'event', the same value twice
+// (double-clicking the same target again) still reaches the server.
+const sendEvent = (name, value) =>
+  window.Shiny?.setInputValue?.(name, value, { priority: 'event' });
+
+// The right-click menu of a target. `copy_name` is done here: the server
+// can't reach the clipboard. Every other action goes to Shiny as
+// <id>_node_action.
+function NodeMenu({ menu, actions, onAction, onClose }) {
+  // Opened where the click was, then moved back inside the widget if it
+  // overflows: measured once drawn, before the browser paints it.
+  const ref = useRef(null);
+  const [place, setPlace] = useState({ left: menu.x, top: menu.y });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const parent = el?.offsetParent;
+    if (!el || !parent) return;
+    const maxLeft = parent.clientWidth - el.offsetWidth;
+    const maxTop = parent.clientHeight - el.offsetHeight;
+    setPlace({
+      left: Math.max(0, Math.min(menu.x, maxLeft)),
+      top: Math.max(0, Math.min(menu.y, maxTop)),
+    });
+  }, [menu.x, menu.y]);
+  useEffect(() => {
+    const onKey = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="tb-node-menu" role="menu" ref={ref} style={place}>
+      {actions.map((action) => (
+        <button
+          key={action.id}
+          role="menuitem"
+          data-action={action.id}
+          onClick={() => onAction(action.id, menu.node)}
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 const BACKGROUND_VARIANTS = {
   dots: BackgroundVariant.Dots,
   lines: BackgroundVariant.Lines,
@@ -190,8 +236,55 @@ function Flow({ configuration }) {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [],
   );
-  const onNodeClick = useCallback((_, node) => setFocusId(node.id), []);
-  const onPaneClick = useCallback(() => setFocusId(null), []);
+  const [menu, setMenu] = useState(null); // {node, x, y}
+  const wrapperRef = useRef(null);
+  const inputId = configuration.id;
+
+  const onNodeClick = useCallback((_, node) => {
+    setFocusId(node.id);
+    setMenu(null);
+  }, []);
+  const onPaneClick = useCallback(() => {
+    setFocusId(null);
+    setMenu(null);
+  }, []);
+  // A double-click also focuses its target, whatever clicks came before.
+  const onNodeDoubleClick = useCallback(
+    (_, node) => {
+      setFocusId(node.id);
+      sendEvent(`${inputId}_double_clicked_node`, node.id);
+    },
+    [inputId],
+  );
+  // Right-click focuses the target, reports it, and opens the menu if R
+  // gave it actions.
+  const onNodeContextMenu = useCallback(
+    (event, node) => {
+      event.preventDefault();
+      setFocusId(node.id);
+      sendEvent(`${inputId}_context_node`, node.id);
+      const box = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+      setMenu({ node: node.id, x: event.clientX - box.left, y: event.clientY - box.top });
+    },
+    [inputId],
+  );
+  const onMenuAction = useCallback(
+    (action, node) => {
+      setMenu(null);
+      if (action === 'copy_name') {
+        navigator.clipboard?.writeText(node).catch(() => {});
+        return;
+      }
+      sendEvent(`${inputId}_node_action`, { action, node });
+    },
+    [inputId],
+  );
+  const closeMenu = useCallback(() => setMenu(null), []);
+  // Where the view is, after each pan or zoom.
+  const onMoveEnd = useCallback(
+    (_, viewport) => window.Shiny?.setInputValue?.(`${inputId}_viewport`, viewport),
+    [inputId],
+  );
 
   const onLayout = useCallback((newDirection) => {
     setDirection(newDirection);
@@ -303,7 +396,6 @@ function Flow({ configuration }) {
   // Report focus and selection to Shiny, as <id>_focused_node and
   // <id>_selected_nodes. Keyed on the ids, so dragging nodes around doesn't
   // send anything.
-  const inputId = configuration.id;
   const selectedKey = sortedKey(nodes.filter((n) => n.selected).map((n) => n.id));
   const runningKey = sortedKey(nodes.filter((n) => n.type === 'running').map((n) => n.id));
   const edgesKey = sortedKey(edges.map((e) => e.id));
@@ -357,7 +449,11 @@ function Flow({ configuration }) {
   const light = colorMode === 'light';
 
   return (
-    <div className="reactflow-wrapper" style={{ height: configuration.height, width: configuration.width }}>
+    <div
+      className="reactflow-wrapper"
+      ref={wrapperRef}
+      style={{ height: configuration.height, width: configuration.width, position: 'relative' }}
+    >
       <ReactFlow
         nodes={shownNodes}
         edges={shownEdges}
@@ -365,6 +461,12 @@ function Flow({ configuration }) {
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneContextMenu={closeMenu}
+        onMoveStart={closeMenu}
+        onMoveEnd={onMoveEnd}
+        zoomOnDoubleClick={false} // a double-click is for the target
         nodesConnectable={false}
         deleteKeyCode={null} // read-only: Backspace and Delete remove nothing
         fitView
@@ -389,6 +491,9 @@ function Flow({ configuration }) {
         {options.controls && <Controls />}
         <LayoutButtons onLayout={onLayout} />
       </ReactFlow>
+      {menu && options.node_actions.length > 0 && (
+        <NodeMenu key={`${menu.node}@${menu.x},${menu.y}`} menu={menu} actions={options.node_actions} onAction={onMenuAction} onClose={closeMenu} />
+      )}
     </div>
   );
 }

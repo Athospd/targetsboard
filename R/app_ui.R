@@ -53,7 +53,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script")) {
               position = "right",
               uiOutput("value_preview")
             ),
-            targetsboard("flow", metadata$nodes, metadata$edges)
+            targetsboard("flow", metadata$nodes, metadata$edges, options = board_options())
           )
         ),
         nav_panel(

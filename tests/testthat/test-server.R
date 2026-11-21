@@ -42,19 +42,75 @@ test_that("Load restarts the poller only for an existing, different script", {
   })
 })
 
-test_that("focusing a target previews its value in one reused output", {
+test_that("a double-click previews a target's value, then the preview follows the focus", {
   skip_on_cran()
   local_pipeline(make = TRUE)
   server <- local_app_server()
 
   shiny::testServer(server, {
     session$setInputs(flow_focused_node = "c")
+    expect_error(output$value_preview) # focusing alone reads no value
+
+    session$setInputs(flow_double_clicked_node = "c")
     expect_match(output$value_preview$html, "value_preview_content")
     expect_match(output$value_preview_content, "4")
 
+    # One reused output, following the focus while open.
     session$setInputs(flow_focused_node = "b")
     invisible(output$value_preview)
     expect_match(output$value_preview_content, "2")
+
+    # Clearing the focus closes it, and focusing again doesn't reopen it.
+    session$setInputs(flow_focused_node = NULL)
+    expect_false(preview_open())
+    session$setInputs(flow_focused_node = "c")
+    expect_error(output$value_preview)
+
+    # Nor does its own toggle, once closed by it.
+    session$setInputs(flow_double_clicked_node = "c")
+    expect_true(preview_open())
+    session$setInputs(value_preview_sidebar = TRUE)
+    session$setInputs(value_preview_sidebar = FALSE)
+    expect_false(preview_open())
+  })
+})
+
+test_that("a target's menu runs it, invalidates it after confirmation, or previews it", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  ran <- list()
+  modal <- NULL
+  local_mocked_bindings(start_run = function(script, names = NULL) {
+    ran[[length(ran) + 1]] <<- names
+    NULL
+  })
+  local_mocked_bindings(
+    showModal = function(ui, ...) modal <<- as.character(ui),
+    removeModal = function(...) NULL,
+    showNotification = function(...) NULL,
+    .package = "shiny"
+  )
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$setInputs(flow_node_action = list(action = "run", node = "b"))
+    expect_equal(ran, list("b"))
+
+    # Invalidates the target the menu was for, whatever is selected.
+    session$setInputs(flow_selected_nodes = c("a", "c"))
+    session$setInputs(flow_node_action = list(action = "invalidate", node = "b"))
+    expect_match(modal, "<code>b</code>", fixed = TRUE)
+    expect_no_match(modal, "<code>a</code>", fixed = TRUE)
+    session$setInputs(invalidate_confirm = 1)
+    meta <- targets::tar_meta(targets_only = TRUE)$name
+    expect_false("b" %in% meta)
+    expect_true(all(c("a", "c") %in% meta))
+
+    session$setInputs(flow_focused_node = "a", flow_node_action = list(action = "value", node = "a"))
+    expect_true(preview_open())
+    expect_match(output$value_preview_content, "1")
   })
 })
 

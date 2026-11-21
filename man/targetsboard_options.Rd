@@ -10,7 +10,8 @@ targetsboard_options(
   controls = TRUE,
   background = c("dots", "lines", "cross", "none"),
   edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
-  only_render_visible = FALSE
+  only_render_visible = FALSE,
+  node_actions = character()
 )
 }
 \arguments{
@@ -29,6 +30,12 @@ or \code{"none"}.}
 
 \item{only_render_visible}{Render only the targets in view, which keeps big
 pipelines responsive.}
+
+\item{node_actions}{The right-click menu of a target: a named character
+vector of labels, named by action. Choosing one sets
+\verb{input$<inputId>_node_action} to \code{list(action = , node = )}, except
+\code{copy_name}, which the widget does itself: it copies the target's name to
+the clipboard. Empty, the default: no menu.}
 }
 \value{
 A list of options for \code{\link[=targetsboard]{targetsboard()}}.

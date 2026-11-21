@@ -13,7 +13,17 @@
 #' - `input$<inputId>_focused_node`: the id of the focused target, or `NULL`;
 #' - `input$<inputId>_selected_nodes`: the ids of the selected targets
 #'   (several with Shift or Ctrl);
-#' - `input$<inputId>_running_nodes`: the ids of the running targets.
+#' - `input$<inputId>_running_nodes`: the ids of the running targets;
+#' - `input$<inputId>_double_clicked_node`: the id of a target double-clicked;
+#' - `input$<inputId>_context_node`: the id of a target right-clicked, which
+#'   also focuses it;
+#' - `input$<inputId>_node_action`: `list(action, node)`, when an action of
+#'   the right-click menu is chosen (see `node_actions` in
+#'   [targetsboard_options()]);
+#' - `input$<inputId>_viewport`: `list(x, y, zoom)`, after each pan or zoom.
+#'
+#' The event inputs (double-click, right-click, action) fire again for the
+#' same target, so `observeEvent()` sees every one.
 #'
 #' @param inputId The input slot of the widget.
 #' @param nodes,edges The `nodes` and `edges` data frames of
@@ -133,6 +143,11 @@ update_targetsboard_options <- function(session, inputId, ...) {
 #'   `"smoothstep"`, `"step"`, `"straight"` or `"simplebezier"`.
 #' @param only_render_visible Render only the targets in view, which keeps big
 #'   pipelines responsive.
+#' @param node_actions The right-click menu of a target: a named character
+#'   vector of labels, named by action. Choosing one sets
+#'   `input$<inputId>_node_action` to `list(action = , node = )`, except
+#'   `copy_name`, which the widget does itself: it copies the target's name to
+#'   the clipboard. Empty, the default: no menu.
 #' @return A list of options for [targetsboard()].
 #' @export
 targetsboard_options <- function(color_mode = c("light", "dark", "system"),
@@ -140,7 +155,8 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
                                  controls = TRUE,
                                  background = c("dots", "lines", "cross", "none"),
                                  edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
-                                 only_render_visible = FALSE) {
+                                 only_render_visible = FALSE,
+                                 node_actions = character()) {
   flag <- function(x) {
     if (!rlang::is_bool(x)) {
       rlang::abort(sprintf("`%s` must be TRUE or FALSE.", deparse(substitute(x))))
@@ -154,10 +170,22 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
       controls = flag(controls),
       background = rlang::arg_match(background),
       edge_type = rlang::arg_match(edge_type),
-      only_render_visible = flag(only_render_visible)
+      only_render_visible = flag(only_render_visible),
+      node_actions = action_items(node_actions)
     ),
     class = "targetsboard_options"
   )
+}
+
+# A named character vector of labels, named by action, as the widget's list
+# of {id, label} items.
+action_items <- function(actions) {
+  if (length(actions) == 0) return(list())
+  ids <- names(actions)
+  if (!is.character(actions) || is.null(ids) || any(!nzchar(ids)) || anyDuplicated(ids)) {
+    rlang::abort("`node_actions` must be a character vector of labels, named by unique actions.")
+  }
+  unname(Map(function(id, label) list(id = id, label = label), ids, unname(actions)))
 }
 
 # The widget's whole configuration: an update replaces it, so both the

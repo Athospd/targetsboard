@@ -86,7 +86,8 @@ widget_app <- function(args = "") {
       "ui <- fluidPage(targetsboard::targetsboard('dag', net$nodes, net$edges, height = '500px'%s))",
       if (nzchar(args)) paste0(", ", args) else ""
     ),
-    "shinyApp(ui, function(input, output, session) NULL)"
+    "server <- function(input, output, session) {}",
+    "shinyApp(ui, server)"
   )
 }
 
@@ -113,4 +114,15 @@ local_chain_pipeline <- function(n, .env = parent.frame()) {
   )
   withr::local_dir(dir, .local_envir = .env)
   dir
+}
+
+# Fires a mouse event ("dblclick", "contextmenu") on the node of target `id`,
+# at its centre, as React sees a real one.
+mouse_event <- function(app, id, type) {
+  app$run_js(sprintf(
+    "const n = %s; const r = n.getBoundingClientRect();
+     n.dispatchEvent(new MouseEvent('%s', {bubbles: true, cancelable: true, button: %d,
+       clientX: r.x + r.width / 2, clientY: r.y + r.height / 2}));",
+    node_js(id), type, if (type == "contextmenu") 2L else 0L
+  ))
 }

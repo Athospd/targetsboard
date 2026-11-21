@@ -88,8 +88,18 @@ The widget reports to the server, as Shiny inputs:
 \item \verb{input$<inputId>_focused_node}: the id of the focused target, or \code{NULL};
 \item \verb{input$<inputId>_selected_nodes}: the ids of the selected targets
 (several with Shift or Ctrl);
-\item \verb{input$<inputId>_running_nodes}: the ids of the running targets.
+\item \verb{input$<inputId>_running_nodes}: the ids of the running targets;
+\item \verb{input$<inputId>_double_clicked_node}: the id of a target double-clicked;
+\item \verb{input$<inputId>_context_node}: the id of a target right-clicked, which
+also focuses it;
+\item \verb{input$<inputId>_node_action}: \code{list(action, node)}, when an action of
+the right-click menu is chosen (see \code{node_actions} in
+\code{\link[=targetsboard_options]{targetsboard_options()}});
+\item \verb{input$<inputId>_viewport}: \code{list(x, y, zoom)}, after each pan or zoom.
 }
+
+The event inputs (double-click, right-click, action) fire again for the
+same target, so \code{observeEvent()} sees every one.
 }
 \examples{
 \dontrun{

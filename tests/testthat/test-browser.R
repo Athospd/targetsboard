@@ -28,10 +28,11 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   )
   expect_length(unique(unlist(positions)), 3)
 
-  # Clicking a target focuses it and previews its value.
+  # Clicking a target focuses it; double-clicking previews its value.
   app$click(selector = ".react-flow__node[data-id='c']")
   app$wait_for_value(input = "flow_focused_node")
   expect_equal(app$get_value(input = "flow_focused_node"), "c")
+  mouse_event(app, "c", "dblclick")
   app$wait_for_value(output = "value_preview_content")
   expect_match(app$get_value(output = "value_preview_content"), "4")
   expect_true(has_class("c", "tb-focused"))
@@ -255,4 +256,82 @@ test_that("the first layout fits the whole graph in view, every time", {
     expect_length(unlist(outside), 0)
     app$stop()
   }
+})
+
+test_that("double-click, right-click menu and viewport reach the server", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "events")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  menu_items <- function() {
+    unlist(app$get_js(
+      "Array.from(document.querySelectorAll('.tb-node-menu [role=menuitem]')).map(b => b.dataset.action)"
+    ))
+  }
+  menu_open <- "document.querySelector('.tb-node-menu') !== null"
+
+  mouse_event(app, "a", "dblclick")
+  app$wait_for_value(input = "flow_double_clicked_node")
+  expect_equal(app$get_value(input = "flow_double_clicked_node"), "a")
+  # It opens the value preview: let its sidebar finish sliding in, which
+  # narrows the graph.
+  app$wait_for_value(output = "value_preview_content")
+  Sys.sleep(1)
+
+  # Right-click: reports and focuses the target, and opens its menu.
+  mouse_event(app, "b", "contextmenu")
+  app$wait_for_js(menu_open)
+  expect_equal(menu_items(), c("run", "invalidate", "value", "copy_name"))
+  app$wait_for_value(input = "flow_context_node")
+  expect_equal(app$get_value(input = "flow_context_node"), "b")
+  expect_true(app$get_js(paste0(node_js("b"), ".classList.contains('tb-focused')")))
+
+  # Inside the widget, however far right the click.
+  box <- app$get_js(
+    "(() => { const m = document.querySelector('.tb-node-menu').getBoundingClientRect();
+       const w = document.querySelector('.reactflow-wrapper').getBoundingClientRect();
+       return {menu_left: m.left, menu_right: m.right, left: w.left, right: w.right}; })()"
+  )
+  expect_gte(box$menu_left, box$left)
+  expect_lte(box$menu_right, box$right + 1)
+
+  press_key(app, "Escape")
+  app$wait_for_js(paste0("!(", menu_open, ")"))
+
+  # Copy its name: done in the browser.
+  app$run_js(
+    "window.__copied = null;
+     Object.defineProperty(navigator, 'clipboard', {configurable: true,
+       value: {writeText: t => { window.__copied = t; return Promise.resolve(); }}});"
+  )
+  mouse_event(app, "b", "contextmenu")
+  app$wait_for_js(menu_open)
+  app$click(selector = ".tb-node-menu [data-action='copy_name']")
+  app$wait_for_js("window.__copied === 'b'")
+  app$wait_for_js(paste0("!(", menu_open, ")"))
+
+  # Another action goes to the server: here, the invalidate confirmation.
+  mouse_event(app, "c", "contextmenu")
+  app$wait_for_js(menu_open)
+  app$click(selector = ".tb-node-menu [data-action='invalidate']")
+  app$wait_for_js("document.querySelector('.modal-dialog') !== null")
+  expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>c</code>", fixed = TRUE)
+  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
+  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+
+  # The viewport, after a zoom.
+  app$wait_for_value(input = "flow_viewport")
+  zoom <- app$get_value(input = "flow_viewport")$zoom
+  app$click(selector = ".react-flow__controls-zoomin")
+  app$wait_for_js(sprintf("Shiny.shinyapp.$inputValues['flow_viewport'].zoom > %f", zoom))
+  expect_gt(app$get_value(input = "flow_viewport")$zoom, zoom)
+})
+
+test_that("a widget without node actions has no menu, but reports right-clicks", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "nomenu", widget_app())
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  mouse_event(app, "b", "contextmenu")
+  app$wait_for_value(input = "dag_context_node")
+  expect_equal(app$get_value(input = "dag_context_node"), "b")
+  expect_false(app$get_js("document.querySelector('.tb-node-menu') !== null"))
 })

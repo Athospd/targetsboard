@@ -87,7 +87,7 @@ test_that("targetsboard_options() has defaults and checks its values", {
   expect_s3_class(options, "targetsboard_options")
   expect_equal(unclass(options), list(
     color_mode = "light", minimap = TRUE, controls = TRUE, background = "dots",
-    edge_type = "default", only_render_visible = FALSE
+    edge_type = "default", only_render_visible = FALSE, node_actions = list()
   ))
   expect_equal(targetsboard_options(edge_type = "step")$edge_type, "step")
   expect_error(targetsboard_options(color_mode = "blue"), "color_mode")
@@ -130,4 +130,17 @@ test_that("update_targetsboard_options() sends only the options it names, checke
 
   expect_error(update_targetsboard_options(session, "dag", edge_type = "zigzag"), "edge_type")
   expect_error(update_targetsboard_options(session, "dag", "dark"))
+})
+
+test_that("node_actions become the menu's items, checked", {
+  options <- targetsboard_options(node_actions = c(run = "Run it", copy_name = "Copy"))
+  expect_equal(options$node_actions, list(
+    list(id = "run", label = "Run it"),
+    list(id = "copy_name", label = "Copy")
+  ))
+  expect_match(as.character(targetsboard("dag", fake_nodes(), fake_edges(), options = options)),
+               '"node_actions":[{"id":"run","label":"Run it"}', fixed = TRUE)
+  expect_error(targetsboard_options(node_actions = c("Run it")), "named")
+  expect_error(targetsboard_options(node_actions = c(run = "a", run = "b")), "unique")
+  expect_error(targetsboard_options(node_actions = list(run = 1)), "character")
 })

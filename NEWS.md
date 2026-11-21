@@ -25,6 +25,15 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* The widget reports more to the server: `<id>_double_clicked_node`,
+  `<id>_context_node` (a right-click, which also focuses the target),
+  `<id>_viewport` after each pan or zoom, and `<id>_node_action` when an item
+  of a target's right-click menu is chosen. The menu's items come from the
+  new `node_actions` of `targetsboard_options()`; `copy_name` copies the
+  target's name in the browser.
+* On the board, a click only focuses a target; a double-click shows its value.
+  Right-click a target to run it, invalidate it (after confirmation), show its
+  value or copy its name.
 * `targetsboard()` takes display options from the new
   `targetsboard_options()`: `color_mode` (light, dark or the system's),
   whether to show the minimap and the zoom controls, the `background` pattern,
