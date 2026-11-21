@@ -121,10 +121,6 @@ board_configuration <- function(inputId, nodes, edges, height, width, warnings =
 #' @noRd
 dataframe_to_reactflow_node_data <- function(dataframe, warnings = character()) {
 
-  nodes_global_params <- list(
-    `deletable?` = TRUE
-  )
-
   dataframe |>
     dplyr::select(
       c("id", "description", "type", "status", "level", "label", "color")
@@ -145,9 +141,8 @@ dataframe_to_reactflow_node_data <- function(dataframe, warnings = character()) 
       )),
       type = status_to_node_type(.data$status) # picks the node component
     ) |>
-    dplyr::mutate(
-      !!!nodes_global_params
-    ) |>
+    # The board is read-only: no target can be deleted from it.
+    dplyr::mutate(deletable = FALSE) |>
     purrr::transpose()
 }
 
@@ -177,6 +172,7 @@ dataframe_to_reactflow_edge_data <- function(dataframe) {
       id = paste(.data$from, .data$arrows, .data$to, sep = "_")
     ) |>
     dplyr::select(dplyr::all_of(c(id = "id", source = "from", target = "to"))) |>
+    dplyr::mutate(deletable = FALSE) |>
     purrr::transpose()
 }
 

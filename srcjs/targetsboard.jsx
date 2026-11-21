@@ -295,6 +295,7 @@ function Flow({ configuration }) {
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodesConnectable={false}
+        deleteKeyCode={null} // read-only: Backspace and Delete remove nothing
         fitView
         minZoom={0.05} // fit big pipelines whole, as tar_visnetwork() does
         style={{ background: configuration.background_color }}

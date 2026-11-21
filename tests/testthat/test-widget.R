@@ -75,3 +75,9 @@ test_that("update_targetsboard_status() can send warning marks alone", {
   update_targetsboard_status(session, "dag", c(raw = "completed"))
   expect_null(sent$warnings) # NULL leaves the marks as they are
 })
+
+test_that("targets and edges can't be deleted from the read-only board", {
+  config <- board_configuration("dag", fake_nodes(), fake_edges(), "500px", "100%")
+  expect_false(any(vapply(config$nodes, function(n) n$deletable, TRUE)))
+  expect_false(any(vapply(config$edges, function(e) e$deletable, TRUE)))
+})

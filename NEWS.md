@@ -82,6 +82,9 @@ First cleanup of the 2024 prototype.
 
 ## Bug fixes and performance
 
+* Backspace and Delete no longer remove the selected targets and their edges
+  from the board. React Flow deletes them on those keys by default, which a
+  read-only board must not do.
 * `tar_board()` lists `parallelly` among its dependencies. Its default port
   comes from `targets::tar_random_port()`, which needs `parallelly`, but
   `targets` only suggests it, so on a fresh install `tar_board()` failed with
