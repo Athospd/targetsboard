@@ -16,13 +16,30 @@ First cleanup of the 2024 prototype.
 * `tar_board()`'s `metadata` argument moved after `targets_only`.
 * The widget reports its selection as `input$<inputId>_selected_nodes`
   (was `input$selected_nodes`).
+* The widget calls running targets "running": their node type is `running`
+  (was `dispatched`) and it reports them as `input$<inputId>_running_nodes`
+  (was `input$<inputId>_dispatched_nodes`; `_dispatched_nodes_incomers` is
+  gone). Targets can no longer be connected by dragging between them.
+* The board's value preview is driven by the focused target, not the first
+  selected one.
 
 ## New features
 
+* Clicking a target focuses it: what it depends on and what depends on it
+  stay highlighted and the rest of the graph dims. The widget reports it as
+  `input$<inputId>_focused_node`; clicking the background clears it.
+* Targets whose last build raised warnings carry a warning mark. The widget
+  functions take `warnings`, and `update_targetsboard_status()` can send
+  the marks alone.
+* When the pipeline changes, targets already drawn keep their place and only
+  new ones are placed, next to their neighbours. The layout buttons are now
+  **Tidy vertically** and **Tidy horizontally**, to lay out everything again.
+* The project's language is in `GLOSSARY.md`, and its scope in
+  `docs/adr/0001-local-read-only-companion.md`.
 * `tar_board_app()` returns the board as a Shiny app object, to run in the
   foreground or deploy.
 * The board follows changes to the pipeline itself: added, removed and
-  rewired targets appear in the DAG, which is laid out again.
+  rewired targets appear in the DAG.
 * A **Load** button switches the pipeline script; the script box no longer
   reloads on every keystroke.
 * The board's output goes to a log file: `readLines(app$get_output_file())`.

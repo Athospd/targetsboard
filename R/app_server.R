@@ -84,9 +84,15 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
         session,
         "flow",
         nodes = overlay_statuses(nodes, settle_statuses(statuses, is_running)),
-        edges = current$x$edges
+        edges = current$x$edges,
+        warnings = shiny::isolate(warned_targets())
       )
     })
+
+    # New metadata can add or clear warning marks: send just those.
+    shiny::observeEvent(warned_targets(), {
+      update_targetsboard_status(session, "flow", warnings = warned_targets())
+    }, ignoreInit = TRUE)
 
     # New progress, or a run that stopped: send just the statuses.
     shiny::observeEvent(list(progress(), running()), {
@@ -154,22 +160,23 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
       if (!is.null(path)) writeLines(format(Sys.time(), "%H:%M:%OS6"), path)
     })
 
+    # The value of the focused target, in the sidebar.
     observe({
-      bslib::toggle_sidebar("output_preview_sidebar", open = !is.null(input$flow_selected_nodes[1]))
+      bslib::toggle_sidebar("value_preview_sidebar", open = !is.null(input$flow_focused_node))
     })
 
-    output$output_preview <- shiny::renderUI({
-      req(input$flow_selected_nodes)
-      tar_output <- tryCatch(
-        targets::tar_read_raw(input$flow_selected_nodes[1]),
-        error = function(e) shiny::p("No artifact available for this target.")
+    output$value_preview <- shiny::renderUI({
+      req(input$flow_focused_node)
+      value <- tryCatch(
+        targets::tar_read_raw(input$flow_focused_node),
+        error = function(e) shiny::p("No value stored for this target yet.")
       )
 
-      c(render_fun, output_ui_fun) %<-% render_and_output_bundle(tar_output)
+      c(render_fun, output_ui_fun) %<-% render_and_output_bundle(value)
       # Reuse one output id: assigning it again replaces the previous
       # renderer instead of piling up a new output per click.
-      output$output_preview_content <- render_fun(tar_output)
-      output_ui_fun("output_preview_content")
+      output$value_preview_content <- render_fun(value)
+      output_ui_fun("value_preview_content")
     })
 
     observeEvent(input$load_script, {
@@ -197,6 +204,13 @@ app_server <- function(metadata, script = "_targets.R", targets_only = TRUE) {
         tryCatch(targets::tar_meta(targets_only = TRUE), error = function(e) NULL)
       }
     )
+
+    # Targets whose last build raised warnings, for the warning marks.
+    warned_targets <- shiny::reactive({
+      meta <- tar_meta_data()
+      if (is.null(meta) || !"warnings" %in% names(meta)) return(character())
+      sort(meta$name[!is.na(meta$warnings)])
+    })
 
     output$meta <- reactable::renderReactable({
       req(tar_meta_data())

@@ -5,8 +5,8 @@ import './buttonStyles.css';
 const LayoutButtons = ({ onLayout }) => (
   <Panel position="top-right">
     <div className="button-container">
-      <button onClick={() => onLayout('TB')}>Vertical Layout</button>
-      <button onClick={() => onLayout('LR')}>Horizontal Layout</button>
+      <button onClick={() => onLayout('TB')}>Tidy vertically</button>
+      <button onClick={() => onLayout('LR')}>Tidy horizontally</button>
     </div>
   </Panel>
 );

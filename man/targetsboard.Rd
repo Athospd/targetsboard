@@ -6,7 +6,14 @@
 \alias{update_targetsboard_status}
 \title{DAG widget for Shiny}
 \usage{
-targetsboard(inputId, nodes, edges, height = "100\%", width = "100\%")
+targetsboard(
+  inputId,
+  nodes,
+  edges,
+  height = "100\%",
+  width = "100\%",
+  warnings = character()
+)
 
 update_targetsboard(
   session,
@@ -14,10 +21,16 @@ update_targetsboard(
   nodes,
   edges,
   height = "100\%",
-  width = "100\%"
+  width = "100\%",
+  warnings = character()
 )
 
-update_targetsboard_status(session, inputId, statuses)
+update_targetsboard_status(
+  session,
+  inputId,
+  statuses = character(),
+  warnings = NULL
+)
 }
 \arguments{
 \item{inputId}{The input slot of the widget.}
@@ -25,12 +38,10 @@ update_targetsboard_status(session, inputId, statuses)
 \item{nodes, edges}{The \code{nodes} and \code{edges} data frames of
 \code{targets::tar_visnetwork()$x}.}
 
-\item{height, width}{CSS size of the widget.
+\item{height, width}{CSS size of the widget.}
 
-\code{update_targetsboard()} replaces the whole graph, and lays it out again when
-targets were added or removed. \code{update_targetsboard_status()} only changes
-the status of some targets, which is much lighter: use it to follow a
-running pipeline.}
+\item{warnings}{For \code{update_targetsboard_status()}: \code{NULL} leaves the warning
+marks as they are; otherwise the ids of all the targets that carry one.}
 
 \item{session}{The Shiny session.}
 
@@ -45,13 +56,22 @@ their side effect.
 }
 \description{
 The interactive targets DAG used by the board, as a Shiny input you can
-place in your own app. Nodes are coloured by status, running targets show a
-spinner and their incoming edges are animated.
+place in your own app. Targets are coloured by status, running targets show
+a spinner and their incoming edges are animated, and targets whose last
+build raised warnings carry a warning mark.
 }
 \details{
-The widget reports the ids of the selected targets to the server as
-\verb{input$<inputId>_selected_nodes} (and the running ones as
-\verb{input$<inputId>_dispatched_nodes}).
+Clicking a target focuses it: what it depends on and what depends on it are
+highlighted, and the rest of the graph dims. Clicking the background clears
+the focus.
+
+The widget reports to the server, as Shiny inputs:
+\itemize{
+\item \verb{input$<inputId>_focused_node}: the id of the focused target, or \code{NULL};
+\item \verb{input$<inputId>_selected_nodes}: the ids of the selected targets
+(several with Shift or Ctrl);
+\item \verb{input$<inputId>_running_nodes}: the ids of the running targets.
+}
 }
 \examples{
 \dontrun{
@@ -66,7 +86,7 @@ server <- function(input, output, session) {
     net <- targets::tar_visnetwork(targets_only = TRUE)$x
     update_targetsboard(session, "dag", net$nodes, net$edges, height = "600px")
   })
-  observe(print(input$dag_selected_nodes))
+  observe(print(input$dag_focused_node))
 }
 
 shinyApp(ui, server)

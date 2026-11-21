@@ -65,9 +65,11 @@ test_that("the board shows a killed run's targets as canceled", {
   server <- local_app_server()
 
   sent <- list()
-  local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses) {
-    sent[[length(sent) + 1]] <<- statuses
-  })
+  local_mocked_bindings(
+    update_targetsboard_status = function(session, inputId, statuses = character(), warnings = NULL) {
+      if (length(statuses)) sent[[length(sent) + 1]] <<- statuses # not the warning marks
+    }
+  )
 
   shiny::testServer(server, {
     environment(server)$stop_poller() # keep the graph as it is

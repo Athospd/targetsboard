@@ -29,6 +29,7 @@ Imports:
 Suggests:
     chromote,
     ggplot2,
+    jsonlite,
     plotly,
     shinytest2,
     skimr,
