@@ -124,3 +124,21 @@ test_that("tar_board() waits for the board, then opens it in the browser", {
   expect_true(port_in_use(port)) # up as soon as tar_board() returns
   expect_match(paste(readLines(url, warn = FALSE), collapse = ""), "Targets board")
 })
+
+test_that("each page load draws the board with the layout saved last", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  app <- tar_board_app()
+  page <- function() {
+    request <- list(
+      REQUEST_METHOD = "GET", PATH_INFO = "/", QUERY_STRING = "",
+      HTTP_HOST = "127.0.0.1", rook.input = NULL
+    )
+    response <- app$httpHandler(list2env(request))
+    paste(response$content, collapse = "")
+  }
+  expect_no_match(page(), "\"layout\":", fixed = TRUE)
+  # Saved after the app started: the next page load has it.
+  write_board_layout(list(direction = "TB", positions = list(a = list(x = 7, y = 8))))
+  expect_match(page(), "\"layout\":{\"direction\":\"TB\"", fixed = TRUE)
+})

@@ -25,6 +25,13 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* The board remembers where you left the targets. It saves their positions,
+  the view and the direction of the last layout in
+  `_targets/user/targetsboard_layout.json` after each drag, pan, zoom or tidy,
+  and opens with them, also on a reload. Targets new since then are placed
+  next to their neighbours; the "Tidy" buttons still lay the graph out afresh.
+  The widget reports its layout as `input$<inputId>_layout`, and
+  `targetsboard()` takes one back as `layout`.
 * The widget draws the whole graph as an image, whatever the zoom:
   `targetsboard_export_image()` asks it for a PNG or an SVG, which arrives as
   `input$<inputId>_image`, and `save_targetsboard_image()` writes that to a

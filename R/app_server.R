@@ -285,6 +285,10 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       update_targetsboard_options(session, "flow", color_mode = input$dark_mode)
     })
 
+    # Keep where the author left the targets, for the next time the board
+    # opens: in the store's user folder, `_targets/user/`.
+    shiny::observeEvent(input$flow_layout, write_board_layout(input$flow_layout))
+
     # The power button: stop the board. In tar_board()'s background process,
     # that ends the process too.
     shiny::observeEvent(input$turn_off, shiny::stopApp("The board is turned off."))

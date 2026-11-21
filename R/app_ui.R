@@ -7,9 +7,10 @@
 #'
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
+#' @param layout The board's saved layout, from `read_board_layout()`, or NULL.
 #' @import shiny bslib
 #' @noRd
-app_ui <- function(metadata, script = targets::tar_config_get("script")) {
+app_ui <- function(metadata, script = targets::tar_config_get("script"), layout = NULL) {
   shiny::tagList(
     add_external_resources(),
     page_sidebar(
@@ -53,7 +54,10 @@ app_ui <- function(metadata, script = targets::tar_config_get("script")) {
               position = "right",
               uiOutput("value_preview")
             ),
-            targetsboard("flow", metadata$nodes, metadata$edges, options = board_options())
+            targetsboard(
+              "flow", metadata$nodes, metadata$edges,
+              options = board_options(), layout = layout
+            )
           )
         ),
         nav_panel(

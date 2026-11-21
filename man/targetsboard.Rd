@@ -16,7 +16,8 @@ targetsboard(
   height = "100\%",
   width = "100\%",
   warnings = character(),
-  options = targetsboard_options()
+  options = targetsboard_options(),
+  layout = NULL
 )
 
 update_targetsboard(
@@ -74,6 +75,12 @@ options it names, e.g. \code{color_mode} to follow \code{bslib::input_dark_mode(
 \code{targetsboard_fit_view()} brings targets into view: together, they can show
 a target picked elsewhere in the app.}
 
+\item{layout}{Optional: a layout the widget reported as
+\verb{input$<inputId>_layout}. The targets in it are drawn where they were, in
+its direction, and the others next to their neighbours; when it has them
+all, its view is restored too, else the graph is fitted into view. The
+"Tidy" buttons lay the graph out afresh.}
+
 \item{session}{The Shiny session.}
 
 \item{statuses}{A named character vector: target statuses, as in
@@ -128,7 +135,12 @@ the right-click menu or of the focused target's toolbar is chosen (see
 \code{node_actions} and \code{toolbar_actions} in \code{\link[=targetsboard_options]{targetsboard_options()}});
 \item \verb{input$<inputId>_viewport}: \code{list(x, y, zoom)}, after each pan or zoom;
 \item \verb{input$<inputId>_image}: \code{list(format, data_url)}, the image asked for by
-\code{\link[=targetsboard_export_image]{targetsboard_export_image()}}, or \code{list(format, error)}.
+\code{\link[=targetsboard_export_image]{targetsboard_export_image()}}, or \code{list(format, error)};
+\item \verb{input$<inputId>_layout}: \code{list(direction, viewport, positions)}, where
+the targets are (\code{positions}, named by target, each \code{list(x, y)}), the
+view (\code{list(x, y, zoom)}) and the direction of the last layout (\code{"LR"} or
+\code{"TB"}): once the targets are laid out, and after each drag, pan or zoom.
+Give it back as \code{layout} to draw the graph as it was.
 }
 
 The event inputs (double-click, right-click, action) fire again for the

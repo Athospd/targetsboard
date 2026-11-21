@@ -264,19 +264,42 @@ const syncNodes = (currentNodes, incomingNodes) => {
   });
 };
 
+// The positions of a layout given by R (targetsboard(layout = )), checked:
+// a Map of target id to {x, y}.
+const savedPositions = (layout) =>
+  new Map(
+    Object.entries(layout?.positions ?? {}).filter(
+      ([, p]) => Number.isFinite(p?.x) && Number.isFinite(p?.y),
+    ).map(([id, p]) => [id, { x: p.x, y: p.y }]),
+  );
+const savedViewport = (viewport) =>
+  ['x', 'y', 'zoom'].every((k) => Number.isFinite(viewport?.[k])) ? viewport : null;
+
 function Flow({ configuration }) {
-  const { fitView, getNodes } = useReactFlow();
+  const { fitView, getNodes, getViewport, setViewport } = useReactFlow();
   const [nodes, setNodes] = useState(configuration.nodes ?? []);
   const [edges, setEdges] = useState(configuration.edges ?? []);
-  const [direction, setDirection] = useState('LR');
+  // A saved layout is read once, when the widget is first drawn.
+  const savedLayout = useRef(configuration.layout);
+  const [direction, setDirection] = useState(
+    ['LR', 'TB'].includes(configuration.layout?.direction) ? configuration.layout.direction : 'LR',
+  );
+  const directionRef = useRef(direction);
+  directionRef.current = direction;
   const [focusId, setFocusId] = useState(null);
   const [options, setOptions] = useState({ ...DEFAULT_OPTIONS, ...configuration.options });
   // Lay out once all nodes have been measured: everything ('all') on first
   // render and when a Tidy button is pressed; only the new targets ('new')
-  // when the pipeline's structure changes.
-  const [layoutPending, setLayoutPending] = useState('all');
-  // Fit the view to the graph once the laid-out targets are drawn.
+  // when the pipeline's structure changes. With a saved layout, the first
+  // render puts the targets back where they were ('restore').
+  const [layoutPending, setLayoutPending] = useState(
+    savedPositions(configuration.layout).size > 0 ? 'restore' : 'all',
+  );
+  // Once the laid-out targets are drawn: true fits the view to the graph, a
+  // viewport ({x, y, zoom}) restores that one.
   const [fitPending, setFitPending] = useState(false);
+  // Report the layout once the new positions are drawn.
+  const [reportPending, setReportPending] = useState(false);
   const newIdsRef = useRef(new Set());
 
   const nodesRef = useRef(nodes);
@@ -358,10 +381,25 @@ function Flow({ configuration }) {
     [inputId],
   );
   const closeMenu = useCallback(() => setMenu(null), []);
+  // The layout, for R to keep: positions by target, the view, the direction.
+  const reportLayout = useCallback(() => {
+    const positions = {};
+    getNodes().forEach((n) => {
+      positions[n.id] = { x: n.position.x, y: n.position.y };
+    });
+    window.Shiny?.setInputValue?.(`${inputId}_layout`, {
+      direction: directionRef.current,
+      viewport: getViewport(),
+      positions,
+    });
+  }, [inputId, getNodes, getViewport]);
   // Where the view is, after each pan or zoom.
   const onMoveEnd = useCallback(
-    (_, viewport) => window.Shiny?.setInputValue?.(`${inputId}_viewport`, viewport),
-    [inputId],
+    (_, viewport) => {
+      window.Shiny?.setInputValue?.(`${inputId}_viewport`, viewport);
+      reportLayout();
+    },
+    [inputId, reportLayout],
   );
 
   const onLayout = useCallback((newDirection) => {
@@ -380,15 +418,27 @@ function Flow({ configuration }) {
 
   useEffect(() => {
     if (!layoutPending || !allMeasured) return;
-    if (layoutPending === 'all') {
+    const saved = layoutPending === 'restore' ? savedPositions(savedLayout.current) : null;
+    const unsaved = saved && new Set(nodes.filter((n) => !saved.has(n.id)).map((n) => n.id));
+    if (layoutPending === 'all' || unsaved?.size === nodes.length) {
       setNodes(layoutGraph(nodes, edges, { direction }).nodes);
       setFitPending(true);
+    } else if (saved) {
+      // Saved targets where they were; targets the layout doesn't know (new
+      // in the pipeline since) next to their neighbours. The saved view only
+      // if it shows every target as it was.
+      const restored = nodes.map((n) =>
+        saved.has(n.id) ? { ...n, position: saved.get(n.id), ...handlePositions(direction) } : n,
+      );
+      setNodes(unsaved.size ? placeNewNodes(restored, edges, unsaved, direction) : restored);
+      setFitPending((unsaved.size === 0 && savedViewport(savedLayout.current?.viewport)) || true);
     } else {
       setNodes(placeNewNodes(nodes, edges, newIdsRef.current, direction));
+      setReportPending(true);
     }
     newIdsRef.current = new Set();
     setLayoutPending(null);
-  }, [layoutPending, allMeasured, nodes, edges, direction, fitView]);
+  }, [layoutPending, allMeasured, nodes, edges, direction]);
 
   // Runs after the render that drew the new positions: React Flow's store,
   // updated by its own (child) effects, has them by now. Fitting in the next
@@ -396,9 +446,17 @@ function Flow({ configuration }) {
   // targets still stacked at the origin: zoomed all the way in.
   useEffect(() => {
     if (!fitPending) return;
-    fitView();
+    if (fitPending === true) fitView();
+    else setViewport(fitPending);
     setFitPending(false);
-  }, [fitPending, nodes, fitView]);
+    setReportPending(true);
+  }, [fitPending, nodes, fitView, setViewport]);
+
+  useEffect(() => {
+    if (!reportPending) return;
+    setReportPending(false);
+    requestAnimationFrame(reportLayout);
+  }, [reportPending, reportLayout]);
 
   // New data from R (statuses every tick; sometimes a changed pipeline).
   useEffect(() => {
@@ -414,9 +472,12 @@ function Flow({ configuration }) {
       const added = incomingNodes.filter((n) => !known.has(n.id)).map((n) => n.id);
       added.forEach((id) => newIdsRef.current.add(id));
       setEdges(incomingEdges);
-      // Nothing placed yet: lay out everything. Otherwise place only the new.
+      // Nothing placed yet: lay out everything (or restore the saved
+      // layout). Otherwise place only the new.
       setLayoutPending((pending) =>
-        pending === 'all' || known.size === 0 ? 'all' : added.length ? 'new' : pending,
+        pending === 'all' || pending === 'restore'
+          ? pending
+          : known.size === 0 ? 'all' : added.length ? 'new' : pending,
       );
     }
   }, [configuration.nodes, configuration.edges]);
@@ -583,6 +644,7 @@ function Flow({ configuration }) {
         onPaneContextMenu={closeMenu}
         onMoveStart={closeMenu}
         onMoveEnd={onMoveEnd}
+        onNodeDragStop={reportLayout}
         zoomOnDoubleClick={false} // a double-click is for the target
         nodesConnectable={false}
         deleteKeyCode={null} // read-only: Backspace and Delete remove nothing

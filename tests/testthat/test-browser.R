@@ -530,3 +530,117 @@ test_that("a widget without download_image has no download button", {
   app$wait_for_js("document.querySelector('.react-flow__controls') !== null")
   expect_false(app$get_js("document.querySelector('.tb-download-image') !== null"))
 })
+
+# A target's position in the graph, as React Flow places it.
+node_position <- function(app, id) {
+  unlist(app$get_js(paste0(
+    "(() => { const m = ", node_js(id), ".style.transform.match(/translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/);",
+    " return {x: Number(m[1]), y: Number(m[2])}; })()"
+  )))
+}
+viewport_transform <- function(app) {
+  app$get_js("document.querySelector('.react-flow__viewport').style.transform")
+}
+# The view's x, y and zoom, from its transform.
+viewport_numbers <- function(app) {
+  as.numeric(regmatches(viewport_transform(app), gregexpr("-?[0-9.]+", viewport_transform(app)))[[1]])
+}
+# Drag a target by (dx, dy) screen pixels, with real mouse events.
+drag_node <- function(app, id, dx, dy) {
+  box <- app$get_js(paste0(
+    "(() => { const r = ", node_js(id), ".getBoundingClientRect();",
+    " return {x: r.left + r.width / 2, y: r.top + r.height / 2}; })()"
+  ))
+  input <- app$get_chromote_session()$Input
+  input$dispatchMouseEvent(type = "mousePressed", x = box$x, y = box$y, button = "left", clickCount = 1)
+  for (step in 1:5) {
+    input$dispatchMouseEvent(type = "mouseMoved", x = box$x + dx * step / 5, y = box$y + dy * step / 5, button = "left")
+  }
+  input$dispatchMouseEvent(type = "mouseReleased", x = box$x + dx, y = box$y + dy, button = "left", clickCount = 1)
+}
+
+test_that("the board saves where targets were left, and opens with them there", {
+  dir <- local_pipeline(make = TRUE)
+  path <- file.path(dir, "_targets", "user", "targetsboard_layout.json")
+  app <- local_board_app(dir, "layout_save")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  # The first layout is saved once drawn.
+  app$wait_for_js("Shiny.shinyapp.$inputValues['flow_layout'] !== undefined")
+  before <- node_position(app, "b")
+  drag_node(app, "b", 0, 120)
+  app$wait_for_js(paste0(
+    "Shiny.shinyapp.$inputValues['flow_layout'].positions.b.y > ", before[["y"]] + 50
+  ))
+  moved <- node_position(app, "b")
+  app$click(selector = ".react-flow__controls-zoomout")
+  Sys.sleep(1)
+  view <- viewport_numbers(app)
+  expect_true(file.exists(path))
+  saved <- jsonlite::read_json(path)
+  expect_equal(saved$direction, "LR")
+  expect_equal(c(saved$positions$b$x, saved$positions$b$y), unname(moved), tolerance = 0.5)
+  expect_lt(saved$viewport$zoom, 1.5)
+
+  # A reload opens the board as it was left: targets and view.
+  app$run_js("location.reload()")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  app$wait_for_js(paste0(
+    "(() => { const m = ", node_js("b"), ".style.transform.match(/translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/);",
+    " return m && Math.abs(Number(m[2]) - ", moved[["y"]], ") < 0.5; })()"
+  ))
+  Sys.sleep(0.5)
+  expect_equal(node_position(app, "b"), moved, tolerance = 0.5)
+  # The zoom comes back to 4 decimals, as the widget's configuration is sent.
+  expect_equal(viewport_numbers(app), view, tolerance = 1e-3)
+
+  # Tidy lays the graph out again, and that is saved too.
+  app$click(selector = ".button-container button:first-child") # Tidy vertically
+  app$wait_for_js("Shiny.shinyapp.$inputValues['flow_layout'].direction === 'TB'")
+  app$wait_for_js(paste(
+    "(() => { const p = Shiny.shinyapp.$inputValues['flow_layout'].positions;",
+    "return Math.abs(p.a.x - p.b.x) < 1 && p.b.y > p.a.y; })()"
+  ))
+  wait_for(function() identical(jsonlite::read_json(path)$direction, "TB"), timeout = 10)
+})
+
+test_that("a saved layout places new targets next to their neighbours, not on top of others", {
+  dir <- local_pipeline(make = TRUE)
+  dir.create(file.path(dir, "_targets", "user"), showWarnings = FALSE)
+  # Saved before `c` was in the pipeline, far from where a layout would put them.
+  jsonlite::write_json(
+    list(direction = "LR", viewport = list(x = 30, y = 20, zoom = 0.5),
+         positions = list(a = list(x = 1000, y = 1000), b = list(x = 1000, y = 1300))),
+    file.path(dir, "_targets", "user", "targetsboard_layout.json"),
+    auto_unbox = TRUE
+  )
+  app <- local_board_app(dir, "layout_restore")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  app$wait_for_js(paste0(
+    "(() => { const m = ", node_js("a"), ".style.transform.match(/translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/);",
+    " return m && Number(m[1]) === 1000; })()"
+  ))
+  Sys.sleep(0.5)
+  expect_equal(node_position(app, "a"), c(x = 1000, y = 1000))
+  expect_equal(node_position(app, "b"), c(x = 1000, y = 1300))
+  c_position <- node_position(app, "c")
+  expect_false(isTRUE(all.equal(c_position, c(x = 0, y = 0)))) # not left at the origin
+  expect_gt(c_position[["x"]], 1000) # downstream of b, to its right
+  # Not every target was saved: fit them all into view instead of the old view.
+  expect_false(identical(viewport_transform(app), "translate(30px, 20px) scale(0.5)"))
+})
+
+test_that("a saved layout with every target restores the saved view", {
+  dir <- local_pipeline(make = TRUE)
+  dir.create(file.path(dir, "_targets", "user"), showWarnings = FALSE)
+  jsonlite::write_json(
+    list(direction = "TB", viewport = list(x = 30, y = 20, zoom = 0.5),
+         positions = list(a = list(x = 0, y = 0), b = list(x = 0, y = 200), c = list(x = 0, y = 400))),
+    file.path(dir, "_targets", "user", "targetsboard_layout.json"),
+    auto_unbox = TRUE
+  )
+  app <- local_board_app(dir, "layout_view")
+  app$wait_for_js("document.querySelector('.react-flow__viewport').style.transform === 'translate(30px, 20px) scale(0.5)'")
+  expect_equal(node_position(app, "c"), c(x = 0, y = 400))
+  # Top to bottom, as saved: handles at the top and bottom.
+  expect_true(app$get_js(paste0(node_js("b"), ".querySelector('.react-flow__handle-bottom') !== null")))
+})

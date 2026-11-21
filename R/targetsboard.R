@@ -22,7 +22,12 @@
 #'   `node_actions` and `toolbar_actions` in [targetsboard_options()]);
 #' - `input$<inputId>_viewport`: `list(x, y, zoom)`, after each pan or zoom;
 #' - `input$<inputId>_image`: `list(format, data_url)`, the image asked for by
-#'   [targetsboard_export_image()], or `list(format, error)`.
+#'   [targetsboard_export_image()], or `list(format, error)`;
+#' - `input$<inputId>_layout`: `list(direction, viewport, positions)`, where
+#'   the targets are (`positions`, named by target, each `list(x, y)`), the
+#'   view (`list(x, y, zoom)`) and the direction of the last layout (`"LR"` or
+#'   `"TB"`): once the targets are laid out, and after each drag, pan or zoom.
+#'   Give it back as `layout` to draw the graph as it was.
 #'
 #' The event inputs (double-click, right-click, action) fire again for the
 #' same target, so `observeEvent()` sees every one.
@@ -33,6 +38,11 @@
 #' @param height,width CSS size of the widget.
 #' @param warnings Ids of the targets whose last build raised warnings, as in
 #'   the `warnings` field of `targets::tar_meta()`.
+#' @param layout Optional: a layout the widget reported as
+#'   `input$<inputId>_layout`. The targets in it are drawn where they were, in
+#'   its direction, and the others next to their neighbours; when it has them
+#'   all, its view is restored too, else the graph is fitted into view. The
+#'   "Tidy" buttons lay the graph out afresh.
 #' @param options Display options, from [targetsboard_options()]. For
 #'   `update_targetsboard()`, `NULL` keeps the current ones.
 #'
@@ -73,7 +83,10 @@
 #' @importFrom htmltools htmlDependency tags
 #' @export
 targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%", warnings = character(),
-                         options = targetsboard_options()) {
+                         options = targetsboard_options(), layout = NULL) {
+  if (!is.null(layout) && !is_board_layout(layout)) {
+    rlang::abort("`layout` must be a layout the widget reported as `input$<inputId>_layout`.")
+  }
   reactR::createReactShinyInput(
     inputId = inputId,
     class = "targetsboard",
@@ -85,7 +98,7 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%",
       script = "targetsboard.js"
     ),
     default = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width, warnings, options),
+    configuration = board_configuration(inputId, nodes, edges, height, width, warnings, options, layout),
     container = function(...) htmltools::tags$div(style = 'height: 100%', ...)
   )
 }
@@ -315,7 +328,7 @@ action_items <- function(actions, arg = "node_actions") {
 # constructor and the update send all of it, except the options, which an
 # update may leave out to keep the current ones.
 board_configuration <- function(inputId, nodes, edges, height, width, warnings = character(),
-                                options = NULL) {
+                                options = NULL, layout = NULL) {
   config <- list(
     id = inputId, # the widget names its Shiny inputs after it
     nodes = dataframe_to_reactflow_node_data(nodes, warnings),
@@ -329,6 +342,8 @@ board_configuration <- function(inputId, nodes, edges, height, width, warnings =
     stopifnot(inherits(options, "targetsboard_options"))
     config$options <- unclass(options)
   }
+  # Read once, when the widget is first drawn: updates leave it out.
+  config$layout <- layout
   config
 }
 
@@ -589,7 +604,9 @@ tar_board_app <- function(script = targets::tar_config_get("script"), targets_on
   if (is.null(metadata)) metadata <- initial_metadata(script, targets_only, ...)
 
   shiny::shinyApp(
-    app_ui(metadata, script),
+    # A function of the request: each page load opens the board with the
+    # layout saved last, not the one there was when the app started.
+    function(request) app_ui(metadata, script, layout = read_board_layout()),
     app_server(metadata, script, targets_only),
     options = options
   )

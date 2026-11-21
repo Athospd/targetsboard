@@ -274,3 +274,18 @@ test_that("a row clicked in the tar_meta() table shows its target on the board",
     ))
   })
 })
+
+test_that("the board writes the widget's layout into the store's user folder", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+  layout <- list(
+    direction = "TB", viewport = list(x = 5, y = 6, zoom = 0.75),
+    positions = list(a = list(x = 0, y = 0), b = list(x = 0, y = 150), c = list(x = 0, y = 300))
+  )
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$setInputs(flow_layout = layout)
+    expect_equal(read_board_layout(file.path("_targets", "user", "targetsboard_layout.json")), layout)
+  })
+})
