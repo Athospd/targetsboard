@@ -3,7 +3,10 @@ Title: Targets Board
 Version: 0.0.0.9000
 Authors@R:
     person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre"))
-Description: An UI alternative to targets::tar_watch to monitor targets DAGs.
+Description: A board for the author of a 'targets' pipeline, to understand
+    it while working on it: its structure, what is outdated, what each target
+    produced and what a run is doing. Meant to replace targets::tar_watch()
+    for the author.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
