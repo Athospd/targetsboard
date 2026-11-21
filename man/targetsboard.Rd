@@ -4,6 +4,7 @@
 \alias{targetsboard}
 \alias{update_targetsboard}
 \alias{update_targetsboard_status}
+\alias{update_targetsboard_options}
 \title{DAG widget for Shiny}
 \usage{
 targetsboard(
@@ -12,7 +13,8 @@ targetsboard(
   edges,
   height = "100\%",
   width = "100\%",
-  warnings = character()
+  warnings = character(),
+  options = targetsboard_options()
 )
 
 update_targetsboard(
@@ -22,7 +24,8 @@ update_targetsboard(
   edges,
   height = "100\%",
   width = "100\%",
-  warnings = character()
+  warnings = character(),
+  options = NULL
 )
 
 update_targetsboard_status(
@@ -31,6 +34,8 @@ update_targetsboard_status(
   statuses = character(),
   warnings = NULL
 )
+
+update_targetsboard_options(session, inputId, ...)
 }
 \arguments{
 \item{inputId}{The input slot of the widget.}
@@ -43,16 +48,29 @@ update_targetsboard_status(
 \item{warnings}{For \code{update_targetsboard_status()}: \code{NULL} leaves the warning
 marks as they are; otherwise the ids of all the targets that carry one.}
 
+\item{options}{Display options, from \code{\link[=targetsboard_options]{targetsboard_options()}}. For
+\code{update_targetsboard()}, \code{NULL} keeps the current ones.
+
+\code{update_targetsboard()} replaces the whole graph. Targets already drawn keep
+their place; new ones are placed next to their neighbours, and the
+"Tidy" buttons lay the whole graph out again. \code{update_targetsboard_status()} only changes
+the status of some targets, which is much lighter: use it to follow a
+running pipeline. \code{update_targetsboard_options()} changes only the display
+options it names, e.g. \code{color_mode} to follow \code{bslib::input_dark_mode()}.}
+
 \item{session}{The Shiny session.}
 
 \item{statuses}{A named character vector: target statuses, as in
 \code{targets::tar_progress()}, named by target. Targets not in the widget are
 ignored.}
+
+\item{...}{For \code{update_targetsboard_options()}: the options to change, as
+arguments of \code{\link[=targetsboard_options]{targetsboard_options()}}.}
 }
 \value{
 \code{targetsboard()} returns a Shiny UI element.
-\code{update_targetsboard()} and \code{update_targetsboard_status()} are called for
-their side effect.
+\code{update_targetsboard()}, \code{update_targetsboard_status()} and
+\code{update_targetsboard_options()} are called for their side effect.
 }
 \description{
 The interactive targets DAG used by the board, as a Shiny input you can

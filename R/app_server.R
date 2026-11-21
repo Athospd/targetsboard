@@ -238,6 +238,11 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       board()$widget
     })
 
+    # The graph follows the page's dark mode switch.
+    shiny::observeEvent(input$dark_mode, {
+      update_targetsboard_options(session, "flow", color_mode = input$dark_mode)
+    })
+
     # The power button: stop the board. In tar_board()'s background process,
     # that ends the process too.
     shiny::observeEvent(input$turn_off, shiny::stopApp("The board is turned off."))

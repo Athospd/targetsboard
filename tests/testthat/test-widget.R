@@ -81,3 +81,53 @@ test_that("targets and edges can't be deleted from the read-only board", {
   expect_false(any(vapply(config$nodes, function(n) n$deletable, TRUE)))
   expect_false(any(vapply(config$edges, function(e) e$deletable, TRUE)))
 })
+
+test_that("targetsboard_options() has defaults and checks its values", {
+  options <- targetsboard_options()
+  expect_s3_class(options, "targetsboard_options")
+  expect_equal(unclass(options), list(
+    color_mode = "light", minimap = TRUE, controls = TRUE, background = "dots",
+    edge_type = "default", only_render_visible = FALSE
+  ))
+  expect_equal(targetsboard_options(edge_type = "step")$edge_type, "step")
+  expect_error(targetsboard_options(color_mode = "blue"), "color_mode")
+  expect_error(targetsboard_options(background = "stripes"), "background")
+  expect_error(targetsboard_options(minimap = "yes"), "`minimap` must be TRUE or FALSE")
+})
+
+test_that("targetsboard() sends its options; update_targetsboard() keeps them by default", {
+  html <- as.character(targetsboard(
+    "dag", fake_nodes(), fake_edges(),
+    options = targetsboard_options(color_mode = "dark", minimap = FALSE)
+  ))
+  expect_match(html, '"color_mode":"dark"', fixed = TRUE)
+  expect_match(html, '"minimap":false', fixed = TRUE)
+
+  sent <- NULL
+  session <- list(sendInputMessage = function(inputId, message) sent <<- message)
+  update_targetsboard(session, "dag", fake_nodes(), fake_edges())
+  expect_null(sent$configuration$options) # the widget keeps its own
+  update_targetsboard(
+    session, "dag", fake_nodes(), fake_edges(),
+    options = targetsboard_options(edge_type = "step")
+  )
+  expect_equal(sent$configuration$options$edge_type, "step")
+  expect_error(update_targetsboard(
+    session, "dag", fake_nodes(), fake_edges(),
+    options = list(minimap = FALSE)
+  ))
+})
+
+test_that("update_targetsboard_options() sends only the options it names, checked", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) {
+    sent <<- list(type = type, message = message)
+  })
+
+  update_targetsboard_options(session, "dag", color_mode = "dark", minimap = FALSE)
+  expect_equal(sent$type, "targetsboard:options")
+  expect_equal(sent$message, list(id = "dag", options = list(color_mode = "dark", minimap = FALSE)))
+
+  expect_error(update_targetsboard_options(session, "dag", edge_type = "zigzag"), "edge_type")
+  expect_error(update_targetsboard_options(session, "dag", "dark"))
+})

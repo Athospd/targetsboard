@@ -1,7 +1,7 @@
 #' The board's UI
 #'
-#' The top bar holds only the title and the power button, which turns the
-#' board off. The page is one card of tabs: Board, the board's own graph;
+#' The top bar holds only the title, the dark mode switch and the power
+#' button, which turns the board off. The page is one card of tabs: Board, the board's own graph;
 #' tar_visnetwork(), the graph as that function draws it; tar_meta(); and
 #' Debug. Each tab's `value` is its snake_case id.
 #'
@@ -16,9 +16,13 @@ app_ui <- function(metadata, script = targets::tar_config_get("script")) {
       title = tags$div(
         class = "d-flex justify-content-between align-items-center w-100",
         "Targets board",
-        actionButton(
-          "turn_off", NULL,
-          icon = icon("power-off"), title = "Turn the board off", class = "btn-sm"
+        tags$div(
+          class = "d-flex align-items-center gap-2",
+          input_dark_mode(id = "dark_mode", mode = "light"),
+          actionButton(
+            "turn_off", NULL,
+            icon = icon("power-off"), title = "Turn the board off", class = "btn-sm"
+          )
         )
       ),
       fillable = TRUE,

@@ -49,14 +49,15 @@ wait_for <- function(condition, timeout = 30) {
   invisible(TRUE)
 }
 
-# The real board in headless Chrome, for the pipeline in `dir`. Skips when
-# Chrome or shinytest2 is missing. Uses the installed targetsboard.
-local_board_app <- function(dir, name, .env = parent.frame()) {
+# The real board in headless Chrome, for the pipeline in `dir`: or, with
+# `app`, the lines of another app.R. Skips when Chrome or shinytest2 is
+# missing. Uses the installed targetsboard.
+local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", .env = parent.frame()) {
   skip_on_cran()
   skip_if_not_installed("shinytest2")
   skip_if_not_installed("chromote")
   skip_if(is.null(chromote::find_chrome()), "Chrome not found")
-  writeLines("targetsboard::tar_board_app()", file.path(dir, "app.R"))
+  writeLines(app, file.path(dir, "app.R"))
   app <- shinytest2::AppDriver$new(dir, name = name, load_timeout = 60 * 1000)
   withr::defer(app$stop(), envir = .env)
   app
@@ -73,4 +74,43 @@ press_key <- function(app, key, code = c(Backspace = 8, Delete = 46, Escape = 27
     chrome$Input$dispatchKeyEvent(type = type, key = key, code = key, windowsVirtualKeyCode = code)
     Sys.sleep(0.3)
   }
+}
+
+# app.R lines for a bare app with just the widget, as "dag", with the
+# given targetsboard() arguments: to test the widget outside the board.
+widget_app <- function(args = "") {
+  c(
+    "library(shiny)",
+    "net <- targets::tar_visnetwork(targets_only = TRUE)$x",
+    sprintf(
+      "ui <- fluidPage(targetsboard::targetsboard('dag', net$nodes, net$edges, height = '500px'%s))",
+      if (nzchar(args)) paste0(", ", args) else ""
+    ),
+    "shinyApp(ui, function(input, output, session) NULL)"
+  )
+}
+
+# Sends a message to the widget as Shiny would, e.g. "targetsboard:options".
+send_widget_message <- function(app, type, detail) {
+  app$run_js(sprintf(
+    "window.dispatchEvent(new CustomEvent('%s', {detail: %s}))",
+    type, jsonlite::toJSON(detail, auto_unbox = TRUE)
+  ))
+}
+
+# A pipeline of `n` targets in a chain, t1 to tn, in the working directory.
+local_chain_pipeline <- function(n, .env = parent.frame()) {
+  dir <- withr::local_tempdir(.local_envir = .env)
+  commands <- c("1", paste0("t", seq_len(n - 1)))
+  writeLines(
+    c(
+      "library(targets)",
+      "list(",
+      paste0("  tar_target(t", seq_len(n), ", ", commands, ")", collapse = ",\n"),
+      ")"
+    ),
+    file.path(dir, "_targets.R")
+  )
+  withr::local_dir(dir, .local_envir = .env)
+  dir
 }

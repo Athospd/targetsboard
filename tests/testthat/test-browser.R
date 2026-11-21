@@ -170,3 +170,66 @@ test_that("the delete keys don't remove targets from the read-only board", {
   expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 3)
   expect_equal(app$get_js("document.querySelectorAll('.react-flow__edge').length"), 2)
 })
+
+test_that("the minimap colours targets by status", {
+  dir <- local_pipeline()
+  targets::tar_make(names = "a", reporter = "silent") # a up to date, b and c outdated
+  app <- local_board_app(dir, "minimap")
+  app$wait_for_js("document.querySelectorAll('.react-flow__minimap-node').length === 3")
+  fills <- app$get_js(
+    "Array.from(document.querySelectorAll('.react-flow__minimap-node')).map(n => getComputedStyle(n).fill)"
+  )
+  # #354823 (up to date) and #78B7C5 (outdated)
+  expect_setequal(unlist(fills), c("rgb(53, 72, 35)", "rgb(120, 183, 197)"))
+})
+
+test_that("the widget's display options take effect, and change from R", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "options", widget_app(paste(
+    "options = targetsboard::targetsboard_options(color_mode = 'dark', minimap = FALSE,",
+    "controls = FALSE, background = 'lines', edge_type = 'step')"
+  )))
+  app$wait_for_js("document.querySelectorAll('.react-flow__edge').length === 2")
+  count <- function(selector) app$get_js(sprintf("document.querySelectorAll('%s').length", selector))
+  has_class <- function(class) {
+    app$get_js(sprintf("document.querySelector('.react-flow').classList.contains('%s')", class))
+  }
+
+  expect_true(has_class("dark"))
+  expect_equal(count(".react-flow__minimap"), 0)
+  expect_equal(count(".react-flow__controls"), 0)
+  expect_equal(count(".react-flow__background path"), 1) # lines, not dots
+  expect_equal(count(".react-flow__edge-step"), 2)
+
+  # update_targetsboard_options() changes only what it names.
+  send_widget_message(app, "targetsboard:options", list(id = "dag", options = list(
+    color_mode = "light", minimap = TRUE, background = "none"
+  )))
+  app$wait_for_js("document.querySelector('.react-flow__minimap') !== null")
+  expect_true(has_class("light"))
+  expect_equal(count(".react-flow__background"), 0)
+  expect_equal(count(".react-flow__controls"), 0) # unchanged
+  expect_equal(count(".react-flow__edge-step"), 2) # unchanged
+
+  # Another widget's message is not for this one.
+  send_widget_message(app, "targetsboard:options", list(id = "other", options = list(minimap = FALSE)))
+  Sys.sleep(0.5)
+  expect_equal(count(".react-flow__minimap"), 1)
+})
+
+test_that("with only visible targets rendered, the layout runs and off-screen targets drop out", {
+  dir <- local_chain_pipeline(12)
+  app <- local_board_app(dir, "visible", widget_app(
+    "options = targetsboard::targetsboard_options(only_render_visible = TRUE)"
+  ))
+  count <- "document.querySelectorAll('.react-flow__node').length"
+  app$wait_for_js(paste(count, "=== 12"))
+  # Laid out: twelve targets, twelve places.
+  app$wait_for_js(paste(
+    "new Set(Array.from(document.querySelectorAll('.react-flow__node'))",
+    ".map(n => n.style.transform)).size === 12"
+  ))
+  for (i in 1:12) app$click(selector = ".react-flow__controls-zoomin")
+  app$wait_for_js(paste(count, "< 12"))
+  expect_lt(app$get_js(count), 12)
+})

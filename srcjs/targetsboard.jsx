@@ -5,6 +5,7 @@ import {
   ReactFlowProvider,
   MiniMap,
   Background,
+  BackgroundVariant,
   Controls,
   applyNodeChanges,
   applyEdgeChanges,
@@ -30,6 +31,35 @@ const nodeTypes = {
   errored: ErroredNode,
   running: RunningNode
 };
+
+// The node colours of each status, for the minimap.
+const STATUS_COLORS = {
+  uptodate: '#354823',
+  outdated: '#78B7C5',
+  errored: '#C93312',
+  running: '#d49536',
+};
+
+// Display options, as targetsboard_options() sets them in R.
+const DEFAULT_OPTIONS = {
+  color_mode: 'light',
+  minimap: true,
+  controls: true,
+  background: 'dots',
+  edge_type: 'default',
+  only_render_visible: false,
+};
+const BACKGROUND_VARIANTS = {
+  dots: BackgroundVariant.Dots,
+  lines: BackgroundVariant.Lines,
+  cross: BackgroundVariant.Cross,
+};
+
+// 'system' follows the browser's preference.
+const resolveColorMode = (mode) =>
+  mode === 'system'
+    ? window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    : mode;
 
 const handlePositions = (direction) => ({
   sourcePosition: direction === 'LR' ? 'right' : 'bottom',
@@ -100,14 +130,19 @@ const lineageOf = (focusId, edges) => {
   return lineage;
 };
 
-// Status-only updates from R (update_targetsboard_status()) arrive as a Shiny
-// custom message; each widget picks the ones addressed to its id.
+// Light updates from R arrive as Shiny custom messages: statuses
+// (update_targetsboard_status()) and display options
+// (update_targetsboard_options()). Each widget picks the ones addressed to
+// its id.
 const STATUS_EVENT = 'targetsboard:status';
+const OPTIONS_EVENT = 'targetsboard:options';
 if (window.Shiny && !window.__targetsboardStatusHandler) {
   window.__targetsboardStatusHandler = true;
-  window.Shiny.addCustomMessageHandler(STATUS_EVENT, (message) => {
-    window.dispatchEvent(new CustomEvent(STATUS_EVENT, { detail: message }));
-  });
+  [STATUS_EVENT, OPTIONS_EVENT].forEach((type) =>
+    window.Shiny.addCustomMessageHandler(type, (message) => {
+      window.dispatchEvent(new CustomEvent(type, { detail: message }));
+    }),
+  );
 }
 
 const sortedKey = (ids) => [...ids].sort().join('|');
@@ -133,6 +168,7 @@ function Flow({ configuration }) {
   const [edges, setEdges] = useState(configuration.edges ?? []);
   const [direction, setDirection] = useState('LR');
   const [focusId, setFocusId] = useState(null);
+  const [options, setOptions] = useState({ ...DEFAULT_OPTIONS, ...configuration.options });
   // Lay out once all nodes have been measured: everything ('all') on first
   // render and when a Tidy button is pressed; only the new targets ('new')
   // when the pipeline's structure changes.
@@ -163,7 +199,11 @@ function Flow({ configuration }) {
   // Our own nodes carry `measured` once React Flow has sized them (it comes
   // back through onNodesChange). useNodesInitialized() turned true one
   // render too early for nodes added later, so check the nodes directly.
-  const allMeasured = nodes.length > 0 && nodes.every((n) => n.measured?.width && n.measured?.height);
+  // Targets rendered only when visible are never measured off screen: then
+  // one measured target is enough, the layout sizes the others like it.
+  const isMeasured = (n) => n.measured?.width && n.measured?.height;
+  const allMeasured = nodes.length > 0 &&
+    (options.only_render_visible ? nodes.some(isMeasured) : nodes.every(isMeasured));
 
   useEffect(() => {
     if (!layoutPending || !allMeasured) return;
@@ -197,6 +237,22 @@ function Flow({ configuration }) {
       );
     }
   }, [configuration.nodes, configuration.edges]);
+
+  // Options sent with a whole new configuration replace the current ones;
+  // without any, the current ones stay.
+  useEffect(() => {
+    if (configuration.options) setOptions({ ...DEFAULT_OPTIONS, ...configuration.options });
+  }, [configuration.options]);
+
+  // update_targetsboard_options() changes only the options it names.
+  useEffect(() => {
+    const onOptions = (event) => {
+      if (event.detail?.id !== configuration.id) return;
+      setOptions((current) => ({ ...current, ...event.detail.options }));
+    };
+    window.addEventListener(OPTIONS_EVENT, onOptions);
+    return () => window.removeEventListener(OPTIONS_EVENT, onOptions);
+  }, [configuration.id]);
 
   // A focused target that left the pipeline is no longer focused.
   useEffect(() => {
@@ -278,12 +334,15 @@ function Flow({ configuration }) {
         className: n.id === focusId ? 'tb-focused' : lineage.has(n.id) ? undefined : 'tb-dimmed',
       }))
     : nodes;
-  const shownEdges = lineage
-    ? edges.map((e) => ({
-        ...e,
-        className: lineage.has(e.source) && lineage.has(e.target) ? undefined : 'tb-dimmed',
-      }))
-    : edges;
+  const shownEdges = edges.map((e) => ({
+    ...e,
+    type: options.edge_type,
+    className: !lineage || (lineage.has(e.source) && lineage.has(e.target)) ? undefined : 'tb-dimmed',
+  }));
+
+  // The board's own colours are for light mode; dark mode keeps React Flow's.
+  const colorMode = resolveColorMode(options.color_mode);
+  const light = colorMode === 'light';
 
   return (
     <div className="reactflow-wrapper" style={{ height: configuration.height, width: configuration.width }}>
@@ -298,17 +357,24 @@ function Flow({ configuration }) {
         deleteKeyCode={null} // read-only: Backspace and Delete remove nothing
         fitView
         minZoom={0.05} // fit big pipelines whole, as tar_visnetwork() does
-        style={{ background: configuration.background_color }}
+        colorMode={colorMode}
+        onlyRenderVisibleElements={options.only_render_visible}
+        style={light ? { background: configuration.background_color } : undefined}
         nodeTypes={nodeTypes}
       >
-        <MiniMap />
-        <Background
-          id="1"
-          gap={15}
-          color={configuration.background_marks_color}
-          size={1}
-        />
-        <Controls />
+        {options.minimap && (
+          <MiniMap nodeColor={(n) => STATUS_COLORS[n.type] ?? STATUS_COLORS.outdated} pannable zoomable />
+        )}
+        {options.background !== 'none' && (
+          <Background
+            id="1"
+            gap={15}
+            variant={BACKGROUND_VARIANTS[options.background]}
+            color={light ? configuration.background_marks_color : undefined}
+            size={1}
+          />
+        )}
+        {options.controls && <Controls />}
         <LayoutButtons onLayout={onLayout} />
       </ReactFlow>
     </div>

@@ -21,16 +21,19 @@
 #' @param height,width CSS size of the widget.
 #' @param warnings Ids of the targets whose last build raised warnings, as in
 #'   the `warnings` field of `targets::tar_meta()`.
+#' @param options Display options, from [targetsboard_options()]. For
+#'   `update_targetsboard()`, `NULL` keeps the current ones.
 #'
 #' `update_targetsboard()` replaces the whole graph. Targets already drawn keep
 #' their place; new ones are placed next to their neighbours, and the
 #' "Tidy" buttons lay the whole graph out again. `update_targetsboard_status()` only changes
 #' the status of some targets, which is much lighter: use it to follow a
-#' running pipeline.
+#' running pipeline. `update_targetsboard_options()` changes only the display
+#' options it names, e.g. `color_mode` to follow `bslib::input_dark_mode()`.
 #'
 #' @return `targetsboard()` returns a Shiny UI element.
-#'   `update_targetsboard()` and `update_targetsboard_status()` are called for
-#'   their side effect.
+#'   `update_targetsboard()`, `update_targetsboard_status()` and
+#'   `update_targetsboard_options()` are called for their side effect.
 #'
 #' @examples
 #' \dontrun{
@@ -54,7 +57,8 @@
 #' @importFrom reactR createReactShinyInput
 #' @importFrom htmltools htmlDependency tags
 #' @export
-targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%", warnings = character()) {
+targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%", warnings = character(),
+                         options = targetsboard_options()) {
   reactR::createReactShinyInput(
     inputId = inputId,
     class = "targetsboard",
@@ -66,7 +70,7 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%",
       script = "targetsboard.js"
     ),
     default = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width, warnings),
+    configuration = board_configuration(inputId, nodes, edges, height, width, warnings, options),
     container = function(...) htmltools::tags$div(style = 'height: 100%', ...)
   )
 }
@@ -75,10 +79,10 @@ targetsboard <- function(inputId, nodes, edges, height = "100%", width = "100%",
 #' @param session The Shiny session.
 #' @export
 update_targetsboard <- function(session, inputId, nodes, edges, height = "100%", width = "100%",
-                                warnings = character()) {
+                                warnings = character(), options = NULL) {
   session$sendInputMessage(inputId, list(
     value = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width, warnings)
+    configuration = board_configuration(inputId, nodes, edges, height, width, warnings, options)
   ))
 }
 
@@ -102,10 +106,66 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
   session$sendCustomMessage("targetsboard:status", message)
 }
 
+#' @rdname targetsboard
+#' @param ... For `update_targetsboard_options()`: the options to change, as
+#'   arguments of [targetsboard_options()].
+#' @export
+update_targetsboard_options <- function(session, inputId, ...) {
+  changed <- list(...)
+  if (length(changed) == 0) return(invisible())
+  stopifnot(!is.null(names(changed)), all(nzchar(names(changed))))
+  options <- do.call(targetsboard_options, changed) # validates them
+  session$sendCustomMessage(
+    "targetsboard:options",
+    list(id = inputId, options = unclass(options)[names(changed)])
+  )
+}
+
+#' Display options of the DAG widget
+#'
+#' @param color_mode `"light"`, `"dark"`, or `"system"` to follow the
+#'   browser's preference. The board's own beige background is for light mode.
+#' @param minimap Show the minimap, with targets coloured by status.
+#' @param controls Show the zoom controls.
+#' @param background The background pattern: `"dots"`, `"lines"`, `"cross"`
+#'   or `"none"`.
+#' @param edge_type How edges are drawn: `"default"` (curves),
+#'   `"smoothstep"`, `"step"`, `"straight"` or `"simplebezier"`.
+#' @param only_render_visible Render only the targets in view, which keeps big
+#'   pipelines responsive.
+#' @return A list of options for [targetsboard()].
+#' @export
+targetsboard_options <- function(color_mode = c("light", "dark", "system"),
+                                 minimap = TRUE,
+                                 controls = TRUE,
+                                 background = c("dots", "lines", "cross", "none"),
+                                 edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
+                                 only_render_visible = FALSE) {
+  flag <- function(x) {
+    if (!rlang::is_bool(x)) {
+      rlang::abort(sprintf("`%s` must be TRUE or FALSE.", deparse(substitute(x))))
+    }
+    x
+  }
+  structure(
+    list(
+      color_mode = rlang::arg_match(color_mode),
+      minimap = flag(minimap),
+      controls = flag(controls),
+      background = rlang::arg_match(background),
+      edge_type = rlang::arg_match(edge_type),
+      only_render_visible = flag(only_render_visible)
+    ),
+    class = "targetsboard_options"
+  )
+}
+
 # The widget's whole configuration: an update replaces it, so both the
-# constructor and the update send all of it.
-board_configuration <- function(inputId, nodes, edges, height, width, warnings = character()) {
-  list(
+# constructor and the update send all of it, except the options, which an
+# update may leave out to keep the current ones.
+board_configuration <- function(inputId, nodes, edges, height, width, warnings = character(),
+                                options = NULL) {
+  config <- list(
     id = inputId, # the widget names its Shiny inputs after it
     nodes = dataframe_to_reactflow_node_data(nodes, warnings),
     edges = dataframe_to_reactflow_edge_data(edges),
@@ -114,6 +174,11 @@ board_configuration <- function(inputId, nodes, edges, height, width, warnings =
     background_color = "#f0e5d7",
     background_marks_color = "#2f223d"
   )
+  if (!is.null(options)) {
+    stopifnot(inherits(options, "targetsboard_options"))
+    config$options <- unclass(options)
+  }
+  config
 }
 
 #' Convert tar_visnetwork() nodes to React Flow nodes

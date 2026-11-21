@@ -25,6 +25,13 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* `targetsboard()` takes display options from the new
+  `targetsboard_options()`: `color_mode` (light, dark or the system's),
+  whether to show the minimap and the zoom controls, the `background` pattern,
+  the `edge_type`, and `only_render_visible` for big pipelines. The new
+  `update_targetsboard_options()` changes some of them from the server. The
+  minimap colours targets by status, and the board has a dark mode switch in
+  its top bar.
 * The board's page is one card of tabs: **Board**, the board's own graph;
   **tar_visnetwork()**, the graph as that function draws it, the view
   `tar_watch()` shows; **tar_meta()**; and **Debug**. The node table is gone. A

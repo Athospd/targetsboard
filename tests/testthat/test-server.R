@@ -172,3 +172,22 @@ test_that("the power button turns the board off", {
     expect_equal(stopped, "The board is turned off.")
   })
 })
+
+test_that("the graph follows the page's dark mode switch", {
+  skip_on_cran()
+  local_pipeline()
+  server <- local_app_server()
+
+  sent <- list()
+  local_mocked_bindings(update_targetsboard_options = function(session, inputId, ...) {
+    sent[[length(sent) + 1]] <<- c(inputId = inputId, list(...))
+  })
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$setInputs(dark_mode = "dark")
+    expect_equal(sent[[length(sent)]], list(inputId = "flow", color_mode = "dark"))
+    session$setInputs(dark_mode = "light")
+    expect_equal(sent[[length(sent)]]$color_mode, "light")
+  })
+})
