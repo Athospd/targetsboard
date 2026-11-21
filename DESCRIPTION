@@ -21,6 +21,7 @@ Imports:
     dplyr,
     glue,
     htmltools,
+    parallelly,
     ps,
     purrr,
     reactable,

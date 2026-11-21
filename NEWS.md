@@ -82,6 +82,10 @@ First cleanup of the 2024 prototype.
 
 ## Bug fixes and performance
 
+* `tar_board()` lists `parallelly` among its dependencies. Its default port
+  comes from `targets::tar_random_port()`, which needs `parallelly`, but
+  `targets` only suggests it, so on a fresh install `tar_board()` failed with
+  "The package "parallelly" is required".
 * `tar_board()` errors when its port is already in use, typically by a
   board started before, instead of returning a background process that has
   already died.
