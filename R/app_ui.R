@@ -34,9 +34,8 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
         actionButton("refresh", "Refresh", icon = icon("rotate")),
         tags$hr(),
         actionButton("run_all", "Run all", icon = icon("play")),
-        actionButton("run_selected", "Run selected", icon = icon("forward"), disabled = TRUE),
         actionButton("stop", "Stop", icon = icon("stop"), disabled = TRUE),
-        actionButton("invalidate", "Invalidate selected", icon = icon("eraser"), disabled = TRUE)
+        actionButton("invalidate_all", "Invalidate all", icon = icon("eraser"), disabled = TRUE)
       ),
       navset_card_underline(
         id = "view",

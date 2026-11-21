@@ -88,7 +88,8 @@ test_that("targetsboard_options() has defaults and checks its values", {
   expect_equal(unclass(options), list(
     color_mode = "light", minimap = TRUE, controls = TRUE, background = "dots",
     edge_type = "default", only_render_visible = FALSE, node_actions = list(),
-    toolbar_actions = list(), download_image = FALSE
+    toolbar_actions = list(), node_group_actions = list(), toolbar_group_actions = list(),
+    download_image = FALSE
   ))
   expect_equal(targetsboard_options(edge_type = "step")$edge_type, "step")
   expect_error(targetsboard_options(color_mode = "blue"), "color_mode")
@@ -167,6 +168,41 @@ test_that("update_targetsboard_focus() and targetsboard_fit_view() send commands
   targetsboard_fit_view(session, "dag")
   expect_false("nodes" %in% names(sent$message)) # all targets
   expect_error(targetsboard_fit_view(session, "dag", 1), "character")
+})
+
+test_that("a group's menu and toolbar are options of their own, checked", {
+  options <- targetsboard_options(
+    node_actions = c(run = "Run it"),
+    node_group_actions = c(run = "Run {n}", copy_name = "Copy {n} names"),
+    toolbar_group_actions = c(invalidate = "Invalidate {n}")
+  )
+  expect_equal(options$node_group_actions, list(
+    list(id = "run", label = "Run {n}"),
+    list(id = "copy_name", label = "Copy {n} names")
+  ))
+  expect_equal(options$toolbar_group_actions, list(list(id = "invalidate", label = "Invalidate {n}")))
+  expect_equal(options$toolbar_actions, list())
+  expect_match(as.character(targetsboard("dag", fake_nodes(), fake_edges(), options = options)),
+               '"toolbar_group_actions":[{"id":"invalidate","label":"Invalidate {n}"}]', fixed = TRUE)
+  expect_error(targetsboard_options(node_group_actions = "Run"), "`node_group_actions` must be")
+  expect_error(targetsboard_options(toolbar_group_actions = c(a = "x", a = "y")), "`toolbar_group_actions` must be")
+})
+
+test_that("update_targetsboard_selection() sends the targets to select, always as an array", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) {
+    sent <<- list(type = type, message = message)
+  })
+  as_json <- function() as.character(jsonlite::toJSON(sent$message, auto_unbox = TRUE))
+
+  update_targetsboard_selection(session, "dag", c("raw", "model"))
+  expect_equal(sent$type, "targetsboard:command")
+  expect_equal(as_json(), '{"id":"dag","command":"select","nodes":["raw","model"]}')
+  update_targetsboard_selection(session, "dag", "raw")
+  expect_equal(as_json(), '{"id":"dag","command":"select","nodes":["raw"]}')
+  update_targetsboard_selection(session, "dag", NULL) # clears it
+  expect_equal(as_json(), '{"id":"dag","command":"select","nodes":[]}')
+  expect_error(update_targetsboard_selection(session, "dag", 1), "character")
 })
 
 test_that("toolbar_actions become the toolbar's buttons, checked", {

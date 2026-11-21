@@ -25,6 +25,18 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* Several targets can be selected and handled as a group: Ctrl-click (Cmd-click
+  on a Mac) adds a target, Shift-drag selects those in a box, and the menu's
+  "Select what it depends on", "Select what depends on it" and "Select its
+  lineage" select at every level. A group keeps its lineage highlighted, gets a
+  toolbar of its own (Run, Invalidate) and, with a right-click on one of its
+  targets, the group's menu, without Value. A right-click on any other target
+  selects it alone, and Escape clears the selection and the focus. "Copy its
+  name" copies R code: `"model"`, or `c("a", "b")` for a group. In the widget,
+  the new `node_group_actions` and `toolbar_group_actions` of
+  `targetsboard_options()` hold a group's menu and toolbar, `<id>_node_action`
+  gains `nodes`, every target an action covers, and the new
+  `update_targetsboard_selection()` selects targets from the server.
 * The board remembers where you left the targets. It saves their positions,
   the view and the direction of the last layout in
   `_targets/user/targetsboard_layout.json` after each drag, pan, zoom or tidy,
@@ -66,11 +78,11 @@ First cleanup of the 2024 prototype.
   `tar_watch()` shows; **tar_meta()**; and **Debug**. The node table is gone. A
   power button in the top bar turns the board off, which also ends
   `tar_board()`'s background process.
-* An **Invalidate selected** button, under **Stop**, makes the selected
-  targets outdated with `targets::tar_invalidate()`, so the next run builds
-  them and what depends on them again; until then, their values can no
-  longer be read. It asks for confirmation, is disabled while a run is going,
-  and refreshes the graph.
+* An **Invalidate all** button, under **Stop**, makes every target outdated
+  with `targets::tar_invalidate()`, so the next run builds them all again;
+  until then, their values can no longer be read. It asks for confirmation,
+  is disabled while a run is going, and refreshes the graph. Some targets are
+  invalidated from their menu or toolbar.
 * The graph is laid out like `tar_visnetwork()`'s: each target in the column
   of its level, and each column stacked compactly and centred, with edge
   crossings reduced. Dagre, which spread dense pipelines (every target of a
@@ -107,9 +119,9 @@ First cleanup of the 2024 prototype.
 * `update_targetsboard_status()` updates target statuses in place, without
   resending or laying out the graph again.
 * A **Refresh** button recomputes the graph on demand.
-* **Run all**, **Run selected** and **Stop** buttons run the pipeline from
-  the board: `tar_make()` of everything, or of the selected targets and what
-  they depend on. Stop also stops a run started outside the board. The
+* **Run all** and **Stop** buttons run the pipeline from the board:
+  `tar_make()` of everything; a target's or a group's menu and toolbar run
+  just those and what they depend on. Stop also stops a run started outside the board. The
   buttons follow whether a run is going, and the board tells how its own runs
   ended.
 * The board tells a running pipeline by its process (`tar_process()`), not

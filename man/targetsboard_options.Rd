@@ -13,6 +13,8 @@ targetsboard_options(
   only_render_visible = FALSE,
   node_actions = character(),
   toolbar_actions = character(),
+  node_group_actions = character(),
+  toolbar_group_actions = character(),
   download_image = FALSE
 )
 }
@@ -35,13 +37,23 @@ pipelines responsive.}
 
 \item{node_actions}{The right-click menu of a target: a named character
 vector of labels, named by action. Choosing one sets
-\verb{input$<inputId>_node_action} to \code{list(action = , node = )}, except
-\code{copy_name}, which the widget does itself: it copies the target's name to
-the clipboard. Empty, the default: no menu.}
+\verb{input$<inputId>_node_action} to \code{list(action = , node = , nodes = )}.
+The widget does some actions itself, without telling the server:
+\code{copy_name} copies the target's name to the clipboard, quoted as an R
+string (\code{"model"}), and \code{select_upstream}, \code{select_downstream} and
+\code{select_lineage} select it with all it depends on, all that depends on
+it, or both. Empty, the default: no menu.}
 
 \item{toolbar_actions}{Buttons over the focused target, as \code{node_actions}:
 a named character vector of labels, named by action, reported the same
 way. Empty, the default: no toolbar.}
+
+\item{node_group_actions, toolbar_group_actions}{The menu and the toolbar of
+a selected group of two or more targets, as \code{node_actions} and
+\code{toolbar_actions}; \code{{n}} in a label is the number of targets. \code{copy_name}
+copies their names as an R vector, \code{c("a", "b")}, and the selection
+actions start from all of them. Empty, the default: no menu or toolbar for
+a group.}
 
 \item{download_image}{Add a button to the zoom controls (shown with
 \code{controls}) that downloads an image of the whole graph, as PNG.}

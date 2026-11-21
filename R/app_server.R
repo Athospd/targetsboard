@@ -104,14 +104,10 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     shiny::observe({
       is_running <- running()
       shiny::updateActionButton(session, "run_all", disabled = is_running)
-      shiny::updateActionButton(
-        session, "run_selected",
-        disabled = is_running || length(input$flow_selected_nodes) == 0
-      )
       shiny::updateActionButton(session, "stop", disabled = !is_running)
       shiny::updateActionButton(
-        session, "invalidate",
-        disabled = is_running || length(input$flow_selected_nodes) == 0
+        session, "invalidate_all",
+        disabled = is_running || length(board_targets(board()$x$nodes)) == 0
       )
     })
 
@@ -124,10 +120,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       runner$stopped <- FALSE
     }
     shiny::observeEvent(input$run_all, launch_run())
-    shiny::observeEvent(input$run_selected, {
-      shiny::req(input$flow_selected_nodes)
-      launch_run(input$flow_selected_nodes)
-    })
 
     # Stops the run going, whoever started it.
     shiny::observeEvent(input$stop, {
@@ -172,22 +164,29 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     to_invalidate <- shiny::reactiveVal(NULL)
     ask_to_invalidate <- function(names) {
       to_invalidate(names)
+      shown <- utils::head(names, 10)
       shiny::showModal(shiny::modalDialog(
         title = "Invalidate targets?",
         shiny::p(
           "The next run will build these targets again, and what depends on them.",
           "Until then, their values can no longer be read."
         ),
-        shiny::tags$ul(lapply(names, \(name) shiny::tags$li(shiny::tags$code(name)))),
+        shiny::tags$ul(
+          lapply(shown, \(name) shiny::tags$li(shiny::tags$code(name))),
+          if (length(names) > length(shown)) {
+            shiny::tags$li(paste("and", length(names) - length(shown), "more"))
+          }
+        ),
         footer = shiny::tagList(
           shiny::modalButton("Cancel"),
           shiny::actionButton("invalidate_confirm", "Invalidate", class = "btn-danger")
         )
       ))
     }
-    shiny::observeEvent(input$invalidate, {
-      shiny::req(input$flow_selected_nodes)
-      ask_to_invalidate(input$flow_selected_nodes)
+    shiny::observeEvent(input$invalidate_all, {
+      names <- board_targets(board()$x$nodes)
+      shiny::req(length(names) > 0)
+      ask_to_invalidate(names)
     })
     shiny::observeEvent(input$invalidate_confirm, {
       shiny::removeModal()
@@ -224,14 +223,15 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       )
     })
 
-    # The actions of a target's right-click menu and of the focused target's
-    # toolbar (board_options()).
+    # The actions of the right-click menus and the toolbars (board_options()):
+    # on the target they were chosen on, or on the selected group.
     shiny::observeEvent(input$flow_node_action, {
-      node <- input$flow_node_action$node
+      action <- input$flow_node_action
+      nodes <- as.character(unlist(action$nodes %||% action$node))
       switch(
-        input$flow_node_action$action,
-        run = launch_run(node),
-        invalidate = ask_to_invalidate(node),
+        action$action,
+        run = launch_run(nodes),
+        invalidate = ask_to_invalidate(nodes),
         value = preview_open(TRUE)
       )
     })
@@ -333,19 +333,40 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 }
 
 # The board's display options: the widget's defaults, plus a right-click
-# menu on each target, a toolbar over the focused one, and a download
-# button for an image of the graph.
+# menu on each target and on a selected group, a toolbar over the focused
+# target or the group, and a download button for an image of the graph. A
+# group has no value to show.
 board_options <- function() {
   targetsboard_options(
     node_actions = c(
       run = "Run this target",
       invalidate = "Invalidate this target",
       value = "Show its value",
-      copy_name = "Copy its name"
+      copy_name = "Copy its name",
+      select_upstream = "Select what it depends on",
+      select_downstream = "Select what depends on it",
+      select_lineage = "Select its lineage"
     ),
     toolbar_actions = c(run = "Run", invalidate = "Invalidate", value = "Value"),
+    node_group_actions = c(
+      run = "Run {n} targets",
+      invalidate = "Invalidate {n} targets",
+      copy_name = "Copy {n} names",
+      select_upstream = "Select what they depend on",
+      select_downstream = "Select what depends on them",
+      select_lineage = "Select their lineage"
+    ),
+    toolbar_group_actions = c(run = "Run {n}", invalidate = "Invalidate {n}"),
     download_image = TRUE
   )
+}
+
+# The targets among the graph's nodes (tar_visnetwork()$x$nodes): without
+# the functions and globals, when those are drawn too.
+board_targets <- function(nodes) {
+  if (is.null(nodes) || nrow(nodes) == 0) return(character())
+  if (!"type" %in% names(nodes)) return(as.character(nodes$id))
+  as.character(nodes$id[nodes$type %in% c("stem", "pattern")])
 }
 
 # A file in the targets store's meta folder, e.g. "progress" or "meta".

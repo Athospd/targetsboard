@@ -59,6 +59,16 @@ The one target the author is looking at: the board shows its value and reasons
 and highlights what it depends on and what depends on it.
 _Avoid_: Selection (when one target is meant), active node
 
+**Group**:
+Two or more targets the author selected together, to run, invalidate or copy
+at once. The board highlights the group's lineage instead of the focus's.
+_Avoid_: Multi-selection, batch, set
+
+**Lineage**:
+A target, or a group, with everything it depends on and everything that depends
+on it, at every level, not only the direct neighbours.
+_Avoid_: Neighbourhood, family, ancestry
+
 ### Statuses
 
 A target on the board is always in exactly one of these four statuses.
