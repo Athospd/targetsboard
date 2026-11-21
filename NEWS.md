@@ -25,6 +25,11 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* The board's page is one card of tabs: **Board**, the board's own graph;
+  **tar_visnetwork()**, the graph as that function draws it, the view
+  `tar_watch()` shows; **tar_meta()**; and **Debug**. The node table is gone. A
+  power button in the top bar turns the board off, which also ends
+  `tar_board()`'s background process.
 * An **Invalidate selected** button, under **Stop**, makes the selected
   targets outdated with `targets::tar_invalidate()`, so the next run builds
   them and what depends on them again; until then, their values can no

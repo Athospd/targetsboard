@@ -231,9 +231,16 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       if (!identical(new_script, poller$script)) start_poller(new_script)
     })
 
-    output$nodes <- reactable::renderReactable({
-      reactable::reactable(board()$x$nodes)
+    # The graph as tar_visnetwork() draws it, the view tar_watch() shows:
+    # recomputed with the board's graph, without live statuses.
+    output$vis_network <- visNetwork::renderVisNetwork({
+      shiny::req(board()$widget)
+      board()$widget
     })
+
+    # The power button: stop the board. In tar_board()'s background process,
+    # that ends the process too.
+    shiny::observeEvent(input$turn_off, shiny::stopApp("The board is turned off."))
 
     # Re-read tar_meta() only when targets writes new metadata; checking the
     # file's modification time every second is cheap.
@@ -259,7 +266,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 
     output$debug <- shiny::renderPrint({
       c(
-        board = board(),
+        board = board()[c("x", "progress_mtime")], # not the visNetwork widget
         reactiveValuesToList(input)
       )
     })
