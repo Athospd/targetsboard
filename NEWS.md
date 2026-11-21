@@ -89,6 +89,8 @@ First cleanup of the 2024 prototype.
 
 ## Bug fixes and performance
 
+* The board no longer opens, now and then, zoomed all the way in on a
+  corner of the graph: the first fit of the view raced the first layout.
 * Backspace and Delete no longer remove the selected targets and their edges
   from the board. React Flow deletes them on those keys by default, which a
   read-only board must not do.

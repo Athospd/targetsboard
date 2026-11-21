@@ -173,6 +173,8 @@ function Flow({ configuration }) {
   // render and when a Tidy button is pressed; only the new targets ('new')
   // when the pipeline's structure changes.
   const [layoutPending, setLayoutPending] = useState('all');
+  // Fit the view to the graph once the laid-out targets are drawn.
+  const [fitPending, setFitPending] = useState(false);
   const newIdsRef = useRef(new Set());
 
   const nodesRef = useRef(nodes);
@@ -209,13 +211,23 @@ function Flow({ configuration }) {
     if (!layoutPending || !allMeasured) return;
     if (layoutPending === 'all') {
       setNodes(layoutGraph(nodes, edges, { direction }).nodes);
-      window.requestAnimationFrame(() => fitView());
+      setFitPending(true);
     } else {
       setNodes(placeNewNodes(nodes, edges, newIdsRef.current, direction));
     }
     newIdsRef.current = new Set();
     setLayoutPending(null);
   }, [layoutPending, allMeasured, nodes, edges, direction, fitView]);
+
+  // Runs after the render that drew the new positions: React Flow's store,
+  // updated by its own (child) effects, has them by now. Fitting in the next
+  // animation frame instead raced that render, and now and then fitted the
+  // targets still stacked at the origin: zoomed all the way in.
+  useEffect(() => {
+    if (!fitPending) return;
+    fitView();
+    setFitPending(false);
+  }, [fitPending, nodes, fitView]);
 
   // New data from R (statuses every tick; sometimes a changed pipeline).
   useEffect(() => {

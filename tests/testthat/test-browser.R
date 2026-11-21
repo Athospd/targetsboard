@@ -233,3 +233,26 @@ test_that("with only visible targets rendered, the layout runs and off-screen ta
   app$wait_for_js(paste(count, "< 12"))
   expect_lt(app$get_js(count), 12)
 })
+
+test_that("the first layout fits the whole graph in view, every time", {
+  dir <- local_chain_pipeline(6)
+  # The fit used to race the layout and, now and then, zoom to the maximum
+  # on targets still stacked at the origin: so load the board a few times.
+  for (i in 1:3) {
+    app <- local_board_app(dir, paste0("fit", i))
+    app$wait_for_js(paste(
+      "new Set(Array.from(document.querySelectorAll('.react-flow__node'))",
+      ".map(n => n.style.transform)).size === 6"
+    ))
+    Sys.sleep(1)
+    outside <- app$get_js(
+      "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();
+         return Array.from(document.querySelectorAll('.react-flow__node')).filter(n => {
+           const r = n.getBoundingClientRect();
+           return r.left < w.left || r.right > w.right || r.top < w.top || r.bottom > w.bottom;
+         }).map(n => n.dataset.id); })()"
+    )
+    expect_length(unlist(outside), 0)
+    app$stop()
+  }
+})
