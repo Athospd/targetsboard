@@ -268,6 +268,17 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       board()$widget
     })
 
+    # A target picked in the tar_meta() table: show it on the board, focused,
+    # with what it depends on and what depends on it directly in view.
+    shiny::observeEvent(input$meta_row_clicked, {
+      name <- input$meta_row_clicked
+      edges <- board()$x$edges
+      neighbours <- unique(c(name, edges$from[edges$to == name], edges$to[edges$from == name]))
+      bslib::nav_select("view", "board")
+      update_targetsboard_focus(session, "flow", name)
+      targetsboard_fit_view(session, "flow", neighbours)
+    })
+
     # The graph follows the page's dark mode switch.
     shiny::observeEvent(input$dark_mode, {
       update_targetsboard_options(session, "flow", color_mode = input$dark_mode)
@@ -296,7 +307,15 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 
     output$meta <- reactable::renderReactable({
       req(tar_meta_data())
-      reactable::reactable(tar_meta_data(), wrap = FALSE)
+      reactable::reactable(
+        tar_meta_data(),
+        wrap = FALSE,
+        # A click on a row shows its target on the board, even twice in a row.
+        onClick = reactable::JS(
+          "function(row) { Shiny.setInputValue('meta_row_clicked', row.values.name, {priority: 'event'}); }"
+        ),
+        rowStyle = list(cursor = "pointer")
+      )
     })
 
     output$debug <- shiny::renderPrint({

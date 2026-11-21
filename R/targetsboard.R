@@ -40,10 +40,13 @@
 #' the status of some targets, which is much lighter: use it to follow a
 #' running pipeline. `update_targetsboard_options()` changes only the display
 #' options it names, e.g. `color_mode` to follow `bslib::input_dark_mode()`.
+#' `update_targetsboard_focus()` focuses a target from the server, and
+#' `targetsboard_fit_view()` brings targets into view: together, they can show
+#' a target picked elsewhere in the app.
 #'
 #' @return `targetsboard()` returns a Shiny UI element.
-#'   `update_targetsboard()`, `update_targetsboard_status()` and
-#'   `update_targetsboard_options()` are called for their side effect.
+#'   The update functions and `targetsboard_fit_view()` are called for their
+#'   side effect.
 #'
 #' @examples
 #' \dontrun{
@@ -114,6 +117,53 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
   )
   if (!is.null(warnings)) message$warnings <- I(as.character(warnings)) # always an array
   session$sendCustomMessage("targetsboard:status", message)
+}
+
+#' @rdname targetsboard
+#' @param node For `update_targetsboard_focus()`: the id of the target to
+#'   focus, as a click does, or `NULL` to clear the focus.
+#' @export
+update_targetsboard_focus <- function(session, inputId, node = NULL) {
+  if (!is.null(node) && !rlang::is_string(node)) {
+    rlang::abort("`node` must be one target id, or NULL.")
+  }
+  send_command(session, inputId, "focus", node = node)
+}
+
+#' @rdname targetsboard
+#' @param nodes For `targetsboard_fit_view()`: ids of the targets to fit in
+#'   view; `NULL`, all of them. Ids not in the widget are ignored.
+#' @param padding For `targetsboard_fit_view()`: room around them, as a
+#'   fraction of the view.
+#' @param duration For `targetsboard_fit_view()`: length of the animation, in
+#'   milliseconds.
+#' @param max_zoom For `targetsboard_fit_view()`: the most it zooms in, so a
+#'   single target doesn't fill the view.
+#' @export
+targetsboard_fit_view <- function(session, inputId, nodes = NULL, padding = 0.2,
+                                  duration = 400, max_zoom = 1.5) {
+  if (!is.null(nodes) && !is.character(nodes)) {
+    rlang::abort("`nodes` must be a character vector of target ids, or NULL.")
+  }
+  stopifnot(rlang::is_scalar_double(padding) || rlang::is_scalar_integer(padding))
+  stopifnot(rlang::is_scalar_double(duration) || rlang::is_scalar_integer(duration))
+  stopifnot(rlang::is_scalar_double(max_zoom) || rlang::is_scalar_integer(max_zoom))
+  send_command(
+    session, inputId, "fit_view",
+    nodes = if (!is.null(nodes)) I(nodes), # always an array
+    padding = padding, duration = duration, max_zoom = max_zoom
+  )
+}
+
+# A command to the widget: one custom message type, picked by `command`.
+# NULL arguments are left out (as JSON, NULL would become an empty object):
+# the widget reads a missing one as null.
+send_command <- function(session, inputId, command, ...) {
+  args <- Filter(Negate(is.null), list(...))
+  session$sendCustomMessage(
+    "targetsboard:command",
+    c(list(id = inputId, command = command), args)
+  )
 }
 
 #' @rdname targetsboard

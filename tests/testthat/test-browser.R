@@ -335,3 +335,84 @@ test_that("a widget without node actions has no menu, but reports right-clicks",
   expect_equal(app$get_value(input = "dag_context_node"), "b")
   expect_false(app$get_js("document.querySelector('.tb-node-menu') !== null"))
 })
+
+test_that("the widget focuses targets and fits the view on command", {
+  dir <- local_chain_pipeline(8)
+  app <- local_board_app(dir, "commands", widget_app())
+  app$wait_for_js(paste(
+    "new Set(Array.from(document.querySelectorAll('.react-flow__node'))",
+    ".map(n => n.style.transform)).size === 8"
+  ))
+  zoom <- function() {
+    app$get_js("parseFloat(document.querySelector('.react-flow__viewport').style.transform.split('scale(')[1])")
+  }
+  in_view <- function(id) {
+    app$get_js(sprintf(
+      "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();
+         const r = %s.getBoundingClientRect();
+         return r.left >= w.left && r.right <= w.right && r.top >= w.top && r.bottom <= w.bottom; })()",
+      node_js(id)
+    ))
+  }
+  command <- function(...) send_widget_message(app, "targetsboard:command", list(id = "dag", ...))
+
+  whole <- zoom()
+  command(command = "focus", node = "t4")
+  app$wait_for_js(paste0(node_js("t4"), ".classList.contains('tb-focused')"))
+  app$wait_for_value(input = "dag_focused_node")
+  expect_equal(app$get_value(input = "dag_focused_node"), "t4")
+
+  # Fit to two targets: closer in than the whole chain, both in view.
+  command(command = "fit_view", nodes = c("t4", "t5"), padding = 0.2, duration = 0, max_zoom = 1.5)
+  app$wait_for_js(sprintf(
+    "parseFloat(document.querySelector('.react-flow__viewport').style.transform.split('scale(')[1]) > %f",
+    whole
+  ))
+  expect_true(in_view("t4") && in_view("t5"))
+  expect_false(in_view("t1"))
+  expect_lte(zoom(), 1.5)
+
+  # Unknown targets: nothing moves. All targets: back to the whole chain.
+  before <- zoom()
+  command(command = "fit_view", nodes = list("nope"), duration = 0)
+  Sys.sleep(0.5)
+  expect_equal(zoom(), before)
+  command(command = "fit_view", duration = 0)
+  app$wait_for_js(paste0(
+    "Array.from(document.querySelectorAll('.react-flow__node')).every(n => {",
+    " const w = document.querySelector('.react-flow').getBoundingClientRect();",
+    " const r = n.getBoundingClientRect(); return r.left >= w.left && r.right <= w.right; })"
+  ))
+
+  command(command = "focus")
+  app$wait_for_js("document.querySelector('.tb-focused') === null")
+})
+
+test_that("a click on a tar_meta() row shows its target on the board", {
+  dir <- local_chain_pipeline(8)
+  targets::tar_make(reporter = "silent")
+  app <- local_board_app(dir, "metajump")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 8")
+
+  app$click(selector = "a[data-value='tar_meta']")
+  app$wait_for_js("document.querySelectorAll('#meta .rt-tbody .rt-tr').length === 8")
+  app$run_js(
+    "Array.from(document.querySelectorAll('#meta .rt-tbody .rt-tr'))
+       .find(r => r.querySelector('.rt-td').innerText.trim() === 't6')
+       .querySelector('.rt-td').click()"
+  )
+  app$wait_for_js("document.querySelector(\"a[data-value='board']\").classList.contains('active')")
+  app$wait_for_js(paste0(node_js("t6"), ".classList.contains('tb-focused')"))
+  app$wait_for_value(input = "flow_focused_node")
+  expect_equal(app$get_value(input = "flow_focused_node"), "t6")
+  # In view, with its neighbours, and the start of the chain out of it.
+  app$wait_for_js(paste0(
+    "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",
+    " const r = ", node_js("t6"), ".getBoundingClientRect();",
+    " return w.width > 0 && r.left >= w.left && r.right <= w.right; })()"
+  ), timeout = 10 * 1000)
+  expect_false(app$get_js(paste0(
+    "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",
+    " const r = ", node_js("t1"), ".getBoundingClientRect(); return r.right <= w.right && r.left >= w.left; })()"
+  )))
+})

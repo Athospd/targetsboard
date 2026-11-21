@@ -247,3 +247,30 @@ test_that("the graph follows the page's dark mode switch", {
     expect_equal(sent[[length(sent)]]$color_mode, "light")
   })
 })
+
+test_that("a row clicked in the tar_meta() table shows its target on the board", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  calls <- list()
+  record <- function(what) function(...) calls[[length(calls) + 1]] <<- list(what, list(...))
+  local_mocked_bindings(
+    update_targetsboard_focus = function(session, inputId, node) record("focus")(inputId, node),
+    targetsboard_fit_view = function(session, inputId, nodes, ...) record("fit")(inputId, nodes)
+  )
+  local_mocked_bindings(
+    nav_select = function(id, selected, ...) record("tab")(id, selected),
+    .package = "bslib"
+  )
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$setInputs(meta_row_clicked = "b")
+    expect_equal(calls, list(
+      list("tab", list("view", "board")),
+      list("focus", list("flow", "b")),
+      list("fit", list("flow", c("b", "a", "c"))) # b, what it depends on, what depends on it
+    ))
+  })
+})

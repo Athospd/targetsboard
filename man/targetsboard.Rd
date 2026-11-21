@@ -4,6 +4,8 @@
 \alias{targetsboard}
 \alias{update_targetsboard}
 \alias{update_targetsboard_status}
+\alias{update_targetsboard_focus}
+\alias{targetsboard_fit_view}
 \alias{update_targetsboard_options}
 \title{DAG widget for Shiny}
 \usage{
@@ -35,6 +37,17 @@ update_targetsboard_status(
   warnings = NULL
 )
 
+update_targetsboard_focus(session, inputId, node = NULL)
+
+targetsboard_fit_view(
+  session,
+  inputId,
+  nodes = NULL,
+  padding = 0.2,
+  duration = 400,
+  max_zoom = 1.5
+)
+
 update_targetsboard_options(session, inputId, ...)
 }
 \arguments{
@@ -56,7 +69,10 @@ their place; new ones are placed next to their neighbours, and the
 "Tidy" buttons lay the whole graph out again. \code{update_targetsboard_status()} only changes
 the status of some targets, which is much lighter: use it to follow a
 running pipeline. \code{update_targetsboard_options()} changes only the display
-options it names, e.g. \code{color_mode} to follow \code{bslib::input_dark_mode()}.}
+options it names, e.g. \code{color_mode} to follow \code{bslib::input_dark_mode()}.
+\code{update_targetsboard_focus()} focuses a target from the server, and
+\code{targetsboard_fit_view()} brings targets into view: together, they can show
+a target picked elsewhere in the app.}
 
 \item{session}{The Shiny session.}
 
@@ -64,13 +80,28 @@ options it names, e.g. \code{color_mode} to follow \code{bslib::input_dark_mode(
 \code{targets::tar_progress()}, named by target. Targets not in the widget are
 ignored.}
 
+\item{node}{For \code{update_targetsboard_focus()}: the id of the target to
+focus, as a click does, or \code{NULL} to clear the focus.}
+
+\item{padding}{For \code{targetsboard_fit_view()}: room around them, as a
+fraction of the view.}
+
+\item{duration}{For \code{targetsboard_fit_view()}: length of the animation, in
+milliseconds.}
+
+\item{max_zoom}{For \code{targetsboard_fit_view()}: the most it zooms in, so a
+single target doesn't fill the view.}
+
 \item{...}{For \code{update_targetsboard_options()}: the options to change, as
 arguments of \code{\link[=targetsboard_options]{targetsboard_options()}}.}
+
+\item{nodes}{For \code{targetsboard_fit_view()}: ids of the targets to fit in
+view; \code{NULL}, all of them. Ids not in the widget are ignored.}
 }
 \value{
 \code{targetsboard()} returns a Shiny UI element.
-\code{update_targetsboard()}, \code{update_targetsboard_status()} and
-\code{update_targetsboard_options()} are called for their side effect.
+The update functions and \code{targetsboard_fit_view()} are called for their
+side effect.
 }
 \description{
 The interactive targets DAG used by the board, as a Shiny input you can

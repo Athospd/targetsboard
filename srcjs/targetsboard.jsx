@@ -182,14 +182,29 @@ const lineageOf = (focusId, edges) => {
 // its id.
 const STATUS_EVENT = 'targetsboard:status';
 const OPTIONS_EVENT = 'targetsboard:options';
+// Commands from R: focus a target (update_targetsboard_focus()), fit the
+// view to targets (targetsboard_fit_view()).
+const COMMAND_EVENT = 'targetsboard:command';
 if (window.Shiny && !window.__targetsboardStatusHandler) {
   window.__targetsboardStatusHandler = true;
-  [STATUS_EVENT, OPTIONS_EVENT].forEach((type) =>
+  [STATUS_EVENT, OPTIONS_EVENT, COMMAND_EVENT].forEach((type) =>
     window.Shiny.addCustomMessageHandler(type, (message) => {
       window.dispatchEvent(new CustomEvent(type, { detail: message }));
     }),
   );
 }
+
+// Run `fn` once `el` is shown and sized: a widget in a hidden tab has no size
+// to fit a view to, so wait (up to 5 s) for its tab to show, then give
+// React Flow two frames to notice the new size.
+const whenVisible = (el, fn, deadline = Date.now() + 5000) => {
+  if (!el) return;
+  if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+    requestAnimationFrame(() => requestAnimationFrame(fn));
+  } else if (Date.now() < deadline) {
+    setTimeout(() => whenVisible(el, fn, deadline), 50);
+  }
+};
 
 const sortedKey = (ids) => [...ids].sort().join('|');
 const structureKey = (nodes, edges) =>
@@ -358,6 +373,32 @@ function Flow({ configuration }) {
     window.addEventListener(OPTIONS_EVENT, onOptions);
     return () => window.removeEventListener(OPTIONS_EVENT, onOptions);
   }, [configuration.id]);
+
+  // Commands from R.
+  useEffect(() => {
+    const onCommand = (event) => {
+      const message = event.detail;
+      if (message?.id !== configuration.id) return;
+      if (message.command === 'focus') {
+        setFocusId(message.node ?? null);
+        setMenu(null);
+      } else if (message.command === 'fit_view') {
+        const known = new Set(nodesRef.current.map((n) => n.id));
+        const ids = (message.nodes ?? []).filter((id) => known.has(id));
+        if (message.nodes && ids.length === 0) return; // none of them drawn
+        const fit = () =>
+          fitView({
+            nodes: message.nodes ? ids.map((id) => ({ id })) : undefined,
+            padding: message.padding,
+            duration: message.duration,
+            maxZoom: message.max_zoom,
+          });
+        whenVisible(wrapperRef.current, fit);
+      }
+    };
+    window.addEventListener(COMMAND_EVENT, onCommand);
+    return () => window.removeEventListener(COMMAND_EVENT, onCommand);
+  }, [configuration.id, fitView]);
 
   // A focused target that left the pipeline is no longer focused.
   useEffect(() => {

@@ -144,3 +144,26 @@ test_that("node_actions become the menu's items, checked", {
   expect_error(targetsboard_options(node_actions = c(run = "a", run = "b")), "unique")
   expect_error(targetsboard_options(node_actions = list(run = 1)), "character")
 })
+
+test_that("update_targetsboard_focus() and targetsboard_fit_view() send commands", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) {
+    sent <<- list(type = type, message = message)
+  })
+
+  update_targetsboard_focus(session, "dag", "raw")
+  expect_equal(sent$type, "targetsboard:command")
+  expect_equal(sent$message, list(id = "dag", command = "focus", node = "raw"))
+  update_targetsboard_focus(session, "dag", NULL)
+  expect_equal(sent$message, list(id = "dag", command = "focus")) # the widget reads null
+  expect_error(update_targetsboard_focus(session, "dag", c("a", "b")), "one target id")
+
+  targetsboard_fit_view(session, "dag", "raw")
+  expect_equal(sent$message$command, "fit_view")
+  expect_equal(jsonlite::toJSON(sent$message$nodes), jsonlite::toJSON(I("raw"))) # an array
+  expect_equal(sent$message[c("padding", "duration", "max_zoom")],
+               list(padding = 0.2, duration = 400, max_zoom = 1.5))
+  targetsboard_fit_view(session, "dag")
+  expect_false("nodes" %in% names(sent$message)) # all targets
+  expect_error(targetsboard_fit_view(session, "dag", 1), "character")
+})

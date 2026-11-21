@@ -25,6 +25,10 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* `update_targetsboard_focus()` focuses a target from the server, and
+  `targetsboard_fit_view()` brings some targets, or all, into view. On the
+  board, a click on a row of the **tar_meta()** table shows its target on the
+  **Board** tab: focused, with its direct neighbours in view.
 * The widget reports more to the server: `<id>_double_clicked_node`,
   `<id>_context_node` (a right-click, which also focuses the target),
   `<id>_viewport` after each pan or zoom, and `<id>_node_action` when an item
