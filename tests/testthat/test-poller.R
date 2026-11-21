@@ -88,3 +88,19 @@ test_that("a killed run still counts as ended", {
   wait_for_rewrite(poller, before)
   expect_identical(readRDS(poller$tar_vis_path)$progress_mtime, file.mtime("_targets/meta/progress"))
 })
+
+test_that("the poller draws a script that appears after it started", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  poller <- tar_visnetwork_bg("_targets.R", interval = 0.2, settle = 0.5, targets_only = TRUE)
+  withr::defer(poller$process$kill())
+
+  Sys.sleep(1.5)
+  expect_true(poller$process$is_alive())
+  expect_false(file.exists(poller$tar_vis_path))
+
+  writeLines(c("library(targets)", "list(tar_target(a, 1), tar_target(b, a))"), "_targets.R")
+  wait_for(function() file.exists(poller$tar_vis_path))
+  expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b"))
+})

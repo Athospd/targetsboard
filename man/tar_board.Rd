@@ -6,15 +6,18 @@
 \title{Launch the targets board}
 \usage{
 tar_board(
-  script = "_targets.R",
-  port = 9999,
+  script = targets::tar_config_get("script"),
+  port = getOption("shiny.port", targets::tar_random_port()),
   targets_only = TRUE,
   metadata = NULL,
+  host = getOption("shiny.host", "127.0.0.1"),
+  browse = TRUE,
+  verbose = TRUE,
   ...
 )
 
 tar_board_app(
-  script = "_targets.R",
+  script = targets::tar_config_get("script"),
   targets_only = TRUE,
   metadata = NULL,
   options = list(),
@@ -22,23 +25,34 @@ tar_board_app(
 )
 }
 \arguments{
-\item{script}{Path to the targets script.}
+\item{script}{Path to the targets script. Defaults to the project's, as
+\code{targets::tar_config_get("script")} gives it.}
 
-\item{port}{Port to serve the board on, at \verb{http://127.0.0.1:<port>}.}
+\item{port}{Port to serve the board on. Defaults to the \code{shiny.port} option
+or, without one, a random free port.}
 
 \item{targets_only}{Show only targets, without functions and globals.}
 
 \item{metadata}{Optional: \code{targets::tar_visnetwork()$x} for the first
-render. Computed from \code{script} when \code{NULL}.}
+render. Computed from \code{script} when \code{NULL}, and empty when there is no
+script yet.}
+
+\item{host}{Host to serve the board on. Defaults to the \code{shiny.host} option
+or, without one, \code{"127.0.0.1"}: only your own machine can reach it.}
+
+\item{browse}{Open the board in your browser once it is up.}
+
+\item{verbose}{Show a spinner while the board starts, and print its url.}
 
 \item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}} for the first render.}
 
 \item{options}{Passed on to \code{\link[shiny:shinyApp]{shiny::shinyApp()}}, e.g. \code{list(port = 8080)}.}
 }
 \value{
-\code{tar_board()}: the background process, a \code{\link[callr:r_bg]{callr::r_bg()}} object.
-Use \verb{$is_alive()} and \verb{$kill()} on it, and read the board's log with
-\code{readLines(app$get_output_file())}.
+\code{tar_board()}: the background process, a \code{\link[callr:r_bg]{callr::r_bg()}} object,
+invisibly. Use \verb{$is_alive()} and \verb{$kill()} on it, read the board's log
+with \code{readLines(app$get_output_file())}, and reopen the board with
+\code{browseURL(attr(app, "url"))}.
 \code{tar_board_app()}: a \code{\link[shiny:shinyApp]{shiny::shinyApp()}} object.
 }
 \description{
@@ -47,11 +61,24 @@ once, so your session stays free to run \code{tar_make()} and friends while the
 board follows along. \code{tar_board_app()} returns the board as a Shiny app
 object instead, to run in the foreground or deploy.
 }
+\details{
+Like \code{targets::tar_watch()}, the board needs no arguments: it shows the
+pipeline of the current project, with the script and store set in its
+configuration (\verb{_targets.R} and \verb{_targets/} unless \verb{_targets.yaml}, or the
+\code{TAR_CONFIG} and \code{TAR_PROJECT} environment variables, say otherwise). The
+graph comes from the script: the store only records the targets' statuses.
+Without a script yet, the board starts empty and draws the pipeline once the
+script appears.
+
+Also like \code{targets::tar_watch()}, \code{tar_board()} serves the board on a random
+free port, waits until it is up, opens it in your browser and prints its
+url.
+}
 \examples{
 \dontrun{
-app <- tar_board()
-browseURL("http://127.0.0.1:9999")
-targets::tar_make()
+app <- tar_board()                 # opens the board in your browser
+targets::tar_make()                # the board follows along
+browseURL(attr(app, "url"))        # reopen it after closing the tab
 app$kill()
 
 # or in the foreground:

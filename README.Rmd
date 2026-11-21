@@ -50,13 +50,13 @@ in a background R process, so your session stays free:
 ```{r example, eval = FALSE}
 library(targetsboard)
 
-app <- tar_board()                     # serves http://127.0.0.1:9999
-browseURL("http://127.0.0.1:9999")
+app <- tar_board()                     # opens the board in your browser
 
 targets::tar_make()                    # the board follows along
 
 app$is_alive()
 readLines(app$get_output_file())       # the board's log
+browseURL(attr(app, "url"))            # reopen it after closing the tab
 app$kill()                             # shut it down
 ```
 
@@ -65,8 +65,15 @@ pipeline, **Run selected** makes the targets selected in the DAG and whatever
 they depend on that is outdated, and **Stop** kills the run going, wherever it
 was started. Runs from the board go on if the board stops.
 
-`tar_board()` takes the pipeline `script` (default `_targets.R`), a `port`
-and `targets_only`. To run the board in the foreground, or deploy it, use the
+Like `targets::tar_watch()`, `tar_board()` needs no arguments: it shows
+the current project's pipeline, using the script and store from its targets
+configuration (`_targets.R` and `_targets/` unless `_targets.yaml` says
+otherwise). The graph comes from the script, since the store only records
+statuses; without a script yet, the board starts empty and draws the pipeline
+once the script appears. As `tar_watch()` does, `tar_board()` serves it on a
+random free port (or the `shiny.port` option), waits until it is up, opens it
+in your browser and prints its url; `browse = FALSE` skips the browser.
+It also takes a `script`, a `port`, a `host` and `targets_only`. To run the board in the foreground, or deploy it, use the
 Shiny app object instead:
 
 ```{r foreground, eval = FALSE}
