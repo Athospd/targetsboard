@@ -48,3 +48,29 @@ wait_for <- function(condition, timeout = 30) {
   }
   invisible(TRUE)
 }
+
+# The real board in headless Chrome, for the pipeline in `dir`. Skips when
+# Chrome or shinytest2 is missing. Uses the installed targetsboard.
+local_board_app <- function(dir, name, .env = parent.frame()) {
+  skip_on_cran()
+  skip_if_not_installed("shinytest2")
+  skip_if_not_installed("chromote")
+  skip_if(is.null(chromote::find_chrome()), "Chrome not found")
+  writeLines("targetsboard::tar_board_app()", file.path(dir, "app.R"))
+  app <- shinytest2::AppDriver$new(dir, name = name, load_timeout = 60 * 1000)
+  withr::defer(app$stop(), envir = .env)
+  app
+}
+
+# JS for the board's node of target `id`.
+node_js <- function(id) sprintf("document.querySelector(\".react-flow__node[data-id='%s']\")", id)
+
+# Presses a key in the page as a person would: a synthetic KeyboardEvent
+# doesn't reach React Flow's key handling, a DevTools key event does.
+press_key <- function(app, key, code = c(Backspace = 8, Delete = 46, Escape = 27)[[key]]) {
+  chrome <- app$get_chromote_session()
+  for (type in c("rawKeyDown", "keyUp")) {
+    chrome$Input$dispatchKeyEvent(type = type, key = key, code = key, windowsVirtualKeyCode = code)
+    Sys.sleep(0.3)
+  }
+}

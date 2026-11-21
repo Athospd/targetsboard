@@ -156,3 +156,17 @@ test_that("dense layers stay compact, in the columns of tar_visnetwork()'s level
   expect_equal(as.vector(spans), rep(spans[[1]], 3))
   expect_lt(spans[[1]], 3 * 60) # three targets, packed
 })
+
+test_that("the delete keys don't remove targets from the read-only board", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "delete")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+
+  app$click(selector = ".react-flow__node[data-id='b']")
+  app$wait_for_value(input = "flow_selected_nodes")
+  for (key in c("Backspace", "Delete")) press_key(app, key)
+  Sys.sleep(1)
+
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 3)
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__edge').length"), 2)
+})
