@@ -107,3 +107,52 @@ test_that("a board started before its script draws the pipeline once it appears"
   )
   expect_length(unique(unlist(positions)), 2)
 })
+
+test_that("dense layers stay compact, in the columns of tar_visnetwork()'s levels", {
+  skip_on_cran()
+  skip_if_not_installed("shinytest2")
+  skip_if_not_installed("chromote")
+  skip_if(is.null(chromote::find_chrome()), "Chrome not found")
+
+  # Three layers of three targets, each feeding all of the next: the shape
+  # that dagre used to spread into a widening diamond.
+  dir <- withr::local_tempdir()
+  writeLines(
+    c(
+      "library(targets)",
+      "list(",
+      "  tar_target(a1, 1), tar_target(a2, 2), tar_target(a3, 3),",
+      "  tar_target(b1, a1 + a2 + a3), tar_target(b2, a1 + a2 + a3), tar_target(b3, a1 + a2 + a3),",
+      "  tar_target(c1, b1 + b2 + b3), tar_target(c2, b1 + b2 + b3), tar_target(c3, b1 + b2 + b3)",
+      ")"
+    ),
+    file.path(dir, "_targets.R")
+  )
+  writeLines("targetsboard::tar_board_app()", file.path(dir, "app.R"))
+
+  app <- shinytest2::AppDriver$new(dir, name = "dense", load_timeout = 60 * 1000)
+  withr::defer(app$stop())
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 9")
+  app$wait_for_js(
+    "new Set(Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.style.transform)).size === 9"
+  )
+
+  xy <- app$get_js(
+    "Object.fromEntries(Array.from(document.querySelectorAll('.react-flow__node')).map(n => {
+       // style.transform is 'translate(<x>px, <y>px)'
+       const xy = n.style.transform.slice('translate('.length, -1).split(', ').map(parseFloat);
+       return [n.dataset.id, xy];
+     }))"
+  )
+  x <- vapply(xy, `[[`, 0, 1)
+  y <- vapply(xy, `[[`, 0, 2)
+  layer <- substr(names(xy), 1, 1)
+
+  # One column per level, left to right.
+  expect_equal(as.vector(tapply(x, layer, function(v) length(unique(v)))), c(1, 1, 1))
+  expect_true(all(diff(tapply(x, layer, min)) > 0))
+  # Every column has the same compact span: no layer spreads wider.
+  spans <- tapply(y, layer, function(v) diff(range(v)))
+  expect_equal(as.vector(spans), rep(spans[[1]], 3))
+  expect_lt(spans[[1]], 3 * 60) # three targets, packed
+})

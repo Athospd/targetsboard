@@ -1,6 +1,5 @@
 import { reactShinyInput } from 'reactR';
 import { useEffect, useCallback, useRef, useState } from 'react';
-import Dagre from '@dagrejs/dagre';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -15,6 +14,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
+import { layoutGraph } from './layout';
 
 import UptodateNode from './UptodateNode';
 import OutdatedNode from './OutdatedNode';
@@ -36,37 +36,6 @@ const handlePositions = (direction) => ({
   targetPosition: direction === 'LR' ? 'left' : 'top',
 });
 
-const getLayoutedElements = (nodes, edges, options) => {
-  nodes = Array.isArray(nodes) ? nodes : [];
-  edges = Array.isArray(edges) ? edges : [];
-
-  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: options.direction });
-
-  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-  nodes.forEach((node) =>
-    g.setNode(node.id, {
-      ...node,
-      width: node.measured?.width ?? 0,
-      height: node.measured?.height ?? 0,
-    }),
-  );
-
-  Dagre.layout(g);
-
-  return {
-    nodes: nodes.map((node) => {
-      const position = g.node(node.id);
-      // We are shifting the dagre node position (anchor=center center) to the top left
-      // so it matches the React Flow node anchor point (top left).
-      const x = position.x - (node.measured?.width ?? 0) / 2;
-      const y = position.y - (node.measured?.height ?? 0) / 2;
-      return { ...node, position: { x, y }, ...handlePositions(options.direction) };
-    }),
-    edges,
-  };
-};
-
 // Place only the targets in `newIds` and leave the others where they are, so
 // the author's picture of the graph survives edits to the pipeline. A new
 // target goes where a full layout would put it relative to a neighbour that is
@@ -74,7 +43,7 @@ const getLayoutedElements = (nodes, edges, options) => {
 // the way the placed targets are.
 const placeNewNodes = (nodes, edges, newIds, direction) => {
   const ideal = new Map(
-    getLayoutedElements(nodes, edges, { direction }).nodes.map((n) => [n.id, n.position]),
+    layoutGraph(nodes, edges, { direction }).nodes.map((n) => [n.id, n.position]),
   );
   const placed = nodes.filter((n) => !newIds.has(n.id));
   const byId = new Map(placed.map((n) => [n.id, n]));
@@ -199,7 +168,7 @@ function Flow({ configuration }) {
   useEffect(() => {
     if (!layoutPending || !allMeasured) return;
     if (layoutPending === 'all') {
-      setNodes(getLayoutedElements(nodes, edges, { direction }).nodes);
+      setNodes(layoutGraph(nodes, edges, { direction }).nodes);
       window.requestAnimationFrame(() => fitView());
     } else {
       setNodes(placeNewNodes(nodes, edges, newIdsRef.current, direction));
@@ -327,6 +296,7 @@ function Flow({ configuration }) {
         onPaneClick={onPaneClick}
         nodesConnectable={false}
         fitView
+        minZoom={0.05} // fit big pipelines whole, as tar_visnetwork() does
         style={{ background: configuration.background_color }}
         nodeTypes={nodeTypes}
       >

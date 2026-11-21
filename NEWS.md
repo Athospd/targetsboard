@@ -25,6 +25,11 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* The graph is laid out like `tar_visnetwork()`'s: each target in the column
+  of its level, and each column stacked compactly and centred, with edge
+  crossings reduced. Dagre, which spread dense pipelines (every target of a
+  layer feeding every target of the next) into a wide diamond, is gone. The
+  board can also zoom out far enough to show big pipelines whole.
 * Like `targets::tar_watch()`, `tar_board()` serves the board on a random
   free port (or the `shiny.port` option) instead of 9999, takes a `host`
   (or the `shiny.host` option), waits until the board is up, opens it in the
