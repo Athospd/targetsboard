@@ -199,6 +199,15 @@ NULL
 #' }
 #' @export
 tar_board <- function(script = "_targets.R", port = 9999, targets_only = TRUE, metadata = NULL, ...) {
+  # Else the background board dies at once on "address already in use" and
+  # the page at the port is whatever was there, often an older board.
+  if (port_in_use(port)) {
+    stop(
+      "Port ", port, " is already in use, maybe by a board you started before: ",
+      "`$kill()` it, or pick another `port`.",
+      call. = FALSE
+    )
+  }
   # Computed here, so that a broken script errors in your session at once.
   if (is.null(metadata))
     metadata <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
@@ -226,6 +235,21 @@ tar_board <- function(script = "_targets.R", port = 9999, targets_only = TRUE, m
   )
   message("targetsboard log: ", log_file)
   invisible(bg_process)
+}
+
+#' Is something already listening on this port?
+#'
+#' Tries to connect rather than to bind: on Windows, binding succeeds even
+#' while another process listens on 127.0.0.1 at that port.
+#' @noRd
+port_in_use <- function(port) {
+  con <- tryCatch(
+    suppressWarnings(socketConnection("127.0.0.1", port, open = "r+b", timeout = 1)),
+    error = function(e) NULL
+  )
+  if (is.null(con)) return(FALSE)
+  close(con)
+  TRUE
 }
 
 #' @rdname tar_board

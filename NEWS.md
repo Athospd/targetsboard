@@ -40,6 +40,10 @@ First cleanup of the 2024 prototype.
 
 ## Bug fixes and performance
 
+* `tar_board()` errors when its port is already in use, typically by a
+  board started before, instead of returning a background process that has
+  already died.
+
 * The background poller no longer keeps a CPU core busy, is shared by all
   browser sessions and stops with the app. It no longer recomputes
   `tar_visnetwork()` every second: only when the script or a file in `R/`
