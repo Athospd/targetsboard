@@ -1,5 +1,5 @@
 import { reactShinyInput } from 'reactR';
-import { useEffect, useLayoutEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,6 +16,7 @@ import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
 import { layoutGraph } from './layout';
+import { NodeActionsContext } from './NodeActions';
 
 import UptodateNode from './UptodateNode';
 import OutdatedNode from './OutdatedNode';
@@ -49,6 +50,7 @@ const DEFAULT_OPTIONS = {
   edge_type: 'default',
   only_render_visible: false,
   node_actions: [], // [{id, label}]: the right-click menu's items
+  toolbar_actions: [], // [{id, label}]: the focused target's toolbar
 };
 
 // Report an event to Shiny: with priority 'event', the same value twice
@@ -283,6 +285,7 @@ function Flow({ configuration }) {
     },
     [inputId],
   );
+  // An action of the menu or the toolbar.
   const onMenuAction = useCallback(
     (action, node) => {
       setMenu(null);
@@ -470,6 +473,11 @@ function Flow({ configuration }) {
     }));
   }, [inputId, runningKey, edgesKey]);
 
+  const nodeActions = useMemo(
+    () => ({ focusId, actions: options.toolbar_actions, onAction: onMenuAction }),
+    [focusId, options.toolbar_actions, onMenuAction],
+  );
+
   // Focus highlighting is derived, never stored: dim what lies outside the
   // focused target's lineage.
   const lineage = focusId ? lineageOf(focusId, edges) : null;
@@ -495,6 +503,7 @@ function Flow({ configuration }) {
       ref={wrapperRef}
       style={{ height: configuration.height, width: configuration.width, position: 'relative' }}
     >
+      <NodeActionsContext.Provider value={nodeActions}>
       <ReactFlow
         nodes={shownNodes}
         edges={shownEdges}
@@ -532,6 +541,7 @@ function Flow({ configuration }) {
         {options.controls && <Controls />}
         <LayoutButtons onLayout={onLayout} />
       </ReactFlow>
+      </NodeActionsContext.Provider>
       {menu && options.node_actions.length > 0 && (
         <NodeMenu key={`${menu.node}@${menu.x},${menu.y}`} menu={menu} actions={options.node_actions} onAction={onMenuAction} onClose={closeMenu} />
       )}

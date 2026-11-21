@@ -25,6 +25,10 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* A toolbar over the focused target, from the new `toolbar_actions` of
+  `targetsboard_options()`, reports its buttons as `<id>_node_action`, like
+  the right-click menu. The board's toolbar runs the target, invalidates it
+  (after confirmation) or shows its value.
 * `update_targetsboard_focus()` focuses a target from the server, and
   `targetsboard_fit_view()` brings some targets, or all, into view. On the
   board, a click on a row of the **tar_meta()** table shows its target on the

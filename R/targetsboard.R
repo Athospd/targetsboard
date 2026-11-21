@@ -18,8 +18,8 @@
 #' - `input$<inputId>_context_node`: the id of a target right-clicked, which
 #'   also focuses it;
 #' - `input$<inputId>_node_action`: `list(action, node)`, when an action of
-#'   the right-click menu is chosen (see `node_actions` in
-#'   [targetsboard_options()]);
+#'   the right-click menu or of the focused target's toolbar is chosen (see
+#'   `node_actions` and `toolbar_actions` in [targetsboard_options()]);
 #' - `input$<inputId>_viewport`: `list(x, y, zoom)`, after each pan or zoom.
 #'
 #' The event inputs (double-click, right-click, action) fire again for the
@@ -198,6 +198,9 @@ update_targetsboard_options <- function(session, inputId, ...) {
 #'   `input$<inputId>_node_action` to `list(action = , node = )`, except
 #'   `copy_name`, which the widget does itself: it copies the target's name to
 #'   the clipboard. Empty, the default: no menu.
+#' @param toolbar_actions Buttons over the focused target, as `node_actions`:
+#'   a named character vector of labels, named by action, reported the same
+#'   way. Empty, the default: no toolbar.
 #' @return A list of options for [targetsboard()].
 #' @export
 targetsboard_options <- function(color_mode = c("light", "dark", "system"),
@@ -206,7 +209,8 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
                                  background = c("dots", "lines", "cross", "none"),
                                  edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
                                  only_render_visible = FALSE,
-                                 node_actions = character()) {
+                                 node_actions = character(),
+                                 toolbar_actions = character()) {
   flag <- function(x) {
     if (!rlang::is_bool(x)) {
       rlang::abort(sprintf("`%s` must be TRUE or FALSE.", deparse(substitute(x))))
@@ -221,7 +225,8 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
       background = rlang::arg_match(background),
       edge_type = rlang::arg_match(edge_type),
       only_render_visible = flag(only_render_visible),
-      node_actions = action_items(node_actions)
+      node_actions = action_items(node_actions),
+      toolbar_actions = action_items(toolbar_actions, "toolbar_actions")
     ),
     class = "targetsboard_options"
   )
@@ -229,11 +234,11 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
 
 # A named character vector of labels, named by action, as the widget's list
 # of {id, label} items.
-action_items <- function(actions) {
+action_items <- function(actions, arg = "node_actions") {
   if (length(actions) == 0) return(list())
   ids <- names(actions)
   if (!is.character(actions) || is.null(ids) || any(!nzchar(ids)) || anyDuplicated(ids)) {
-    rlang::abort("`node_actions` must be a character vector of labels, named by unique actions.")
+    rlang::abort(sprintf("`%s` must be a character vector of labels, named by unique actions.", arg))
   }
   unname(Map(function(id, label) list(id = id, label = label), ids, unname(actions)))
 }

@@ -154,3 +154,24 @@
 .tb-node-menu button:hover {
   background: #f0e5d7;
 }
+
+/* The focused target's toolbar. */
+.tb-node-toolbar {
+  display: flex;
+  gap: 4px;
+}
+
+.tb-node-toolbar button {
+  padding: 2px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: #222;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.tb-node-toolbar button:hover {
+  background: #f0e5d7;
+}

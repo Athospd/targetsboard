@@ -416,3 +416,55 @@ test_that("a click on a tar_meta() row shows its target on the board", {
     " const r = ", node_js("t1"), ".getBoundingClientRect(); return r.right <= w.right && r.left >= w.left; })()"
   )))
 })
+
+test_that("the focused target's toolbar runs the board's actions", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "toolbar")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  toolbar <- "document.querySelector('.tb-node-toolbar')"
+
+  expect_false(app$get_js(paste(toolbar, "!== null")))
+  app$click(selector = ".react-flow__node[data-id='b']")
+  app$wait_for_js(paste(toolbar, "!== null"))
+  expect_equal(
+    unlist(app$get_js(
+      "Array.from(document.querySelectorAll('.tb-node-toolbar button')).map(b => b.dataset.action)"
+    )),
+    c("run", "invalidate", "value")
+  )
+  # Above its target.
+  expect_true(app$get_js(paste0(
+    "(() => { const t = ", toolbar, ".getBoundingClientRect();",
+    " const n = ", node_js("b"), ".getBoundingClientRect();",
+    " return t.bottom <= n.top + 1 && t.right > n.left && t.left < n.right; })()"
+  )))
+
+  app$click(selector = ".tb-node-toolbar [data-action='value']")
+  app$wait_for_value(output = "value_preview_content")
+  expect_match(app$get_value(output = "value_preview_content"), "2")
+
+  app$click(selector = ".tb-node-toolbar [data-action='invalidate']")
+  app$wait_for_js("document.querySelector('.modal-dialog') !== null")
+  expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>b</code>", fixed = TRUE)
+  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
+  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+
+  # It follows the focus, and goes with it.
+  app$click(selector = ".react-flow__node[data-id='c']")
+  app$wait_for_js(paste0(
+    "(() => { const t = ", toolbar, "; if (!t) return false;",
+    " const r = t.getBoundingClientRect(), n = ", node_js("c"), ".getBoundingClientRect();",
+    " return r.right > n.left && r.left < n.right; })()"
+  ))
+  app$click(selector = ".react-flow__pane")
+  app$wait_for_js(paste(toolbar, "=== null"))
+})
+
+test_that("a widget without toolbar actions has no toolbar", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "notoolbar", widget_app())
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  app$click(selector = ".react-flow__node[data-id='b']")
+  app$wait_for_js(paste0(node_js("b"), ".classList.contains('tb-focused')"))
+  expect_false(app$get_js("document.querySelector('.tb-node-toolbar') !== null"))
+})

@@ -124,8 +124,8 @@ The widget reports to the server, as Shiny inputs:
 \item \verb{input$<inputId>_context_node}: the id of a target right-clicked, which
 also focuses it;
 \item \verb{input$<inputId>_node_action}: \code{list(action, node)}, when an action of
-the right-click menu is chosen (see \code{node_actions} in
-\code{\link[=targetsboard_options]{targetsboard_options()}});
+the right-click menu or of the focused target's toolbar is chosen (see
+\code{node_actions} and \code{toolbar_actions} in \code{\link[=targetsboard_options]{targetsboard_options()}});
 \item \verb{input$<inputId>_viewport}: \code{list(x, y, zoom)}, after each pan or zoom.
 }
 

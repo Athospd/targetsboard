@@ -11,7 +11,8 @@ targetsboard_options(
   background = c("dots", "lines", "cross", "none"),
   edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
   only_render_visible = FALSE,
-  node_actions = character()
+  node_actions = character(),
+  toolbar_actions = character()
 )
 }
 \arguments{
@@ -36,6 +37,10 @@ vector of labels, named by action. Choosing one sets
 \verb{input$<inputId>_node_action} to \code{list(action = , node = )}, except
 \code{copy_name}, which the widget does itself: it copies the target's name to
 the clipboard. Empty, the default: no menu.}
+
+\item{toolbar_actions}{Buttons over the focused target, as \code{node_actions}:
+a named character vector of labels, named by action, reported the same
+way. Empty, the default: no toolbar.}
 }
 \value{
 A list of options for \code{\link[=targetsboard]{targetsboard()}}.

@@ -87,7 +87,8 @@ test_that("targetsboard_options() has defaults and checks its values", {
   expect_s3_class(options, "targetsboard_options")
   expect_equal(unclass(options), list(
     color_mode = "light", minimap = TRUE, controls = TRUE, background = "dots",
-    edge_type = "default", only_render_visible = FALSE, node_actions = list()
+    edge_type = "default", only_render_visible = FALSE, node_actions = list(),
+    toolbar_actions = list()
   ))
   expect_equal(targetsboard_options(edge_type = "step")$edge_type, "step")
   expect_error(targetsboard_options(color_mode = "blue"), "color_mode")
@@ -166,4 +167,11 @@ test_that("update_targetsboard_focus() and targetsboard_fit_view() send commands
   targetsboard_fit_view(session, "dag")
   expect_false("nodes" %in% names(sent$message)) # all targets
   expect_error(targetsboard_fit_view(session, "dag", 1), "character")
+})
+
+test_that("toolbar_actions become the toolbar's buttons, checked", {
+  options <- targetsboard_options(toolbar_actions = c(run = "Run"))
+  expect_equal(options$toolbar_actions, list(list(id = "run", label = "Run")))
+  expect_equal(options$node_actions, list()) # independent of the menu
+  expect_error(targetsboard_options(toolbar_actions = "Run"), "`toolbar_actions` must be")
 })
