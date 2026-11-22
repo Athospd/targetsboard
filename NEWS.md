@@ -7,6 +7,13 @@
   launch, filters them as you type and still takes any other path; Load
   switches to the chosen one.
 
+## Bug fixes
+
+* Invalidating a target that errored shows it as outdated. It stayed red,
+  because `targets::tar_invalidate()` keeps its line in the progress file: a
+  target now shows as errored only while the metadata still records its
+  error, or one of its branches'.
+
 # targetsboard 0.1.0
 
 First release: the 2024 prototype, cleaned up into a board for the author of
