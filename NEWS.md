@@ -93,7 +93,9 @@ First cleanup of the 2024 prototype.
   its top bar.
 * The board's page is one card of tabs: **Board**, the board's own graph;
   **tar_visnetwork()**, the graph as that function draws it, the view
-  `tar_watch()` shows; **tar_meta()**; and **Debug**. The node table is gone. A
+  `tar_watch()` shows; and **tar_meta()**. An **Internals** tab, with the
+  app's own inputs, shows only with `options(targetsboard.dev = TRUE)`, to
+  develop the board. The node table is gone. A
   power button in the top bar turns the board off, which also ends
   `tar_board()`'s background process.
 * An **Invalidate all** button, under **Stop**, makes every target outdated

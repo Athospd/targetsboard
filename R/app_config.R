@@ -22,3 +22,8 @@ add_external_resources <- function() {
     shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/index.css")
   )
 }
+
+# Whether the board shows what only helps develop it: the Internals tab, with
+# the app's own inputs. Set with `options(targetsboard.dev = TRUE)`;
+# tar_board() hands the option to its background process.
+board_dev_mode <- function() isTRUE(getOption("targetsboard.dev"))

@@ -2,8 +2,9 @@
 #'
 #' The top bar holds only the title, the dark mode switch and the power
 #' button, which turns the board off. The page is one card of tabs: Board, the board's own graph;
-#' tar_visnetwork(), the graph as that function draws it; tar_meta(); and
-#' Debug. Each tab's `value` is its snake_case id.
+#' tar_visnetwork(), the graph as that function draws it; and tar_meta().
+#' With `options(targetsboard.dev = TRUE)`, an Internals tab shows the app's
+#' own inputs, to develop the board. Each tab's `value` is its snake_case id.
 #'
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
@@ -68,10 +69,12 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
           "tar_meta()", value = "tar_meta",
           reactable::reactableOutput("meta")
         ),
-        nav_panel(
-          "Debug", value = "debug",
-          verbatimTextOutput("debug")
-        )
+        if (board_dev_mode()) {
+          nav_panel(
+            "Internals", value = "internals",
+            verbatimTextOutput("internals")
+          )
+        }
       )
     )
   )

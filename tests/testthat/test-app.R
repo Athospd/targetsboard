@@ -142,3 +142,28 @@ test_that("each page load draws the board with the layout saved last", {
   write_board_layout(list(direction = "TB", positions = list(a = list(x = 7, y = 8))))
   expect_match(page(), "\"layout\":{\"direction\":\"TB\"", fixed = TRUE)
 })
+
+test_that("the Internals tab is only there to develop the board", {
+  metadata <- list(nodes = fake_nodes(), edges = fake_edges())
+  html <- as.character(app_ui(metadata, "_targets.R"))
+  expect_no_match(html, 'data-value="internals"', fixed = TRUE)
+  expect_no_match(html, ">Debug<", fixed = TRUE) # "debug" is for pipelines now
+
+  withr::local_options(targetsboard.dev = TRUE)
+  html <- as.character(app_ui(metadata, "_targets.R"))
+  expect_match(html, 'data-value="internals"', fixed = TRUE)
+  expect_match(html, 'id="internals"', fixed = TRUE)
+})
+
+test_that("tar_board() hands the dev option to its background process", {
+  local_mocked_bindings(port_in_use = function(port, host) FALSE)
+  local_mocked_bindings(r_bg = function(func, args, ...) list(func = func, args = args), .package = "callr")
+  metadata <- list(nodes = fake_nodes(), edges = fake_edges())
+  expect_false(suppressMessages(tar_board(metadata = metadata, browse = FALSE))$args$dev)
+
+  withr::local_options(targetsboard.dev = TRUE)
+  bg <- suppressMessages(tar_board(metadata = metadata, browse = FALSE))
+  expect_true(bg$args$dev)
+  # The background process sets it before building the app.
+  expect_match(paste(deparse(bg$func), collapse = " "), "options(targetsboard.dev = dev)", fixed = TRUE)
+})

@@ -57,8 +57,14 @@ update_targetsboard_options(session, inputId, ...)
 \arguments{
 \item{inputId}{The input slot of the widget.}
 
-\item{nodes, edges}{The \code{nodes} and \code{edges} data frames of
-\code{targets::tar_visnetwork()$x}.}
+\item{nodes}{For \code{targetsboard()} and \code{update_targetsboard()}: the \code{nodes}
+data frame of \code{targets::tar_visnetwork()$x}. For
+\code{targetsboard_fit_view()}: ids of the targets to fit in view; \code{NULL}, all
+of them. For \code{update_targetsboard_selection()}: ids of the targets to
+select, instead of those selected; \code{NULL} clears the selection. Ids not
+in the widget are ignored.}
+
+\item{edges}{The \code{edges} data frame of \code{targets::tar_visnetwork()$x}.}
 
 \item{height, width}{CSS size of the widget.}
 
@@ -106,11 +112,6 @@ single target doesn't fill the view.}
 
 \item{...}{For \code{update_targetsboard_options()}: the options to change, as
 arguments of \code{\link[=targetsboard_options]{targetsboard_options()}}.}
-
-\item{nodes}{For \code{targetsboard_fit_view()}: ids of the targets to fit in
-view; \code{NULL}, all of them. For \code{update_targetsboard_selection()}: ids of
-the targets to select, instead of those selected; \code{NULL} clears the
-selection. Ids not in the widget are ignored.}
 }
 \value{
 \code{targetsboard()} returns a Shiny UI element.

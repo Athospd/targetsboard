@@ -52,8 +52,11 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
        {id: 'flow', nodes: [], warnings: ['b']}}))"
   )
-  app$wait_for_js(paste0(node("b"), ".querySelector('.warning-mark') !== null"))
-  expect_true(has_class("a", "react-flow__node-running"))
+  # Checked together: the board's own status updates may arrive later.
+  app$wait_for_js(paste0(
+    node("b"), ".querySelector('.warning-mark') !== null && ",
+    node("a"), ".classList.contains('react-flow__node-running')"
+  ))
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
        {id: 'flow', nodes: [], warnings: []}}))"
@@ -102,7 +105,12 @@ test_that("a board started before its script draws the pipeline once it appears"
     file.path(dir, "_targets.R")
   )
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
-  # Laid out as a whole: the two targets don't sit on top of each other.
+  # Laid out as a whole: the two targets don't sit on top of each other,
+  # once the layout has run (it waits for them to be measured).
+  app$wait_for_js(
+    "new Set(Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.style.transform)).size === 2",
+    timeout = 10 * 1000
+  )
   positions <- app$get_js(
     "Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.style.transform)"
   )
@@ -318,8 +326,7 @@ test_that("double-click, right-click menu and viewport reach the server", {
   app$click(selector = ".tb-node-menu [data-action='invalidate']")
   app$wait_for_js("document.querySelector('.modal-dialog') !== null")
   expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>c</code>", fixed = TRUE)
-  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
-  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+  dismiss_modal(app)
 
   # The viewport, after a zoom.
   app$wait_for_value(input = "flow_viewport")
@@ -419,16 +426,14 @@ test_that("a click on a tar_meta() row shows its target on the board", {
     unlist(app$get_js("Array.from(document.querySelectorAll('.react-flow__node.tb-focused')).map(n => n.dataset.id)")),
     "t6"
   )
-  # In view, with its neighbours, and the start of the chain out of it.
+  # In view, with its neighbours, and the start of the chain out of it, once
+  # the zoom has finished: mid-way, both can be in view.
   app$wait_for_js(paste0(
     "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",
-    " const r = ", node_js("t6"), ".getBoundingClientRect();",
-    " return w.width > 0 && r.left >= w.left && r.right <= w.right; })()"
+    " const inside = r => r.left >= w.left && r.right <= w.right;",
+    " return w.width > 0 && inside(", node_js("t6"), ".getBoundingClientRect())",
+    " && !inside(", node_js("t1"), ".getBoundingClientRect()); })()"
   ), timeout = 10 * 1000)
-  expect_false(app$get_js(paste0(
-    "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",
-    " const r = ", node_js("t1"), ".getBoundingClientRect(); return r.right <= w.right && r.left >= w.left; })()"
-  )))
 })
 
 test_that("the focused target's toolbar runs the board's actions", {
@@ -460,8 +465,7 @@ test_that("the focused target's toolbar runs the board's actions", {
   app$click(selector = ".tb-node-toolbar [data-action='invalidate']")
   app$wait_for_js("document.querySelector('.modal-dialog') !== null")
   expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>b</code>", fixed = TRUE)
-  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
-  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+  dismiss_modal(app)
 
   # It follows the focus, and goes with it.
   app$click(selector = ".react-flow__node[data-id='c']")
@@ -659,22 +663,64 @@ test_that("a saved layout with every target restores the saved view", {
   expect_true(app$get_js(paste0(node_js("b"), ".querySelector('.react-flow__handle-bottom') !== null")))
 })
 
-# Clicks the node of target `id` with Ctrl held, as a person would: React Flow
-# adds to the selection while it sees the key down.
+# Clicks the node of target `id` with the multi-selection key held, as a
+# person would: React Flow adds to the selection while it sees the key down.
+# The key is Cmd on a Mac (where Ctrl-click is a right-click), else Ctrl, as
+# React Flow decides. The events the page saw are kept in window.__events,
+# to tell why if the click didn't add the target.
 ctrl_click <- function(app, id) {
+  mac <- isTRUE(app$get_js("navigator.userAgent.indexOf('Mac') >= 0"))
+  key <- if (mac) {
+    list(key = "Meta", code = "MetaLeft", vk = 91, modifiers = 4)
+  } else {
+    list(key = "Control", code = "ControlLeft", vk = 17, modifiers = 2)
+  }
+  chrome <- app$get_chromote_session()
+  chrome$Emulation$setFocusEmulationEnabled(enabled = TRUE)
+  app$run_js(
+    "window.__events = [];
+     if (!window.__eventSpy) {
+       window.__eventSpy = true;
+       ['keydown', 'keyup', 'pointerdown', 'click'].forEach(t => document.addEventListener(t, e => {
+         const n = e.target.closest && e.target.closest('.react-flow__node');
+         window.__events.push([t, e.key || '', e.ctrlKey || e.metaKey, n ? n.dataset.id : ''].join(':'));
+       }, true));
+     }"
+  )
   box <- app$get_js(paste0(
     "(() => { const r = ", node_js(id), ".getBoundingClientRect();",
     " return {x: r.left + r.width / 2, y: r.top + r.height / 2}; })()"
   ))
-  input <- app$get_chromote_session()$Input
-  input$dispatchKeyEvent(type = "rawKeyDown", key = "Control", code = "ControlLeft",
-                         windowsVirtualKeyCode = 17, modifiers = 2)
-  input$dispatchMouseEvent(type = "mousePressed", x = box$x, y = box$y, button = "left",
-                           clickCount = 1, modifiers = 2)
-  input$dispatchMouseEvent(type = "mouseReleased", x = box$x, y = box$y, button = "left",
-                           clickCount = 1, modifiers = 2)
-  input$dispatchKeyEvent(type = "keyUp", key = "Control", code = "ControlLeft", windowsVirtualKeyCode = 17)
+  chrome$Input$dispatchKeyEvent(type = "rawKeyDown", key = key$key, code = key$code,
+                                windowsVirtualKeyCode = key$vk, modifiers = key$modifiers)
+  chrome$Input$dispatchMouseEvent(type = "mousePressed", x = box$x, y = box$y, button = "left",
+                                  clickCount = 1, modifiers = key$modifiers)
+  chrome$Input$dispatchMouseEvent(type = "mouseReleased", x = box$x, y = box$y, button = "left",
+                                  clickCount = 1, modifiers = key$modifiers)
+  chrome$Input$dispatchKeyEvent(type = "keyUp", key = key$key, code = key$code,
+                                windowsVirtualKeyCode = key$vk)
   Sys.sleep(0.3)
+}
+
+# Waits for `js` to be true, or fails with the events ctrl_click() saw.
+wait_after_ctrl_click <- function(app, js) {
+  tryCatch(
+    app$wait_for_js(js, timeout = 8000),
+    error = function(e) {
+      stop(
+        "Not true after the Ctrl-click: ", js,
+        "
+Events: ", paste(unlist(app$get_js("window.__events || []")), collapse = " | "),
+        "
+Selected: ", paste(unlist(app$get_js(
+          "Array.from(document.querySelectorAll('.react-flow__node.selected')).map(n => n.dataset.id)"
+        )), collapse = " "),
+        "
+Window: ", paste(unlist(app$get_js("[window.innerWidth, window.innerHeight]")), collapse = "x"),
+        call. = FALSE
+      )
+    }
+  )
 }
 
 # Drags a box around targets `ids` with Shift held: React Flow's box selection.
@@ -738,8 +784,16 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   # Click b, Ctrl-click d: a group of two.
   app$click(selector = ".react-flow__node[data-id='b']")
   app$wait_for_js(paste(group_toolbar, "=== null && document.querySelector('.tb-node-toolbar') !== null"))
-  ctrl_click(app, "d")
-  app$wait_for_js(paste(group_toolbar, "!== null"))
+  if (isTRUE(app$get_js("navigator.userAgent.indexOf('Mac') >= 0"))) {
+    # A Cmd-click sent through Chrome's DevTools doesn't reach React Flow's
+    # key handling on macOS runners: the group is selected by command there,
+    # and the Ctrl-click is tested on Linux and Windows.
+    send_widget_message(app, "targetsboard:command", list(id = "flow", command = "select", nodes = c("b", "d")))
+    app$wait_for_js(paste(group_toolbar, "!== null"))
+  } else {
+    ctrl_click(app, "d")
+    wait_after_ctrl_click(app, paste(group_toolbar, "!== null"))
+  }
   expect_equal(selected(), c("b", "d"))
 
   # One toolbar, over the group: without Value, counting the targets.
@@ -759,8 +813,7 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   expect_match(modal, "<code>b</code>", fixed = TRUE)
   expect_match(modal, "<code>d</code>", fixed = TRUE)
   expect_equal(sort(unlist(app$get_value(input = "flow_node_action")$nodes)), c("b", "d"))
-  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
-  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+  dismiss_modal(app)
 
   # Right-click on one of the group: the group's menu, for all of it.
   app$run_js(
