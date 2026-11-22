@@ -18,3 +18,8 @@ dev/metadata.rds
 # Local JS source maps (npm run dev); the shipped bundle has none
 inst/htmlwidgets/*.map
 _targets_examples
+
+# Demo video: attached to the GitHub release, rebuilt by demo/make-demo.py
+demo/**/*.mp4
+demo/build/
+__pycache__/
