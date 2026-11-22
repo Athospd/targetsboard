@@ -324,7 +324,8 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       )
     })
 
-    output$debug <- shiny::renderPrint({
+    # The Internals tab, shown only to develop the board (board_dev_mode()).
+    output$internals <- shiny::renderPrint({
       c(
         board = board()[c("x", "progress_mtime")], # not the visNetwork widget
         reactiveValuesToList(input)
