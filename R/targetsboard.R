@@ -487,6 +487,9 @@ NULL
 #'   render. Computed from `script` when `NULL`, and empty when there is no
 #'   script yet.
 #' @param options Passed on to [shiny::shinyApp()], e.g. `list(port = 8080)`.
+#' @param scripts Optional: other targets scripts to switch to, offered in the
+#'   board's Script field. The field lists them under `script`, filters them
+#'   as you type, and still takes any other path. Pick one and press Load.
 #' @param ... Passed on to [targets::tar_visnetwork()] for the first render.
 #'
 #' @return `tar_board()`: the background process, a [callr::r_bg()] object,
@@ -502,6 +505,9 @@ NULL
 #' browseURL(attr(app, "url"))        # reopen it after closing the tab
 #' app$kill()
 #'
+#' # switch between scripts from the board's Script field:
+#' tar_board(scripts = c("_targets.R", "pipelines/other.R"))
+#'
 #' # or in the foreground:
 #' shiny::runApp(tar_board_app())
 #' }
@@ -511,7 +517,8 @@ tar_board <- function(script = targets::tar_config_get("script"),
                       port = getOption("shiny.port", targets::tar_random_port()),
                       targets_only = TRUE, metadata = NULL,
                       host = getOption("shiny.host", "127.0.0.1"),
-                      browse = TRUE, verbose = TRUE, ...) {
+                      browse = TRUE, verbose = TRUE, scripts = NULL, ...) {
+  script_choices(script, scripts) # check them in your session
   # Else the background board dies at once on "address already in use" and
   # the page at the port is whatever was there, often an older board.
   if (port_in_use(port, host)) {
@@ -526,10 +533,11 @@ tar_board <- function(script = targets::tar_config_get("script"),
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, host, port, targets_only, dev) {
+    \(metadata, script, scripts, host, port, targets_only, dev) {
       options(targetsboard.dev = dev)
       print(targetsboard::tar_board_app(
         script = script,
+        scripts = scripts,
         targets_only = targets_only,
         metadata = metadata,
         options = list(host = host, port = port)
@@ -538,6 +546,7 @@ tar_board <- function(script = targets::tar_config_get("script"),
     args = list(
       metadata = metadata,
       script = script,
+      scripts = scripts,
       host = host,
       port = port,
       targets_only = targets_only,
@@ -645,13 +654,14 @@ port_in_use <- function(port, host = "127.0.0.1") {
 #' @rdname tar_board
 #' @export
 tar_board_app <- function(script = targets::tar_config_get("script"), targets_only = TRUE,
-                          metadata = NULL, options = list(), ...) {
+                          metadata = NULL, options = list(), scripts = NULL, ...) {
+  script_choices(script, scripts)
   if (is.null(metadata)) metadata <- initial_metadata(script, targets_only, ...)
 
   shiny::shinyApp(
     # A function of the request: each page load opens the board with the
     # layout saved last, not the one there was when the app started.
-    function(request) app_ui(metadata, script, layout = read_board_layout()),
+    function(request) app_ui(metadata, script, layout = read_board_layout(), scripts = scripts),
     app_server(metadata, script, targets_only),
     options = options
   )

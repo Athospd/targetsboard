@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# targetsboard
+# targetsboard <img src="man/figures/logo.png" align="right" height="139" alt="targetsboard hex sticker" />
 
 <!-- badges: start -->
 
@@ -96,8 +96,10 @@ empty and draws the pipeline once the script appears. As `tar_watch()`
 does, `tar_board()` serves it on a random free port (or the `shiny.port`
 option), waits until it is up, opens it in your browser and prints its
 url; `browse = FALSE` skips the browser. It also takes a `script`, a
-`port`, a `host` and `targets_only`. To run the board in the foreground,
-or deploy it, use the Shiny app object instead:
+`port`, a `host` and `targets_only`, and `scripts`: other scripts to
+switch to, listed in the board’s Script field, which filters them as you
+type. To run the board in the foreground, or deploy it, use the Shiny
+app object instead:
 
 ``` r
 shiny::runApp(tar_board_app(script = "_targets.R"))

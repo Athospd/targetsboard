@@ -13,7 +13,8 @@
 #' @param layout The board's saved layout, from `read_board_layout()`, or NULL.
 #' @import shiny bslib
 #' @noRd
-app_ui <- function(metadata, script = targets::tar_config_get("script"), layout = NULL) {
+app_ui <- function(metadata, script = targets::tar_config_get("script"), layout = NULL,
+                   scripts = NULL) {
   shiny::tagList(
     add_external_resources(),
     page_sidebar(
@@ -32,7 +33,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
       fillable = TRUE,
       sidebar = sidebar(
         title = "Control Panel",
-        textInput("script", "Script", script),
+        script_input(script, scripts),
         actionButton("load_script", "Load", icon = icon("folder-open")),
         actionButton("refresh", "Refresh", icon = icon("rotate")),
         tags$hr(),
@@ -125,4 +126,29 @@ run_mode_switches <- function(supported = run_modes_supported()) {
       tags$div(title = title, input)
     })
   )
+}
+
+#' The Script field: a text field with a dropdown of `scripts`, filtered as
+#' one types. Any other path can still be typed (`create`), and is kept when
+#' the field loses focus, so that Load gets it.
+#' @noRd
+script_input <- function(script, scripts = NULL) {
+  shiny::selectizeInput(
+    "script", "Script",
+    choices = script_choices(script, scripts), selected = script,
+    options = list(
+      create = TRUE, createOnBlur = TRUE, persist = FALSE,
+      placeholder = "Path to a targets script"
+    )
+  )
+}
+
+#' The scripts the Script field offers: the launch script first, then the
+#' others, each once.
+#' @noRd
+script_choices <- function(script, scripts = NULL) {
+  if (!is.null(scripts) && !is.character(scripts)) {
+    stop("`scripts` must be a character vector of paths to targets scripts.", call. = FALSE)
+  }
+  unique(c(script, scripts))
 }

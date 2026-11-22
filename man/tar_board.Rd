@@ -13,6 +13,7 @@ tar_board(
   host = getOption("shiny.host", "127.0.0.1"),
   browse = TRUE,
   verbose = TRUE,
+  scripts = NULL,
   ...
 )
 
@@ -21,6 +22,7 @@ tar_board_app(
   targets_only = TRUE,
   metadata = NULL,
   options = list(),
+  scripts = NULL,
   ...
 )
 }
@@ -43,6 +45,10 @@ or, without one, \code{"127.0.0.1"}: only your own machine can reach it.}
 \item{browse}{Open the board in your browser once it is up.}
 
 \item{verbose}{Show a spinner while the board starts, and print its url.}
+
+\item{scripts}{Optional: other targets scripts to switch to, offered in the
+board's Script field. The field lists them under \code{script}, filters them
+as you type, and still takes any other path. Pick one and press Load.}
 
 \item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}} for the first render.}
 
@@ -80,6 +86,9 @@ app <- tar_board()                 # opens the board in your browser
 targets::tar_make()                # the board follows along
 browseURL(attr(app, "url"))        # reopen it after closing the tab
 app$kill()
+
+# switch between scripts from the board's Script field:
+tar_board(scripts = c("_targets.R", "pipelines/other.R"))
 
 # or in the foreground:
 shiny::runApp(tar_board_app())
