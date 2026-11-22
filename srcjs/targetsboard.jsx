@@ -551,7 +551,10 @@ function Flow({ configuration }) {
       const message = event.detail;
       if (message?.id !== configuration.id) return;
       if (message.command === 'focus') {
+        // As a click does: the target alone is selected, so a group selected
+        // before doesn't keep the highlighting and the toolbar from it.
         setFocusId(message.node ?? null);
+        selectOnly(message.node ? [message.node] : []);
         setMenu(null);
       } else if (message.command === 'select') {
         const known = new Set(nodesRef.current.map((n) => n.id));

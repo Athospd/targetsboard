@@ -146,7 +146,8 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
 
 #' @rdname targetsboard
 #' @param node For `update_targetsboard_focus()`: the id of the target to
-#'   focus, as a click does, or `NULL` to clear the focus.
+#'   focus and select alone, as a click does, or `NULL` to clear the focus
+#'   and the selection.
 #' @export
 update_targetsboard_focus <- function(session, inputId, node = NULL) {
   if (!is.null(node) && !rlang::is_string(node)) {
