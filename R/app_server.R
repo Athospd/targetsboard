@@ -241,8 +241,19 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 
     output$value_preview <- shiny::renderUI({
       req(preview_open(), input$flow_focused_node)
+      name <- input$flow_focused_node
+      # A target that errored or warned shows its problem first; an errored
+      # one has no value to show.
+      problem <- target_problem(name, poller$script)
+      problem_part <- NULL
+      if (has_problem(problem)) {
+        edges <- board()$x$edges
+        inputs <- intersect(edges$from[edges$to == name], board_targets(board()$x$nodes))
+        problem_part <- problem_ui(problem, inputs, running = running(), script = poller$script)
+        if (!is.null(problem$error)) return(problem_part)
+      }
       value <- tryCatch(
-        targets::tar_read_raw(input$flow_focused_node),
+        targets::tar_read_raw(name),
         error = function(e) shiny::p("No value stored for this target yet.")
       )
 
@@ -250,7 +261,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       # Reuse one output id: assigning it again replaces the previous
       # renderer instead of piling up a new output per click.
       output$value_preview_content <- render_fun(value)
-      output_ui_fun("value_preview_content")
+      shiny::tagList(problem_part, output_ui_fun("value_preview_content"))
     })
 
     observeEvent(input$load_script, {
