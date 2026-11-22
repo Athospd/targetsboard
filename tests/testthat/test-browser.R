@@ -396,6 +396,10 @@ test_that("a click on a tar_meta() row shows its target on the board", {
   targets::tar_make(reporter = "silent")
   app <- local_board_app(dir, "metajump")
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 8")
+  # A group selected before: the row's target replaces it.
+  send_widget_message(app, "targetsboard:command",
+                      list(id = "flow", command = "select", nodes = c("t1", "t2")))
+  app$wait_for_js("document.querySelector('.tb-group-toolbar') !== null")
 
   app$click(selector = "a[data-value='tar_meta']")
   app$wait_for_js("document.querySelectorAll('#meta .rt-tbody .rt-tr').length === 8")
@@ -408,6 +412,13 @@ test_that("a click on a tar_meta() row shows its target on the board", {
   app$wait_for_js(paste0(node_js("t6"), ".classList.contains('tb-focused')"))
   app$wait_for_value(input = "flow_focused_node")
   expect_equal(app$get_value(input = "flow_focused_node"), "t6")
+  # Alone: selected, ringed, with its own toolbar.
+  app$wait_for_js("document.querySelector('.tb-group-toolbar') === null")
+  expect_equal(unlist(app$get_value(input = "flow_selected_nodes")), "t6")
+  expect_equal(
+    unlist(app$get_js("Array.from(document.querySelectorAll('.react-flow__node.tb-focused')).map(n => n.dataset.id)")),
+    "t6"
+  )
   # In view, with its neighbours, and the start of the chain out of it.
   app$wait_for_js(paste0(
     "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",

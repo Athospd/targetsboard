@@ -317,7 +317,8 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         wrap = FALSE,
         # A click on a row shows its target on the board, even twice in a row.
         onClick = reactable::JS(
-          "function(row) { Shiny.setInputValue('meta_row_clicked', row.values.name, {priority: 'event'}); }"
+          # Not the empty row of an empty table.
+          "function(row) { if (row && row.values && row.values.name) Shiny.setInputValue('meta_row_clicked', row.values.name, {priority: 'event'}); }"
         ),
         rowStyle = list(cursor = "pointer")
       )

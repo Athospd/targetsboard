@@ -92,7 +92,8 @@ all, its view is restored too, else the graph is fitted into view. The
 ignored.}
 
 \item{node}{For \code{update_targetsboard_focus()}: the id of the target to
-focus, as a click does, or \code{NULL} to clear the focus.}
+focus and select alone, as a click does, or \code{NULL} to clear the focus
+and the selection.}
 
 \item{padding}{For \code{targetsboard_fit_view()}: room around them, as a
 fraction of the view.}
