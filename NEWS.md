@@ -25,6 +25,15 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* The value preview of a target that errored or warned starts with its
+  problem: the error or warnings, the traceback (the pipeline's own functions
+  shown, calls in packages folded), the seed and links to its inputs. Two
+  snippets to copy into the console follow: **Reproduce** loads what the
+  target had (its workspace, or its inputs, globals and seed) and runs its
+  command; **Debug run** runs the pipeline in your session, stopped in the
+  debugger inside the target. A pattern lists its branches with problems,
+  each with its own. New `debug_run_script()` writes the script a debug run
+  uses, so your own script is never changed.
 * Two run modes, switched on in the sidebar under **Run all**, change how the
   board's runs go, for debugging: **Keep going after errors** builds the other
   targets after one errors, so a run shows every error at once; **Stop at
