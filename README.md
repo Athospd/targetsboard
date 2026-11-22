@@ -57,12 +57,14 @@ app$kill()                             # shut it down, or press the power button
 ```
 
 You can also run the pipeline from the board. **Run all** makes the whole
-pipeline, **Run selected** makes the targets selected in the DAG and whatever
-they depend on that is outdated, and **Stop** kills the run going, wherever it
-was started. **Invalidate selected** makes the selected targets outdated with
-`targets::tar_invalidate()`, so the next run builds them again: it asks first,
-and is disabled while a run is going. Runs from the board go on if the board
-stops.
+pipeline, and **Stop** kills the run going, wherever it was started.
+**Invalidate all** makes every target outdated with `targets::tar_invalidate()`,
+so the next run builds them all again: it asks first, and is disabled while a
+run is going. To run or invalidate some targets, right-click one, or use the
+toolbar over it. Ctrl-click (Cmd-click on a Mac) or Shift-drag selects several
+targets, and the menu can select what a target depends on or what depends on
+it: the menu and toolbar of a group act on all of it. Runs from the board go on
+if the board stops.
 
 Like `targets::tar_watch()`, `tar_board()` needs no arguments: it shows
 the current project's pipeline, using the script and store from its targets

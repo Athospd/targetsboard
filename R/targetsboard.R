@@ -6,20 +6,29 @@
 #' build raised warnings carry a warning mark.
 #'
 #' Clicking a target focuses it: what it depends on and what depends on it are
-#' highlighted, and the rest of the graph dims. Clicking the background clears
-#' the focus.
+#' highlighted, and the rest of the graph dims. Clicking the background, or
+#' Escape, clears the focus and the selection.
+#'
+#' Several targets can be selected: Ctrl-click (Cmd-click on a Mac) adds one,
+#' and Shift-drag selects those in a box. A group of two or more stays
+#' highlighted with all it depends on and all that depends on it. A
+#' right-click on one of the group opens the group's menu
+#' (`node_group_actions`), and a toolbar over the group holds
+#' `toolbar_group_actions`; a right-click on any other target selects that one
+#' alone.
 #'
 #' The widget reports to the server, as Shiny inputs:
 #' - `input$<inputId>_focused_node`: the id of the focused target, or `NULL`;
-#' - `input$<inputId>_selected_nodes`: the ids of the selected targets
-#'   (several with Shift or Ctrl);
+#' - `input$<inputId>_selected_nodes`: the ids of the selected targets;
 #' - `input$<inputId>_running_nodes`: the ids of the running targets;
 #' - `input$<inputId>_double_clicked_node`: the id of a target double-clicked;
 #' - `input$<inputId>_context_node`: the id of a target right-clicked, which
 #'   also focuses it;
-#' - `input$<inputId>_node_action`: `list(action, node)`, when an action of
-#'   the right-click menu or of the focused target's toolbar is chosen (see
-#'   `node_actions` and `toolbar_actions` in [targetsboard_options()]);
+#' - `input$<inputId>_node_action`: `list(action, node, nodes)`, when an
+#'   action of a right-click menu or of a toolbar is chosen (see
+#'   `node_actions`, `toolbar_actions` and their group versions in
+#'   [targetsboard_options()]): `node` is the target it was chosen on, `nodes`
+#'   every target it covers, `node` alone or the selected group;
 #' - `input$<inputId>_viewport`: `list(x, y, zoom)`, after each pan or zoom;
 #' - `input$<inputId>_image`: `list(format, data_url)`, the image asked for by
 #'   [targetsboard_export_image()], or `list(format, error)`;
@@ -54,7 +63,8 @@
 #' options it names, e.g. `color_mode` to follow `bslib::input_dark_mode()`.
 #' `update_targetsboard_focus()` focuses a target from the server, and
 #' `targetsboard_fit_view()` brings targets into view: together, they can show
-#' a target picked elsewhere in the app.
+#' a target picked elsewhere in the app. `update_targetsboard_selection()`
+#' selects targets from the server.
 #'
 #' @return `targetsboard()` returns a Shiny UI element.
 #'   The update functions and `targetsboard_fit_view()` are called for their
@@ -147,7 +157,9 @@ update_targetsboard_focus <- function(session, inputId, node = NULL) {
 
 #' @rdname targetsboard
 #' @param nodes For `targetsboard_fit_view()`: ids of the targets to fit in
-#'   view; `NULL`, all of them. Ids not in the widget are ignored.
+#'   view; `NULL`, all of them. For `update_targetsboard_selection()`: ids of
+#'   the targets to select, instead of those selected; `NULL` clears the
+#'   selection. Ids not in the widget are ignored.
 #' @param padding For `targetsboard_fit_view()`: room around them, as a
 #'   fraction of the view.
 #' @param duration For `targetsboard_fit_view()`: length of the animation, in
@@ -168,6 +180,15 @@ targetsboard_fit_view <- function(session, inputId, nodes = NULL, padding = 0.2,
     nodes = if (!is.null(nodes)) I(nodes), # always an array
     padding = padding, duration = duration, max_zoom = max_zoom
   )
+}
+
+#' @rdname targetsboard
+#' @export
+update_targetsboard_selection <- function(session, inputId, nodes = NULL) {
+  if (!is.null(nodes) && !is.character(nodes)) {
+    rlang::abort("`nodes` must be a character vector of target ids, or NULL.")
+  }
+  send_command(session, inputId, "select", nodes = I(as.character(nodes))) # always an array
 }
 
 #' Images of the DAG widget's graph
@@ -272,12 +293,21 @@ update_targetsboard_options <- function(session, inputId, ...) {
 #'   pipelines responsive.
 #' @param node_actions The right-click menu of a target: a named character
 #'   vector of labels, named by action. Choosing one sets
-#'   `input$<inputId>_node_action` to `list(action = , node = )`, except
-#'   `copy_name`, which the widget does itself: it copies the target's name to
-#'   the clipboard. Empty, the default: no menu.
+#'   `input$<inputId>_node_action` to `list(action = , node = , nodes = )`.
+#'   The widget does some actions itself, without telling the server:
+#'   `copy_name` copies the target's name to the clipboard, quoted as an R
+#'   string (`"model"`), and `select_upstream`, `select_downstream` and
+#'   `select_lineage` select it with all it depends on, all that depends on
+#'   it, or both. Empty, the default: no menu.
 #' @param toolbar_actions Buttons over the focused target, as `node_actions`:
 #'   a named character vector of labels, named by action, reported the same
 #'   way. Empty, the default: no toolbar.
+#' @param node_group_actions,toolbar_group_actions The menu and the toolbar of
+#'   a selected group of two or more targets, as `node_actions` and
+#'   `toolbar_actions`; `{n}` in a label is the number of targets. `copy_name`
+#'   copies their names as an R vector, `c("a", "b")`, and the selection
+#'   actions start from all of them. Empty, the default: no menu or toolbar for
+#'   a group.
 #' @param download_image Add a button to the zoom controls (shown with
 #'   `controls`) that downloads an image of the whole graph, as PNG.
 #' @return A list of options for [targetsboard()].
@@ -290,6 +320,8 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
                                  only_render_visible = FALSE,
                                  node_actions = character(),
                                  toolbar_actions = character(),
+                                 node_group_actions = character(),
+                                 toolbar_group_actions = character(),
                                  download_image = FALSE) {
   flag <- function(x) {
     if (!rlang::is_bool(x)) {
@@ -307,6 +339,8 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
       only_render_visible = flag(only_render_visible),
       node_actions = action_items(node_actions),
       toolbar_actions = action_items(toolbar_actions, "toolbar_actions"),
+      node_group_actions = action_items(node_group_actions, "node_group_actions"),
+      toolbar_group_actions = action_items(toolbar_group_actions, "toolbar_group_actions"),
       download_image = flag(download_image)
     ),
     class = "targetsboard_options"

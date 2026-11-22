@@ -114,6 +114,86 @@ test_that("a target's menu runs it, invalidates it after confirmation, or previe
   })
 })
 
+test_that("the actions of a selected group cover every target of it", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  ran <- list()
+  modal <- NULL
+  local_mocked_bindings(start_run = function(script, names = NULL) {
+    ran[[length(ran) + 1]] <<- names
+    NULL
+  })
+  local_mocked_bindings(
+    showModal = function(ui, ...) modal <<- as.character(ui),
+    removeModal = function(...) NULL,
+    showNotification = function(...) NULL,
+    .package = "shiny"
+  )
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    # As the widget sends it: `nodes`, a JSON array, can arrive as a list.
+    session$setInputs(flow_node_action = list(action = "run", node = "a", nodes = list("a", "c")))
+    expect_equal(ran, list(c("a", "c")))
+
+    session$setInputs(flow_node_action = list(action = "invalidate", node = "a", nodes = c("a", "c")))
+    expect_match(modal, "<code>a</code>", fixed = TRUE)
+    expect_match(modal, "<code>c</code>", fixed = TRUE)
+    expect_no_match(modal, "<code>b</code>", fixed = TRUE)
+    session$setInputs(invalidate_confirm = 1)
+    expect_equal(targets::tar_meta(targets_only = TRUE)$name, "b")
+
+    # A long list is cut short in the confirmation, but all are invalidated.
+    many <- paste0("t", 1:12)
+    session$setInputs(flow_node_action = list(action = "invalidate", node = "t1", nodes = many))
+    expect_match(modal, "<code>t10</code>", fixed = TRUE)
+    expect_no_match(modal, "<code>t11</code>", fixed = TRUE)
+    expect_match(modal, "and 2 more", fixed = TRUE)
+    expect_equal(to_invalidate(), many)
+  })
+})
+
+test_that("Invalidate all asks for every target of the graph, then invalidates them", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+
+  modal <- NULL
+  local_mocked_bindings(
+    showModal = function(ui, ...) modal <<- as.character(ui),
+    removeModal = function(...) NULL,
+    showNotification = function(...) NULL,
+    .package = "shiny"
+  )
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$setInputs(invalidate_all = 1)
+    for (name in c("a", "b", "c")) expect_match(modal, sprintf("<code>%s</code>", name), fixed = TRUE)
+    expect_equal(nrow(targets::tar_meta(targets_only = TRUE)), 3) # not yet
+    session$setInputs(invalidate_confirm = 1)
+    expect_equal(nrow(targets::tar_meta(targets_only = TRUE)), 0)
+  })
+})
+
+test_that("board_targets() leaves out the functions and globals of the graph", {
+  nodes <- fake_nodes(c("raw", "clean_fun", "model"))
+  nodes$type <- c("stem", "function", "pattern")
+  expect_equal(board_targets(nodes), c("raw", "model"))
+  expect_equal(board_targets(nodes[0, ]), character())
+  expect_equal(board_targets(NULL), character())
+})
+
+test_that("the board's sidebar has Invalidate all, not the selection's buttons", {
+  html <- as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R"))
+  expect_match(html, 'id="invalidate_all"', fixed = TRUE)
+  expect_match(html, "Invalidate all", fixed = TRUE)
+  expect_no_match(html, 'id="run_selected"', fixed = TRUE)
+  expect_no_match(html, "Invalidate selected", fixed = TRUE)
+})
+
 test_that("tar_meta() is re-read only when the metadata file changes", {
   skip_on_cran()
   local_pipeline(make = TRUE)

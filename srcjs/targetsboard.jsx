@@ -19,7 +19,7 @@ import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
 import { layoutGraph } from './layout';
-import { NodeActionsContext } from './NodeActions';
+import { NodeActionsContext, GroupToolbar, groupLabel } from './NodeActions';
 
 import UptodateNode from './UptodateNode';
 import OutdatedNode from './OutdatedNode';
@@ -54,6 +54,8 @@ const DEFAULT_OPTIONS = {
   only_render_visible: false,
   node_actions: [], // [{id, label}]: the right-click menu's items
   toolbar_actions: [], // [{id, label}]: the focused target's toolbar
+  node_group_actions: [], // the menu of a selected group; `{n}` in a label: its size
+  toolbar_group_actions: [], // the toolbar over a selected group
   download_image: false, // a download button in the zoom controls
 };
 
@@ -97,9 +99,16 @@ const downloadIcon = (
 const sendEvent = (name, value) =>
   window.Shiny?.setInputValue?.(name, value, { priority: 'event' });
 
-// The right-click menu of a target. `copy_name` is done here: the server
-// can't reach the clipboard. Every other action goes to Shiny as
-// <id>_node_action.
+// Target names as R code: "model", or c("a", "b") for several.
+const rNames = (ids) => {
+  const quoted = ids.map((id) => JSON.stringify(id));
+  return quoted.length === 1 ? quoted[0] : `c(${quoted.join(', ')})`;
+};
+
+// The right-click menu of a target, or of the selected group it is part of
+// (`menu.nodes`). `copy_name` and the selection actions are done here: the
+// server can't reach the clipboard, and selecting is the widget's own. Every
+// other action goes to Shiny as <id>_node_action.
 function NodeMenu({ menu, actions, onAction, onClose }) {
   // Opened where the click was, then moved back inside the widget if it
   // overflows: measured once drawn, before the browser paints it.
@@ -128,9 +137,9 @@ function NodeMenu({ menu, actions, onAction, onClose }) {
           key={action.id}
           role="menuitem"
           data-action={action.id}
-          onClick={() => onAction(action.id, menu.node)}
+          onClick={() => onAction(action.id, menu.node, menu.nodes)}
         >
-          {action.label}
+          {menu.nodes.length > 1 ? groupLabel(action.label, menu.nodes.length) : action.label}
         </button>
       ))}
     </div>
@@ -193,28 +202,36 @@ const placeNewNodes = (nodes, edges, newIds, direction) => {
   });
 };
 
-// The focused target with everything upstream and downstream of it.
-const lineageOf = (focusId, edges) => {
-  const lineage = new Set([focusId]);
-  const walk = (from, to) => {
-    const next = new Map();
-    edges.forEach((e) => {
-      if (!next.has(e[from])) next.set(e[from], []);
-      next.get(e[from]).push(e[to]);
+// Targets `ids` with every target reached from them along the edges, from
+// `from` to `to`: all levels, not only the direct neighbours.
+const reachable = (ids, edges, from, to) => {
+  const next = new Map();
+  edges.forEach((e) => {
+    if (!next.has(e[from])) next.set(e[from], []);
+    next.get(e[from]).push(e[to]);
+  });
+  const seen = new Set(ids);
+  const stack = [...ids];
+  while (stack.length) {
+    (next.get(stack.pop()) ?? []).forEach((id) => {
+      if (!seen.has(id)) {
+        seen.add(id);
+        stack.push(id);
+      }
     });
-    const stack = [focusId];
-    while (stack.length) {
-      (next.get(stack.pop()) ?? []).forEach((id) => {
-        if (!lineage.has(id)) {
-          lineage.add(id);
-          stack.push(id);
-        }
-      });
-    }
-  };
-  walk('source', 'target'); // downstream
-  walk('target', 'source'); // upstream
-  return lineage;
+  }
+  return seen;
+};
+const upstreamOf = (ids, edges) => reachable(ids, edges, 'target', 'source');
+const downstreamOf = (ids, edges) => reachable(ids, edges, 'source', 'target');
+// Targets with everything upstream and downstream of them.
+const lineageOf = (ids, edges) => new Set([...upstreamOf(ids, edges), ...downstreamOf(ids, edges)]);
+
+// The menu's selection actions: what to select, from the targets it covers.
+const SELECT_ACTIONS = {
+  select_upstream: upstreamOf,
+  select_downstream: downstreamOf,
+  select_lineage: lineageOf,
 };
 
 // Light updates from R arrive as Shiny custom messages: statuses
@@ -223,8 +240,9 @@ const lineageOf = (focusId, edges) => {
 // its id.
 const STATUS_EVENT = 'targetsboard:status';
 const OPTIONS_EVENT = 'targetsboard:options';
-// Commands from R: focus a target (update_targetsboard_focus()), fit the
-// view to targets (targetsboard_fit_view()).
+// Commands from R: focus a target (update_targetsboard_focus()), select
+// targets (update_targetsboard_selection()), fit the view to targets
+// (targetsboard_fit_view()), draw an image (targetsboard_export_image()).
 const COMMAND_EVENT = 'targetsboard:command';
 if (window.Shiny && !window.__targetsboardStatusHandler) {
   window.__targetsboardStatusHandler = true;
@@ -287,6 +305,8 @@ function Flow({ configuration }) {
   const directionRef = useRef(direction);
   directionRef.current = direction;
   const [focusId, setFocusId] = useState(null);
+  const focusRef = useRef(focusId);
+  focusRef.current = focusId;
   const [options, setOptions] = useState({ ...DEFAULT_OPTIONS, ...configuration.options });
   // Lay out once all nodes have been measured: everything ('all') on first
   // render and when a Tidy button is pressed; only the new targets ('new')
@@ -315,7 +335,16 @@ function Flow({ configuration }) {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [],
   );
-  const [menu, setMenu] = useState(null); // {node, x, y}
+  const [menu, setMenu] = useState(null); // {node, nodes, x, y}
+  const menuRef = useRef(menu);
+  menuRef.current = menu;
+  // Select exactly these targets.
+  const selectOnly = useCallback((ids) => {
+    const chosen = new Set(ids);
+    setNodes((nds) =>
+      nds.map((n) => (!!n.selected === chosen.has(n.id) ? n : { ...n, selected: chosen.has(n.id) })),
+    );
+  }, []);
   const wrapperRef = useRef(null);
   const colorModeRef = useRef('light');
   const imageOf = useCallback(
@@ -357,28 +386,46 @@ function Flow({ configuration }) {
     [inputId],
   );
   // Right-click focuses the target, reports it, and opens the menu if R
-  // gave it actions.
+  // gave it actions. On a target of a selected group, the menu is the
+  // group's; on any other, that target alone becomes the selection.
   const onNodeContextMenu = useCallback(
     (event, node) => {
       event.preventDefault();
+      const selected = nodesRef.current.filter((n) => n.selected).map((n) => n.id);
+      const nodes = selected.length > 1 && selected.includes(node.id) ? selected.sort() : [node.id];
+      if (nodes.length === 1) selectOnly(nodes);
       setFocusId(node.id);
       sendEvent(`${inputId}_context_node`, node.id);
       const box = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
-      setMenu({ node: node.id, x: event.clientX - box.left, y: event.clientY - box.top });
+      setMenu({ node: node.id, nodes, x: event.clientX - box.left, y: event.clientY - box.top });
     },
-    [inputId],
+    [inputId, selectOnly],
   );
-  // An action of the menu or the toolbar.
+  // Right-click on the box around a Shift-drag selection: the group's menu,
+  // for the focused target if it is in the group.
+  const onSelectionContextMenu = useCallback(
+    (event, selection) => {
+      const ids = selection.map((n) => n.id);
+      if (ids.length === 0) return;
+      onNodeContextMenu(event, { id: ids.includes(focusRef.current) ? focusRef.current : ids[0] });
+    },
+    [onNodeContextMenu],
+  );
+  // An action of a menu or a toolbar, on `node` or, for a group, on `nodes`.
   const onMenuAction = useCallback(
-    (action, node) => {
+    (action, node, nodes = [node]) => {
       setMenu(null);
       if (action === 'copy_name') {
-        navigator.clipboard?.writeText(node).catch(() => {});
+        navigator.clipboard?.writeText(rNames(nodes)).catch(() => {});
         return;
       }
-      sendEvent(`${inputId}_node_action`, { action, node });
+      if (SELECT_ACTIONS[action]) {
+        selectOnly([...SELECT_ACTIONS[action](nodes, edgesRef.current)]);
+        return;
+      }
+      sendEvent(`${inputId}_node_action`, { action, node, nodes });
     },
-    [inputId],
+    [inputId, selectOnly],
   );
   const closeMenu = useCallback(() => setMenu(null), []);
   // The layout, for R to keep: positions by target, the view, the direction.
@@ -506,6 +553,10 @@ function Flow({ configuration }) {
       if (message.command === 'focus') {
         setFocusId(message.node ?? null);
         setMenu(null);
+      } else if (message.command === 'select') {
+        const known = new Set(nodesRef.current.map((n) => n.id));
+        selectOnly((message.nodes ?? []).filter((id) => known.has(id)));
+        setMenu(null);
       } else if (message.command === 'export_image') {
         // The image goes back to R as <id>_image, or the reason it failed.
         const format = message.format === 'svg' ? 'svg' : 'png';
@@ -528,7 +579,24 @@ function Flow({ configuration }) {
     };
     window.addEventListener(COMMAND_EVENT, onCommand);
     return () => window.removeEventListener(COMMAND_EVENT, onCommand);
-  }, [configuration.id, fitView, imageOf]);
+  }, [configuration.id, fitView, imageOf, selectOnly]);
+
+  // Escape closes the menu, if one is open (the menu does it); else it
+  // clears the focus and the selection. Not while typing elsewhere on the
+  // page, or in a dialog.
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== 'Escape' || menuRef.current) return;
+      if (event.target?.closest?.('input, textarea, select, [contenteditable="true"], .modal')) return;
+      const unselect = (items) =>
+        items.some((x) => x.selected) ? items.map((x) => (x.selected ? { ...x, selected: false } : x)) : items;
+      setFocusId(null);
+      setNodes(unselect);
+      setEdges(unselect);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // A focused target that left the pipeline is no longer focused.
   useEffect(() => {
@@ -600,18 +668,24 @@ function Flow({ configuration }) {
     }));
   }, [inputId, runningKey, edgesKey]);
 
+  // A selected group: two targets or more. It takes over from the focused
+  // target for the toolbar and the highlighting.
+  const group = useMemo(() => (selectedKey.includes('|') ? selectedKey.split('|') : null), [selectedKey]);
+  const toolbarFocus = group ? null : focusId;
   const nodeActions = useMemo(
-    () => ({ focusId, actions: options.toolbar_actions, onAction: onMenuAction }),
-    [focusId, options.toolbar_actions, onMenuAction],
+    () => ({ focusId: toolbarFocus, actions: options.toolbar_actions, onAction: onMenuAction }),
+    [toolbarFocus, options.toolbar_actions, onMenuAction],
   );
 
-  // Focus highlighting is derived, never stored: dim what lies outside the
-  // focused target's lineage.
-  const lineage = focusId ? lineageOf(focusId, edges) : null;
+  // Highlighting is derived, never stored: dim what lies outside the lineage
+  // of the selected group, or else of the focused target.
+  const marked = group ?? (focusId ? [focusId] : null);
+  const markedIds = new Set(marked ?? []);
+  const lineage = marked ? lineageOf(marked, edges) : null;
   const shownNodes = lineage
     ? nodes.map((n) => ({
         ...n,
-        className: n.id === focusId ? 'tb-focused' : lineage.has(n.id) ? undefined : 'tb-dimmed',
+        className: markedIds.has(n.id) ? 'tb-focused' : lineage.has(n.id) ? undefined : 'tb-dimmed',
       }))
     : nodes;
   const shownEdges = edges.map((e) => ({
@@ -619,6 +693,8 @@ function Flow({ configuration }) {
     type: options.edge_type,
     className: !lineage || (lineage.has(e.source) && lineage.has(e.target)) ? undefined : 'tb-dimmed',
   }));
+
+  const menuActions = menu?.nodes.length > 1 ? options.node_group_actions : options.node_actions;
 
   // The board's own colours are for light mode; dark mode keeps React Flow's.
   const colorMode = resolveColorMode(options.color_mode);
@@ -641,6 +717,7 @@ function Flow({ configuration }) {
         onPaneClick={onPaneClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
+        onSelectionContextMenu={onSelectionContextMenu}
         onPaneContextMenu={closeMenu}
         onMoveStart={closeMenu}
         onMoveEnd={onMoveEnd}
@@ -678,10 +755,16 @@ function Flow({ configuration }) {
           </Controls>
         )}
         <LayoutButtons onLayout={onLayout} />
+        <GroupToolbar
+          ids={group}
+          node={group?.includes(focusId) ? focusId : group?.[0]}
+          actions={options.toolbar_group_actions}
+          onAction={onMenuAction}
+        />
       </ReactFlow>
       </NodeActionsContext.Provider>
-      {menu && options.node_actions.length > 0 && (
-        <NodeMenu key={`${menu.node}@${menu.x},${menu.y}`} menu={menu} actions={options.node_actions} onAction={onMenuAction} onClose={closeMenu} />
+      {menu && menuActions.length > 0 && (
+        <NodeMenu key={`${menu.node}@${menu.x},${menu.y}`} menu={menu} actions={menuActions} onAction={onMenuAction} onClose={closeMenu} />
       )}
     </div>
   );

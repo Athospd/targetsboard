@@ -138,7 +138,7 @@ test_that("the board runs, refuses a second run, stops and tells how it went", {
     session$elapse(600)
     expect_true(running())
 
-    session$setInputs(run_selected = 1, flow_selected_nodes = "c")
+    session$setInputs(flow_node_action = list(action = "run", node = "c", nodes = "c"))
     expect_match(notes, "already going", all = FALSE)
 
     session$setInputs(stop = 1)
@@ -187,7 +187,7 @@ test_that("invalidate_targets() makes targets outdated, leaving their files", {
   expect_error(targets::tar_read(b)) # but without metadata, it can't be read
 })
 
-test_that("the board invalidates the selected targets once confirmed", {
+test_that("the board invalidates targets once confirmed", {
   skip_on_cran()
   local_pipeline(make = TRUE)
   server <- local_app_server()
@@ -204,7 +204,7 @@ test_that("the board invalidates the selected targets once confirmed", {
   )
 
   shiny::testServer(server, {
-    session$setInputs(flow_selected_nodes = c("b", "c"), invalidate = 1)
+    session$setInputs(flow_node_action = list(action = "invalidate", node = "b", nodes = c("b", "c")))
     expect_match(modal, "Invalidate targets?", fixed = TRUE)
     expect_match(modal, "<code>b</code>", fixed = TRUE)
     expect_true(all(c("b", "c") %in% targets::tar_meta(targets_only = TRUE)$name)) # not yet

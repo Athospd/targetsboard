@@ -6,6 +6,7 @@
 \alias{update_targetsboard_status}
 \alias{update_targetsboard_focus}
 \alias{targetsboard_fit_view}
+\alias{update_targetsboard_selection}
 \alias{update_targetsboard_options}
 \title{DAG widget for Shiny}
 \usage{
@@ -49,6 +50,8 @@ targetsboard_fit_view(
   max_zoom = 1.5
 )
 
+update_targetsboard_selection(session, inputId, nodes = NULL)
+
 update_targetsboard_options(session, inputId, ...)
 }
 \arguments{
@@ -73,7 +76,8 @@ running pipeline. \code{update_targetsboard_options()} changes only the display
 options it names, e.g. \code{color_mode} to follow \code{bslib::input_dark_mode()}.
 \code{update_targetsboard_focus()} focuses a target from the server, and
 \code{targetsboard_fit_view()} brings targets into view: together, they can show
-a target picked elsewhere in the app.}
+a target picked elsewhere in the app. \code{update_targetsboard_selection()}
+selects targets from the server.}
 
 \item{layout}{Optional: a layout the widget reported as
 \verb{input$<inputId>_layout}. The targets in it are drawn where they were, in
@@ -103,7 +107,9 @@ single target doesn't fill the view.}
 arguments of \code{\link[=targetsboard_options]{targetsboard_options()}}.}
 
 \item{nodes}{For \code{targetsboard_fit_view()}: ids of the targets to fit in
-view; \code{NULL}, all of them. Ids not in the widget are ignored.}
+view; \code{NULL}, all of them. For \code{update_targetsboard_selection()}: ids of
+the targets to select, instead of those selected; \code{NULL} clears the
+selection. Ids not in the widget are ignored.}
 }
 \value{
 \code{targetsboard()} returns a Shiny UI element.
@@ -118,21 +124,30 @@ build raised warnings carry a warning mark.
 }
 \details{
 Clicking a target focuses it: what it depends on and what depends on it are
-highlighted, and the rest of the graph dims. Clicking the background clears
-the focus.
+highlighted, and the rest of the graph dims. Clicking the background, or
+Escape, clears the focus and the selection.
+
+Several targets can be selected: Ctrl-click (Cmd-click on a Mac) adds one,
+and Shift-drag selects those in a box. A group of two or more stays
+highlighted with all it depends on and all that depends on it. A
+right-click on one of the group opens the group's menu
+(\code{node_group_actions}), and a toolbar over the group holds
+\code{toolbar_group_actions}; a right-click on any other target selects that one
+alone.
 
 The widget reports to the server, as Shiny inputs:
 \itemize{
 \item \verb{input$<inputId>_focused_node}: the id of the focused target, or \code{NULL};
-\item \verb{input$<inputId>_selected_nodes}: the ids of the selected targets
-(several with Shift or Ctrl);
+\item \verb{input$<inputId>_selected_nodes}: the ids of the selected targets;
 \item \verb{input$<inputId>_running_nodes}: the ids of the running targets;
 \item \verb{input$<inputId>_double_clicked_node}: the id of a target double-clicked;
 \item \verb{input$<inputId>_context_node}: the id of a target right-clicked, which
 also focuses it;
-\item \verb{input$<inputId>_node_action}: \code{list(action, node)}, when an action of
-the right-click menu or of the focused target's toolbar is chosen (see
-\code{node_actions} and \code{toolbar_actions} in \code{\link[=targetsboard_options]{targetsboard_options()}});
+\item \verb{input$<inputId>_node_action}: \code{list(action, node, nodes)}, when an
+action of a right-click menu or of a toolbar is chosen (see
+\code{node_actions}, \code{toolbar_actions} and their group versions in
+\code{\link[=targetsboard_options]{targetsboard_options()}}): \code{node} is the target it was chosen on, \code{nodes}
+every target it covers, \code{node} alone or the selected group;
 \item \verb{input$<inputId>_viewport}: \code{list(x, y, zoom)}, after each pan or zoom;
 \item \verb{input$<inputId>_image}: \code{list(format, data_url)}, the image asked for by
 \code{\link[=targetsboard_export_image]{targetsboard_export_image()}}, or \code{list(format, error)};
