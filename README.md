@@ -37,8 +37,9 @@ the pane on the right</figcaption>
 Watch the board in a 2.5-minute demo, with sound: a pipeline running,
 value previews, shaping the DAG and debugging an error.
 
-[![The demo video: the board while a pipeline runs, with a play
-button](man/figures/README-demo.jpg)](https://github.com/Athospd/targetsboard/releases/download/v0.1.0/targetsboard-demo.mp4)
+[![Watch the demo (2.5 minutes): a pipeline running, value previews,
+shaping the DAG and debugging an
+error](man/figures/README-demo.jpg)](https://youtu.be/z2TOGc4vmFk)
 
 **Early stage.** Help, support and ideas are welcome!
 
