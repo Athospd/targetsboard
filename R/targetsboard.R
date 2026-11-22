@@ -518,7 +518,8 @@ tar_board <- function(script = targets::tar_config_get("script"),
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, host, port, targets_only) {
+    \(metadata, script, host, port, targets_only, dev) {
+      options(targetsboard.dev = dev)
       print(targetsboard::tar_board_app(
         script = script,
         targets_only = targets_only,
@@ -531,7 +532,8 @@ tar_board <- function(script = targets::tar_config_get("script"),
       script = script,
       host = host,
       port = port,
-      targets_only = targets_only
+      targets_only = targets_only,
+      dev = board_dev_mode()
     ),
     supervise = TRUE,
     poll_connection = TRUE,
