@@ -7,6 +7,12 @@
   launch, filters them as you type and still takes any other path; Load
   switches to the chosen one.
 
+## Bug fixes
+
+* A script that stops loading, such as one with a typo, is notified, with
+  its error, until it loads again. The board kept its last graph without a
+  word.
+
 # targetsboard 0.1.0
 
 First release: the 2024 prototype, cleaned up into a board for the author of

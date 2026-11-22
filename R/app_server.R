@@ -57,6 +57,30 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     )
     shiny::observeEvent(poller_board(), board(poller_board()))
 
+    # A script that stops loading (a typo while editing it): say so, for as
+    # long as it lasts, rather than silently keep the last graph.
+    script_error <- shiny::reactivePoll(
+      500, session,
+      checkFunc = function() {
+        path <- poller_rds_path()
+        if (is.null(path)) NA else file.mtime(poller_error_path(path))
+      },
+      valueFunc = function() {
+        path <- poller_rds_path()
+        error_path <- if (!is.null(path)) poller_error_path(path)
+        if (is.null(error_path) || !file.exists(error_path)) return(NULL)
+        tryCatch(readLines(error_path, warn = FALSE), error = function(e) NULL)
+      }
+    )
+    shiny::observeEvent(script_error(), ignoreNULL = FALSE, {
+      text <- script_error_text(poller$script, script_error())
+      if (is.null(text)) {
+        shiny::removeNotification("script_error", session)
+      } else {
+        shiny::showNotification(text, id = "script_error", duration = NULL, type = "error", session = session)
+      }
+    })
+
     # Live statuses, from the progress file targets writes during a run:
     # cheap to check, so every half second.
     progress <- shiny::reactivePoll(

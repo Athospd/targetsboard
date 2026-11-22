@@ -249,6 +249,35 @@ test_that("a run's progress reaches the widget as status-only updates", {
   })
 })
 
+test_that("a script that stops loading is notified until it loads again", {
+  skip_on_cran()
+  local_pipeline()
+  server <- local_app_server()
+  shown <- list()
+  local_mocked_bindings(
+    showNotification = function(ui, ..., id = NULL) shown[[length(shown) + 1]] <<- list(id = id, ui = ui),
+    removeNotification = function(id, ...) shown[[length(shown) + 1]] <<- list(id = id, ui = NULL),
+    .package = "shiny"
+  )
+
+  shiny::testServer(server, {
+    error_path <- poller_error_path(environment(server)$poller_rds_path())
+    writeLines("stop('broken pipeline')", "_targets.R")
+    wait_for(function() file.exists(error_path))
+    session$elapse(600)
+    last <- shown[[length(shown)]]
+    expect_equal(last$id, "script_error")
+    expect_match(last$ui, "_targets.R doesn't load.*broken pipeline")
+
+    writeLines(c("library(targets)", "list(tar_target(z, 1))"), "_targets.R")
+    wait_for(function() !file.exists(error_path))
+    session$elapse(600)
+    last <- shown[[length(shown)]]
+    expect_equal(last$id, "script_error")
+    expect_null(last$ui)
+  })
+})
+
 test_that("Refresh asks the poller to recompute", {
   skip_on_cran()
   local_pipeline()

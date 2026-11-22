@@ -681,6 +681,9 @@ tar_board_app <- function(script = targets::tar_config_get("script"), targets_on
 #' `list(x = tar_visnetwork()$x, widget = tar_visnetwork(), progress_mtime = )`:
 #' `widget` for the `tar_visnetwork` tab, and the modification time of the
 #' progress file it reflects, so the app knows which progress is newer.
+#' When `tar_visnetwork()` fails (a broken script), the error message is
+#' written next to it, to `poller_error_path(tar_vis_path)`, and removed by
+#' the next recompute that works: the app shows it.
 #'
 #' @param script Path to the targets script.
 #' @param interval Seconds between two checks; checks are cheap file stats.
@@ -740,13 +743,16 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
         !running()
 
       if (!identical(code, computed_code) || run_ended) {
+        error_path <- sub("[.]rds$", ".error", tar_vis_path) # poller_error_path()
         widget <- tryCatch(
           targets::tar_visnetwork(script = script, ...),
           error = function(e) {
             message("tar_visnetwork() failed: ", conditionMessage(e))
+            writeLines(conditionMessage(e), error_path)
             NULL
           }
         )
+        if (!is.null(widget)) unlink(error_path)
         # Write to a temp file and rename it into place, so the app never
         # reads a half-written file. On Windows the rename fails while the
         # app holds the file open: then retry on the next check.
@@ -777,6 +783,24 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
     stderr = "2>&1"
   )
   invisible(list(process = bg_process, tar_vis_path = tar_vis_path, refresh_path = refresh_path))
+}
+
+# Where the poller writes why its last recompute failed: see tar_visnetwork_bg().
+poller_error_path <- function(tar_vis_path) sub("[.]rds$", ".error", tar_vis_path)
+
+#' Why the script doesn't load, for the board's notification
+#'
+#' @param message The error message the poller wrote, or `NULL` when it loads.
+#' @return A notification's text, or `NULL`.
+#' @noRd
+script_error_text <- function(script, message) {
+  if (is.null(message) || !length(message)) return(NULL)
+  message <- paste(message, collapse = " ")
+  if (nchar(message) > 300) message <- paste0(substr(message, 1, 297), "...")
+  paste0(
+    script, " doesn't load, so the board still shows its last working graph. ",
+    "The error: ", message
+  )
 }
 
 #' Branch counts for the widget, from `tar_progress_branches()`
