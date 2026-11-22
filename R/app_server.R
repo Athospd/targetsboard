@@ -135,7 +135,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         if (isTRUE(input$keep_going)) "keep going",
         if (isTRUE(input$stop_at_warnings)) "stop at warnings"
       )
-      label <- if (length(modes)) paste0("Run all · ", paste(modes, collapse = ", ")) else "Run all"
+      label <- if (length(modes)) paste0("Run all \u00b7 ", paste(modes, collapse = ", ")) else "Run all"
       shiny::updateActionButton(session, "run_all", label = label)
     }, ignoreInit = TRUE)
 
