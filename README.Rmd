@@ -32,7 +32,7 @@ warnings carry a warning mark. Clicking a target focuses it: what it depends
 on and what depends on it stay highlighted, and its value is previewed.
 When the pipeline changes, targets already drawn keep their place.
 
-![The board while tar_make() runs: model_a is running](man/figures/README-board.png)
+![The board while tar_make() runs: model_a is running, check errored, model_b and report are outdated, and clean, focused, raised a warning](man/figures/README-board.png)
 
 **Early stage.** Help, support and ideas are welcome!
 
