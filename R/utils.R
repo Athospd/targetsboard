@@ -15,33 +15,6 @@
   }
 }
 
-#' F string
-#'
-#' Alias to glue::glue to resemble the Pythonic f-string.
-#'
-#' @seealso [glue::glue()]
-#'
-#' @keywords internal
-#' @export
-#' @examples
-#' mean <- 3.5
-#' f("the mean is {mean}")
-#' @importFrom glue glue
-f <- glue::glue
-
-#' Not in operator
-#'
-#' The negation of `%in%`: `x %not_in% table` is `!(x %in% table)`.
-#'
-#' @usage `\%not_in\%`(...)
-#' @param ... `x` and `table`, as for [base::%in%].
-#' @return A logical vector as long as `x`.
-#' @keywords internal
-#' @export
-#' @examples
-#' c("a", "z") %not_in% letters[1:3]
-"%not_in%" <- Negate(`%in%`)
-
+# zeallot's multiple assignment, used internally: c(a, b) %<-% list(1, 2).
 #' @importFrom zeallot %<-%
-#' @export
-zeallot::`%<-%`
+NULL

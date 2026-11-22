@@ -32,7 +32,7 @@ warnings carry a warning mark. Clicking a target focuses it: what it depends
 on and what depends on it stay highlighted, and its value is previewed.
 When the pipeline changes, targets already drawn keep their place.
 
-![The board while tar_make() runs: model_a is running, check errored, model_b and report are outdated, and clean, focused, raised a warning](man/figures/README-board.png)
+![The board while tar_make() runs: model_a is running, model_b and report are outdated, clean raised a warning, and check errored: its problem, traceback and code to reproduce it are in the pane on the right](man/figures/README-board.png)
 
 **Early stage.** Help, support and ideas are welcome!
 
@@ -72,6 +72,13 @@ it: the menu and toolbar of a group act on all of it. Two switches under
 after an error, and **Stop at warnings** turns warnings into errors, so they
 leave a workspace. Runs from the board go on if the board stops.
 
+When a target errors or warns, its value preview starts with its problem:
+the error or warnings, the traceback through your own functions, and code to
+copy into the console, to reproduce it from what the target had or to stop in
+the debugger inside it (`debug_run_script()`). The **Problems** tab lists
+every target with a problem, and the **Log** tab shows the latest run's
+output. While a run goes, a pattern shows how many of its branches are done.
+
 Like `targets::tar_watch()`, `tar_board()` needs no arguments: it shows
 the current project's pipeline, using the script and store from its targets
 configuration (`_targets.R` and `_targets/` unless `_targets.yaml` says
@@ -85,6 +92,23 @@ Shiny app object instead:
 
 ```{r foreground, eval = FALSE}
 shiny::runApp(tar_board_app(script = "_targets.R"))
+```
+
+### Example pipelines
+
+From a clone of this repository, `inst/examples/pipelines/` has pipelines to
+try the board with: a bootstrap analysis with dynamic and static branching,
+row groups and values of unusual types; one pipeline per situation the tests
+cover (a slow run, problems, run modes, groups of targets, ...); and two
+bootstraps at scale. Each is a targets project, with its own store:
+
+```{r examples, eval = FALSE}
+Sys.setenv(
+  TAR_CONFIG = "inst/examples/pipelines/_targets.yaml",
+  TAR_PROJECT = "bootstrap" # or test_problems, test_slow, ...: see the file
+)
+targets::tar_make()
+targetsboard::tar_board()
 ```
 
 ### The DAG widget in your own Shiny app

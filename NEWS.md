@@ -1,11 +1,18 @@
-# targetsboard 0.0.0.9000
+# targetsboard 0.1.0
 
-First cleanup of the 2024 prototype.
+First release: the 2024 prototype, cleaned up into a board for the author of
+a pipeline, with runs, selection of several targets and debugging.
 
 ## Breaking changes
 
-* The public API is now `tar_board()`, `tar_board_app()`, `targetsboard()`,
-  `update_targetsboard()` and `update_targetsboard_status()` (plus the `f()`, `%not_in%` and `%<-%` helpers).
+* The public API is `tar_board()` and `tar_board_app()`; the widget,
+  `targetsboard()`, with `update_targetsboard()`,
+  `update_targetsboard_status()`, `update_targetsboard_focus()`,
+  `update_targetsboard_selection()`, `update_targetsboard_options()`,
+  `targetsboard_options()`, `targetsboard_fit_view()`,
+  `targetsboard_export_image()` and `save_targetsboard_image()`; and
+  `debug_run_script()`. The prototype's `f()`, `%not_in%` and `%<-%` helpers
+  are no longer exported.
   `app_ui()`, `app_server()`, `tar_visnetwork_bg()`, the
   `dataframe_to_reactflow_*()` converters and `render_and_output_bundle()`
   are internal, and the non-working React component wrappers (`MiniMap()`,
@@ -25,6 +32,11 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* `inst/examples/pipelines/` has pipelines to try the board with, each a
+  project of its `_targets.yaml` with its own store: a bootstrap with
+  dynamic and static branching, row groups, batches and values of unusual
+  types; one pipeline per situation the tests cover; and two bootstraps at
+  scale.
 * While a run goes, a pattern shows how many of its branches are done, e.g.
   "3/6", in red once one errored. `update_targetsboard_status()` gains
   `branches`, for the counts of `targets::tar_progress_branches()`.

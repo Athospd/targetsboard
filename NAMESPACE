@@ -7,10 +7,7 @@ S3method(render_and_output_bundle,gg)
 S3method(render_and_output_bundle,ggplot)
 S3method(render_and_output_bundle,plotly)
 S3method(render_and_output_bundle,shiny.tag)
-export("%<-%")
-export("%not_in%")
 export(debug_run_script)
-export(f)
 export(save_targetsboard_image)
 export(tar_board)
 export(tar_board_app)
@@ -25,7 +22,6 @@ export(update_targetsboard_selection)
 export(update_targetsboard_status)
 import(bslib)
 import(shiny)
-importFrom(glue,glue)
 importFrom(htmltools,
   htmlDependency,
   tags
