@@ -25,8 +25,10 @@ export(update_targetsboard_status)
 import(bslib)
 import(shiny)
 importFrom(glue,glue)
-importFrom(htmltools,htmlDependency)
-importFrom(htmltools,tags)
+importFrom(htmltools,
+  htmlDependency,
+  tags
+)
 importFrom(parallelly,freePort)
 importFrom(reactR,createReactShinyInput)
 importFrom(rlang,.data)

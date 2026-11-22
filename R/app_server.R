@@ -116,7 +116,10 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         shiny::showNotification("A run is already going.", type = "warning")
         return()
       }
-      runner$process <- start_run(poller$script, names)
+      runner$process <- start_run(poller$script, names, modes = list(
+        keep_going = isTRUE(input$keep_going),
+        stop_at_warnings = isTRUE(input$stop_at_warnings)
+      ))
       runner$stopped <- FALSE
     }
     shiny::observeEvent(input$run_all, launch_run())

@@ -82,7 +82,7 @@ test_that("a target's menu runs it, invalidates it after confirmation, or previe
 
   ran <- list()
   modal <- NULL
-  local_mocked_bindings(start_run = function(script, names = NULL) {
+  local_mocked_bindings(start_run = function(script, names = NULL, ...) {
     ran[[length(ran) + 1]] <<- names
     NULL
   })
@@ -121,7 +121,7 @@ test_that("the actions of a selected group cover every target of it", {
 
   ran <- list()
   modal <- NULL
-  local_mocked_bindings(start_run = function(script, names = NULL) {
+  local_mocked_bindings(start_run = function(script, names = NULL, ...) {
     ran[[length(ran) + 1]] <<- names
     NULL
   })

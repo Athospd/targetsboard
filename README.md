@@ -64,8 +64,10 @@ so the next run builds them all again: it asks first, and is disabled while a
 run is going. To run or invalidate some targets, right-click one, or use the
 toolbar over it. Ctrl-click (Cmd-click on a Mac) or Shift-drag selects several
 targets, and the menu can select what a target depends on or what depends on
-it: the menu and toolbar of a group act on all of it. Runs from the board go on
-if the board stops.
+it: the menu and toolbar of a group act on all of it. Two switches under
+**Run all** help debugging: **Keep going after errors** builds what it can
+after an error, and **Stop at warnings** turns warnings into errors, so they
+leave a workspace. Runs from the board go on if the board stops.
 
 Like `targets::tar_watch()`, `tar_board()` needs no arguments: it shows
 the current project's pipeline, using the script and store from its targets

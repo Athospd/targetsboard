@@ -35,6 +35,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
         actionButton("refresh", "Refresh", icon = icon("rotate")),
         tags$hr(),
         actionButton("run_all", "Run all", icon = icon("play")),
+        run_mode_switches(),
         actionButton("stop", "Stop", icon = icon("stop"), disabled = TRUE),
         actionButton("invalidate_all", "Invalidate all", icon = icon("eraser"), disabled = TRUE)
       ),
@@ -76,5 +77,42 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
         }
       )
     )
+  )
+}
+
+# How the board's runs differ from tar_make(): off on every start, so a mode
+# left on doesn't surprise the next session. They apply to every run the
+# board starts. Without the internals they rely on (run_modes_supported()),
+# they are disabled, and say what to add to the script instead.
+run_mode_switches <- function(supported = run_modes_supported()) {
+  switches <- list(
+    keep_going = list(
+      label = "Keep going after errors",
+      help = "Build the other targets after one errors.",
+      line = 'tar_option_set(error = "continue")'
+    ),
+    stop_at_warnings = list(
+      label = "Stop at warnings",
+      help = "A target's first warning becomes an error, with a workspace and a traceback.",
+      line = NULL
+    )
+  )
+  tags$div(
+    class = "tb-run-modes",
+    lapply(names(switches), function(id) {
+      mode <- switches[[id]]
+      title <- if (supported) {
+        mode$help
+      } else if (!is.null(mode$line)) {
+        paste0("Not available with this version of targets: add ", mode$line, " to the script instead.")
+      } else {
+        "Not available with this version of targets."
+      }
+      input <- bslib::input_switch(id, mode$label, value = FALSE)
+      if (!supported) {
+        input <- htmltools::tagQuery(input)$find("input")$addAttrs(disabled = NA)$allTags()
+      }
+      tags$div(title = title, input)
+    })
   )
 }
