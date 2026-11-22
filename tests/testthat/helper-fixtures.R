@@ -58,7 +58,8 @@ local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", .e
   skip_if_not_installed("chromote")
   skip_if(is.null(chromote::find_chrome()), "Chrome not found")
   writeLines(app, file.path(dir, "app.R"))
-  app <- shinytest2::AppDriver$new(dir, name = name, load_timeout = 60 * 1000)
+  # Slow CI runners can take over a minute to start Chrome and the app.
+  app <- shinytest2::AppDriver$new(dir, name = name, load_timeout = 120 * 1000)
   withr::defer(app$stop(), envir = .env)
   app
 }
@@ -125,4 +126,22 @@ mouse_event <- function(app, id, type) {
        clientX: r.x + r.width / 2, clientY: r.y + r.height / 2}));",
     node_js(id), type, if (type == "contextmenu") 2L else 0L
   ))
+}
+
+# Closes the open modal with its Cancel button. Bootstrap ignores a hide while
+# the modal is still fading in, which a test can click into: on CI's faster
+# runners it did, and the modal stayed open. So click until it is gone.
+dismiss_modal <- function(app, attempts = 10) {
+  for (i in seq_len(attempts)) {
+    app$run_js(
+      "const b = document.querySelector('.modal-footer [data-bs-dismiss], .modal-footer [data-dismiss]');
+       if (b) b.click();"
+    )
+    closed <- tryCatch({
+      app$wait_for_js("document.querySelector('.modal-dialog') === null", timeout = 1000)
+      TRUE
+    }, error = function(e) FALSE)
+    if (closed) return(invisible())
+  }
+  stop("The modal did not close.")
 }
