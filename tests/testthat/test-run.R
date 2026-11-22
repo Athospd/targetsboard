@@ -66,7 +66,7 @@ test_that("the board shows a killed run's targets as canceled", {
 
   sent <- list()
   local_mocked_bindings(
-    update_targetsboard_status = function(session, inputId, statuses = character(), warnings = NULL) {
+    update_targetsboard_status = function(session, inputId, statuses = character(), warnings = NULL, ...) {
       if (length(statuses)) sent[[length(sent) + 1]] <<- statuses # not the warning marks
     }
   )

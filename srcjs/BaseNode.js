@@ -20,6 +20,15 @@ const BaseNode = ({
       {data?.warning && (
         <span className="warning-mark" title="Its last build raised warnings">!</span>
       )}
+      {data?.branches && (
+        <span
+          className={'branch-progress' + (data.branches.errored > 0 ? ' branch-progress-errored' : '')}
+          title={`${data.branches.done} of ${data.branches.total} branches done` +
+            (data.branches.errored > 0 ? `, ${data.branches.errored} errored` : '')}
+        >
+          {data.branches.done}/{data.branches.total}
+        </span>
+      )}
         {data?.label}
       <Handle type="source" position={sourcePosition} isConnectable={isConnectable} />
     </div>

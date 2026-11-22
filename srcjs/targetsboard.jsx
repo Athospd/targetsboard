@@ -614,11 +614,17 @@ function Flow({ configuration }) {
       const updates = new Map((message.nodes ?? []).map((u) => [u.id, u]));
       // `warnings`, when sent, lists every target that carries a warning mark.
       const warned = Array.isArray(message.warnings) ? new Set(message.warnings) : null;
+      // `branches`, when sent, has the branch counts of every pattern that
+      // shows one, by id; an empty one (which may arrive as []) clears them.
+      const counts = message.branches == null ? null
+        : (Array.isArray(message.branches) ? {} : message.branches);
       setNodes((current) =>
         current.map((node) => {
           const update = updates.get(node.id);
           const warning = warned ? warned.has(node.id) : node.data?.warning;
-          if (!update && warning === node.data?.warning) return node;
+          const branches = counts ? (counts[node.id] ?? null) : (node.data?.branches ?? null);
+          const sameBranches = JSON.stringify(branches) === JSON.stringify(node.data?.branches ?? null);
+          if (!update && warning === node.data?.warning && sameBranches) return node;
           return {
             ...node,
             type: update ? update.type : node.type,
@@ -626,6 +632,7 @@ function Flow({ configuration }) {
               ...node.data,
               ...(update ? { target_status: update.target_status } : {}),
               warning,
+              branches,
             },
           };
         }),

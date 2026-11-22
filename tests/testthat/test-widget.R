@@ -250,3 +250,23 @@ test_that("save_targetsboard_image() writes a graph-sized SVG quickly, byte for 
   expect_lt(elapsed, 5)
   expect_identical(readBin(svg, "raw", file.size(svg)), charToRaw(enc2utf8(text)))
 })
+
+test_that("update_targetsboard_status() sends pattern branch counts, and clears them", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) sent <<- message)
+  branches <- data.frame(
+    name = c("slow", "per_group"), branches = c(6L, 3L), skipped = c(0L, 1L),
+    dispatched = c(1L, 0L), completed = c(3L, 1L), errored = c(1L, 0L), canceled = c(0L, 1L)
+  )
+  update_targetsboard_status(session, "dag", branches = branches)
+  expect_equal(sent$branches$slow, list(total = 6L, done = 4L, errored = 1L))
+  expect_equal(sent$branches$per_group, list(total = 3L, done = 3L, errored = 0L))
+  expect_null(sent$warnings) # left alone
+
+  update_targetsboard_status(session, "dag", branches = data.frame())
+  expect_length(sent$branches, 0)
+  expect_equal(as.character(jsonlite::toJSON(sent$branches, auto_unbox = TRUE)), "{}")
+
+  update_targetsboard_status(session, "dag", c(raw = "completed"))
+  expect_null(sent$branches) # left as they are
+})

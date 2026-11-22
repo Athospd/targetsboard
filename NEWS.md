@@ -25,6 +25,11 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* While a run goes, a pattern shows how many of its branches are done, e.g.
+  "3/6", in red once one errored. `update_targetsboard_status()` gains
+  `branches`, for the counts of `targets::tar_progress_branches()`.
+* A pattern carries the warning mark when its branches warned: targets
+  records the warnings on the branches alone.
 * A **Problems** tab lists the targets that errored or warned in their
   latest build, errors first, with a count in its title; a pattern counts its
   branches with problems. A click shows the target on the board with its
