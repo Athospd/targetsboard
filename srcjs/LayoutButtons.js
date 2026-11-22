@@ -4,9 +4,9 @@ import './buttonStyles.css';
 
 const LayoutButtons = ({ onLayout }) => (
   <Panel position="top-right">
-    <div className="button-container">
-      <button onClick={() => onLayout('TB')}>Tidy vertically</button>
-      <button onClick={() => onLayout('LR')}>Tidy horizontally</button>
+    <div className="tb-layout-buttons">
+      <button type="button" onClick={() => onLayout('TB')}>Tidy vertically</button>
+      <button type="button" onClick={() => onLayout('LR')}>Tidy horizontally</button>
     </div>
   </Panel>
 );

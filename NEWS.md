@@ -30,6 +30,14 @@ First cleanup of the 2024 prototype.
   `branches`, for the counts of `targets::tar_progress_branches()`.
 * A pattern carries the warning mark when its branches warned: targets
   records the warnings on the branches alone.
+* **Run all** names the run modes that are on, e.g. "Run all · keep going",
+  and the Log tab starts with what the run was: when it started, what it
+  builds and its modes.
+* The Copy buttons of the Problem pane say "Copied", or that copying failed.
+* The Tidy buttons look like the graph's other controls, in light and dark
+  mode, and no longer sit under the value preview's toggle.
+* A pattern whose branches errored shows only its problem, without "No value
+  stored for this target yet." under it.
 * A **Problems** tab lists the targets that errored or warned in their
   latest build, errors first, with a count in its title; a pattern counts its
   branches with problems. A click shows the target on the board with its

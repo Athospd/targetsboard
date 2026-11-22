@@ -129,6 +129,16 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     }
     shiny::observeEvent(input$run_all, launch_run())
 
+    # Run all says which run modes are on: the switches are easy to miss.
+    shiny::observeEvent(list(input$keep_going, input$stop_at_warnings), {
+      modes <- c(
+        if (isTRUE(input$keep_going)) "keep going",
+        if (isTRUE(input$stop_at_warnings)) "stop at warnings"
+      )
+      label <- if (length(modes)) paste0("Run all · ", paste(modes, collapse = ", ")) else "Run all"
+      shiny::updateActionButton(session, "run_all", label = label)
+    }, ignoreInit = TRUE)
+
     # Stops the run going, whoever started it.
     shiny::observeEvent(input$stop, {
       if (board_run_alive()) {
@@ -281,10 +291,14 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         problem_part <- problem_ui(problem, inputs, running = running(), script = poller$script)
         if (!is.null(problem$error)) return(problem_part)
       }
-      value <- tryCatch(
-        targets::tar_read_raw(name),
-        error = function(e) shiny::p("No value stored for this target yet.")
-      )
+      no_value <- new.env() # a value can be NULL itself
+      value <- tryCatch(suppressWarnings(targets::tar_read_raw(name)), error = function(e) no_value)
+      if (identical(value, no_value)) {
+        # The problem says why there is no value: a pattern whose branches
+        # errored. Without one, say it plainly.
+        if (!is.null(problem_part)) return(problem_part)
+        value <- shiny::p("No value stored for this target yet.")
+      }
 
       c(render_fun, output_ui_fun) %<-% render_and_output_bundle(value)
       # Reuse one output id: assigning it again replaces the previous
@@ -409,7 +423,11 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       valueFunc = function() read_run_log(attr(runner$process, "log"))
     )
     output$run_log <- shiny::renderText({
-      run_log() %||% "No run started from the board yet: the log of its next run shows here."
+      log <- run_log()
+      if (is.null(log)) return("No run started from the board yet: the log of its next run shows here.")
+      paste0(attr(runner$process, "header"), "
+
+", log)
     })
 
     # The Internals tab, shown only to develop the board (board_dev_mode()).

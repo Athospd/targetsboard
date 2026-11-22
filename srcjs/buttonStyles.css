@@ -1,9 +1,23 @@
+/* The Tidy buttons: styled as React Flow's own controls (zoom, fit view),
+   with the same colour variables, so they follow light and dark mode. */
+.tb-layout-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 28px; /* clear of the value preview's toggle, at the top right */
+}
 
-/* Container for the buttons */
-.button-container {
-    display: flex;
-    justify-content: center; /* Center the buttons horizontally */
-    gap: 15px; /* Add space between the buttons */
-    margin-top: 20px; /* Add some space above the buttons */
-  }
-  
+.tb-layout-buttons button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 0;
+  background: var(--xy-controls-button-background-color, var(--xy-controls-button-background-color-default));
+  color: var(--xy-controls-button-color, var(--xy-controls-button-color-default));
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: var(--xy-controls-box-shadow, var(--xy-controls-box-shadow-default));
+}
+
+.tb-layout-buttons button:hover {
+  background: var(--xy-controls-button-background-color-hover, var(--xy-controls-button-background-color-hover-default));
+  color: var(--xy-controls-button-color-hover, var(--xy-controls-button-color-hover-default));
+}

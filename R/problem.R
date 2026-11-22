@@ -270,6 +270,15 @@ debug_run_block <- function(name, running, script, run = name) {
   code_block("Debug run", "debug_run", debug_run_code(name, script, run))
 }
 
+# Copies the button's code, then says so for a moment (or that it couldn't:
+# the clipboard needs a secure page, which localhost is).
+copy_button_js <- paste(
+  "const b = this;",
+  "const say = t => { b.textContent = t; clearTimeout(b._tb); b._tb = setTimeout(() => b.textContent = 'Copy', 1500); };",
+  "if (!navigator.clipboard) { say('Copy failed'); return; }",
+  "navigator.clipboard.writeText(b.dataset.copy).then(() => say('Copied'), () => say('Copy failed'));"
+)
+
 # R code to copy into the console, shown in full.
 code_block <- function(title, kind, code) {
   shiny::tags$div(
@@ -279,7 +288,7 @@ code_block <- function(title, kind, code) {
       shiny::tags$span(class = "text-muted", title),
       shiny::tags$button(
         class = "btn btn-sm btn-outline-secondary tb-copy", `data-copy` = code,
-        onclick = "navigator.clipboard && navigator.clipboard.writeText(this.dataset.copy)",
+        onclick = copy_button_js,
         "Copy"
       )
     ),

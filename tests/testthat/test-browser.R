@@ -626,7 +626,7 @@ test_that("the board saves where targets were left, and opens with them there", 
   expect_equal(viewport_numbers(app), view, tolerance = 1e-3)
 
   # Tidy lays the graph out again, and that is saved too.
-  app$click(selector = ".button-container button:first-child") # Tidy vertically
+  app$click(selector = ".tb-layout-buttons button:first-child") # Tidy vertically
   app$wait_for_js("Shiny.shinyapp.$inputValues['flow_layout'].direction === 'TB'")
   app$wait_for_js(paste(
     "(() => { const p = Shiny.shinyapp.$inputValues['flow_layout'].positions;",
@@ -710,6 +710,9 @@ ctrl_click <- function(app, id) {
   ))
   chrome$Input$dispatchKeyEvent(type = "rawKeyDown", key = key$key, code = key$code,
                                 windowsVirtualKeyCode = key$vk, modifiers = key$modifiers)
+  # React Flow sees the key through React state and an effect: only after a
+  # render does it select more than one. A click straight away can beat it.
+  Sys.sleep(0.2)
   chrome$Input$dispatchMouseEvent(type = "mousePressed", x = box$x, y = box$y, button = "left",
                                   clickCount = 1, modifiers = key$modifiers)
   chrome$Input$dispatchMouseEvent(type = "mouseReleased", x = box$x, y = box$y, button = "left",
