@@ -7,6 +7,12 @@
   launch, filters them as you type and still takes any other path; Load
   switches to the chosen one.
 
+## Bug fixes
+
+* The Script field names the script the board draws, in every tab: a tab
+  opened after a Load, or open during one, showed the launch script over the
+  loaded script's graph.
+
 # targetsboard 0.1.0
 
 First release: the 2024 prototype, cleaned up into a board for the author of

@@ -662,7 +662,7 @@ tar_board_app <- function(script = targets::tar_config_get("script"), targets_on
     # A function of the request: each page load opens the board with the
     # layout saved last, not the one there was when the app started.
     function(request) app_ui(metadata, script, layout = read_board_layout(), scripts = scripts),
-    app_server(metadata, script, targets_only),
+    app_server(metadata, script, targets_only, scripts),
     options = options
   )
 }
