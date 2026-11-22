@@ -167,3 +167,34 @@ test_that("tar_board() hands the dev option to its background process", {
   # The background process sets it before building the app.
   expect_match(paste(deparse(bg$func), collapse = " "), "options(targetsboard.dev = dev)", fixed = TRUE)
 })
+
+test_that("the Script field offers the scripts, with the launch script first and chosen", {
+  metadata <- list(nodes = fake_nodes(), edges = fake_edges())
+  html <- as.character(app_ui(metadata, "b.R", scripts = c("a.R", "b.R", "c.R")))
+  expect_match(html, 'id="script"><option', fixed = TRUE)
+  expect_match(html, '<option value="b.R" selected>b.R</option>', fixed = TRUE)
+  options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
+  expect_equal(options, paste0('<option value="', c("b.R", "a.R", "c.R"), '"'))
+  # Any other path can still be typed, and the list filters as one types.
+  expect_match(html, '"create":true', fixed = TRUE)
+
+  # Without scripts, the field offers just the launch script, as before.
+  html <- as.character(app_ui(metadata, "_targets.R"))
+  options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
+  expect_equal(options, '<option value="_targets.R"')
+})
+
+test_that("script_choices() puts the launch script first, once", {
+  expect_equal(script_choices("b.R", c("a.R", "b.R")), c("b.R", "a.R"))
+  expect_equal(script_choices("a.R", NULL), "a.R")
+  expect_error(script_choices("a.R", 1:2), "character vector")
+})
+
+test_that("tar_board() hands the scripts to the board's background process", {
+  local_mocked_bindings(port_in_use = function(port, host) FALSE)
+  local_mocked_bindings(r_bg = function(func, args, ...) args, .package = "callr")
+  metadata <- list(nodes = fake_nodes(), edges = fake_edges())
+  args <- suppressMessages(tar_board("b.R", metadata = metadata, browse = FALSE, scripts = c("a.R", "b.R")))
+  expect_equal(args$script, "b.R")
+  expect_equal(args$scripts, c("a.R", "b.R"))
+})
