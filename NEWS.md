@@ -25,6 +25,11 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* While a run goes, a pattern shows how many of its branches are done, e.g.
+  "3/6", in red once one errored. `update_targetsboard_status()` gains
+  `branches`, for the counts of `targets::tar_progress_branches()`.
+* A pattern carries the warning mark when its branches warned: targets
+  records the warnings on the branches alone.
 * **Run all** names the run modes that are on, e.g. "Run all · keep going",
   and the Log tab starts with what the run was: when it started, what it
   builds and its modes.

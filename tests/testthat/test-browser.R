@@ -63,6 +63,20 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   )
   app$wait_for_js(paste0(node("b"), ".querySelector('.warning-mark') === null"))
 
+  # A pattern's branch counts, during a run: shown, red with errors, cleared.
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [], branches: {b: {total: 6, done: 3, errored: 1}}}}))"
+  )
+  app$wait_for_js(paste0(node("b"), ".querySelector('.branch-progress-errored') !== null"))
+  expect_equal(app$get_js(paste0(node("b"), ".querySelector('.branch-progress').innerText")), "3/6")
+  expect_false(app$get_js(paste0(node("a"), ".querySelector('.branch-progress') !== null")))
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [], branches: []}}))"
+  )
+  app$wait_for_js(paste0(node("b"), ".querySelector('.branch-progress') === null"))
+
   # New targets appear; the targets already drawn stay where they were.
   placed <- list(a = transform("a"), b = transform("b"), c = transform("c"))
   writeLines(
@@ -618,7 +632,10 @@ test_that("the board saves where targets were left, and opens with them there", 
     "(() => { const p = Shiny.shinyapp.$inputValues['flow_layout'].positions;",
     "return Math.abs(p.a.x - p.b.x) < 1 && p.b.y > p.a.y; })()"
   ))
-  wait_for(function() identical(jsonlite::read_json(path)$direction, "TB"), timeout = 10)
+  # On Windows, a read can hit the file while the board writes it: try again.
+  wait_for(function() {
+    identical(tryCatch(jsonlite::read_json(path)$direction, error = function(e) NULL), "TB")
+  }, timeout = 10)
 })
 
 test_that("a saved layout places new targets next to their neighbours, not on top of others", {

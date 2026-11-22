@@ -135,8 +135,14 @@ update_targetsboard <- function(session, inputId, nodes, edges, height = "100%",
 #'   ignored.
 #' @param warnings For `update_targetsboard_status()`: `NULL` leaves the warning
 #'   marks as they are; otherwise the ids of all the targets that carry one.
+#' @param branches For `update_targetsboard_status()`: `NULL` leaves the
+#'   branch counts on patterns as they are; otherwise a data frame as
+#'   `targets::tar_progress_branches()` returns, and the patterns it lists
+#'   show how many of their branches are done (e.g. "3/6"). The others show
+#'   none, so a data frame without rows clears them all.
 #' @export
-update_targetsboard_status <- function(session, inputId, statuses = character(), warnings = NULL) {
+update_targetsboard_status <- function(session, inputId, statuses = character(), warnings = NULL,
+                                       branches = NULL) {
   stopifnot(is.character(statuses), !is.null(names(statuses)) || length(statuses) == 0)
   message <- list(
     id = inputId,
@@ -146,6 +152,7 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
     ))
   )
   if (!is.null(warnings)) message$warnings <- I(as.character(warnings)) # always an array
+  if (!is.null(branches)) message$branches <- branch_counts(branches)
   session$sendCustomMessage("targetsboard:status", message)
 }
 
@@ -760,4 +767,24 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
     stderr = "2>&1"
   )
   invisible(list(process = bg_process, tar_vis_path = tar_vis_path, refresh_path = refresh_path))
+}
+
+#' Branch counts for the widget, from `tar_progress_branches()`
+#'
+#' @return A named list (a JSON object, even when empty): for each pattern,
+#'   its number of branches, how many are done (completed, errored, skipped
+#'   or canceled) and how many errored.
+#' @noRd
+branch_counts <- function(branches) {
+  counts <- stats::setNames(list(), character()) # {} when empty
+  if (is.null(branches) || nrow(branches) == 0) return(counts)
+  count <- function(field, i) if (field %in% names(branches)) as.integer(branches[[field]][i]) else 0L
+  for (i in seq_len(nrow(branches))) {
+    counts[[branches$name[i]]] <- list(
+      total = count("branches", i),
+      done = sum(vapply(c("completed", "errored", "skipped", "canceled"), count, integer(1), i = i)),
+      errored = count("errored", i)
+    )
+  }
+  counts
 }

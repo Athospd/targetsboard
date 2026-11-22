@@ -36,7 +36,8 @@ update_targetsboard_status(
   session,
   inputId,
   statuses = character(),
-  warnings = NULL
+  warnings = NULL,
+  branches = NULL
 )
 
 update_targetsboard_focus(session, inputId, node = NULL)
@@ -96,6 +97,12 @@ all, its view is restored too, else the graph is fitted into view. The
 \item{statuses}{A named character vector: target statuses, as in
 \code{targets::tar_progress()}, named by target. Targets not in the widget are
 ignored.}
+
+\item{branches}{For \code{update_targetsboard_status()}: \code{NULL} leaves the
+branch counts on patterns as they are; otherwise a data frame as
+\code{targets::tar_progress_branches()} returns, and the patterns it lists
+show how many of their branches are done (e.g. "3/6"). The others show
+none, so a data frame without rows clears them all.}
 
 \item{node}{For \code{update_targetsboard_focus()}: the id of the target to
 focus and select alone, as a click does, or \code{NULL} to clear the focus

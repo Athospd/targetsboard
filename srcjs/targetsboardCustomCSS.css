@@ -175,3 +175,24 @@
 .tb-node-toolbar button:hover {
   background: #f0e5d7;
 }
+
+/* A pattern's branches done so far, during a run: "3/6". */
+.branch-progress {
+  position: absolute;
+  top: -9px;
+  right: -8px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #fff;
+  color: #222;
+  border: 1px solid #ccc;
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.branch-progress-errored {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+}

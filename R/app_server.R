@@ -95,10 +95,15 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     }, ignoreInit = TRUE)
 
     # New progress, or a run that stopped: send just the statuses.
+    # Patterns show how many of their branches are done while a run goes;
+    # the counts go once it stops.
     shiny::observeEvent(list(progress(), running()), {
       statuses <- live_statuses(progress(), shiny::isolate(board())$progress_mtime)
       statuses <- settle_statuses(statuses, running())
-      if (length(statuses)) update_targetsboard_status(session, "flow", statuses)
+      branches <- if (running()) {
+        tryCatch(targets::tar_progress_branches(), error = function(e) NULL)
+      }
+      update_targetsboard_status(session, "flow", statuses, branches = branches %||% data.frame())
     }, ignoreInit = TRUE)
 
     shiny::observe({
@@ -130,7 +135,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         if (isTRUE(input$keep_going)) "keep going",
         if (isTRUE(input$stop_at_warnings)) "stop at warnings"
       )
-      label <- if (length(modes)) paste0("Run all · ", paste(modes, collapse = ", ")) else "Run all"
+      label <- if (length(modes)) paste0("Run all \u00b7 ", paste(modes, collapse = ", ")) else "Run all"
       shiny::updateActionButton(session, "run_all", label = label)
     }, ignoreInit = TRUE)
 
@@ -361,11 +366,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     )
 
     # Targets whose last build raised warnings, for the warning marks.
-    warned_targets <- shiny::reactive({
-      meta <- tar_meta_data()
-      if (is.null(meta) || !"warnings" %in% names(meta)) return(character())
-      sort(meta$name[!is.na(meta$warnings)])
-    })
+    warned_targets <- shiny::reactive(warned_targets_of(tar_meta_data()))
 
     output$meta <- reactable::renderReactable({
       req(tar_meta_data())
@@ -504,4 +505,21 @@ overlay_statuses <- function(nodes, statuses) {
   hit <- match(nodes$id, names(statuses))
   nodes$status[!is.na(hit)] <- unname(statuses[hit[!is.na(hit)]])
   nodes
+}
+
+#' Targets whose last build raised warnings
+#'
+#' targets records a branch's warnings on the branch alone: its pattern
+#' carries the mark.
+#' @param meta `tar_meta(targets_only = TRUE)`.
+#' @noRd
+warned_targets_of <- function(meta) {
+  if (is.null(meta) || !"warnings" %in% names(meta)) return(character())
+  warned <- meta[!is.na(meta$warnings), ]
+  names <- warned$name
+  if (all(c("type", "parent") %in% names(warned))) {
+    branch <- warned$type %in% "branch" & !is.na(warned$parent)
+    names[branch] <- warned$parent[branch]
+  }
+  sort(unique(names))
 }

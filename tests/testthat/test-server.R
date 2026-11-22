@@ -233,8 +233,8 @@ test_that("a run's progress reaches the widget as status-only updates", {
   server <- local_app_server()
 
   sent <- list()
-  local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses) {
-    sent[[length(sent) + 1]] <<- statuses
+  local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses, ...) {
+    if (length(statuses)) sent[[length(sent) + 1]] <<- statuses # not only branch counts
   })
 
   shiny::testServer(server, {
@@ -367,5 +367,53 @@ test_that("the board writes the widget's layout into the store's user folder", {
     environment(server)$stop_poller()
     session$setInputs(flow_layout = layout)
     expect_equal(read_board_layout(file.path("_targets", "user", "targetsboard_layout.json")), layout)
+  })
+})
+
+test_that("a pattern carries the warning mark of its branches", {
+  meta <- data.frame(
+    name = c("raw", "slow", "slow_1", "slow_2", "model"),
+    type = c("stem", "pattern", "branch", "branch", "stem"),
+    parent = c(NA, NA, "slow", "slow", NA),
+    warnings = c(NA, NA, "odd one", "odd two", "careful")
+  )
+  expect_equal(warned_targets_of(meta), c("model", "slow"))
+  expect_equal(warned_targets_of(meta[c(1, 5), c("name", "warnings")]), "model") # without type
+  expect_equal(warned_targets_of(NULL), character())
+})
+
+test_that("during a run, patterns show their branch counts; they go when it stops", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  writeLines(c(
+    "library(targets)",
+    "list(tar_target(nums, 1:4), tar_target(slow, {Sys.sleep(1); nums}, pattern = map(nums)))"
+  ), file.path(dir, "_targets.R"))
+  withr::local_dir(dir)
+  server <- local_app_server()
+  sent <- list()
+  local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses = character(),
+                                                              warnings = NULL, branches = NULL) {
+    if (!is.null(branches)) sent[[length(sent) + 1]] <<- branches
+  })
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$flushReact()
+    session$setInputs(run_all = 1)
+    process <- environment(server)$runner$process
+    seen <- FALSE
+    while (process$is_alive()) {
+      Sys.sleep(0.3)
+      session$elapse(600)
+      last <- sent[[length(sent)]]
+      if (nrow(last) && "slow" %in% last$name) {
+        seen <- TRUE
+        expect_equal(last$branches[last$name == "slow"], 4L)
+      }
+    }
+    expect_true(seen)
+    session$elapse(1200)
+    expect_equal(nrow(sent[[length(sent)]]), 0) # cleared once the run stopped
   })
 })

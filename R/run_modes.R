@@ -17,7 +17,7 @@ NULL
 # The internal fields of a target that the run modes change, and how they
 # must look. A new version of targets that changes them disables the modes.
 run_modes_supported <- function() {
-  target <- tryCatch(targets::tar_target(probe, 1), error = function(e) NULL)
+  target <- tryCatch(targets::tar_target_raw("probe", quote(1)), error = function(e) NULL)
   is.environment(target) &&
     is.environment(target$settings) && rlang::is_string(target$settings$error) &&
     is.environment(target$cue) && rlang::is_string(target$cue$mode) &&
