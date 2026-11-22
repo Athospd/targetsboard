@@ -1,3 +1,12 @@
+# targetsboard (development version)
+
+## New features
+
+* `tar_board()` and `tar_board_app()` gain `scripts`: other targets scripts
+  to switch to. The Script field lists them under `script`, the one shown on
+  launch, filters them as you type and still takes any other path; Load
+  switches to the chosen one.
+
 # targetsboard 0.1.0
 
 First release: the 2024 prototype, cleaned up into a board for the author of

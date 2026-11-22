@@ -947,3 +947,39 @@ test_that("update_targetsboard_selection() selects targets from the server", {
   send_widget_message(app, "targetsboard:command", list(id = "dag", command = "select", nodes = I(character())))
   app$wait_for_js("document.querySelectorAll('.react-flow__node.selected').length === 0")
 })
+
+test_that("the Script field filters the scripts as one types, and Load switches to one", {
+  skip_on_cran()
+  skip_if_not_installed("shinytest2")
+  skip_if_not_installed("chromote")
+  skip_if(is.null(chromote::find_chrome()), "Chrome not found")
+
+  dir <- withr::local_tempdir()
+  writeLines(c("library(targets)", "list(tar_target(a, 1), tar_target(b, a))"), file.path(dir, "_targets.R"))
+  writeLines(c("library(targets)", "list(tar_target(x, 1))"), file.path(dir, "other.R"))
+  writeLines(c("library(targets)", "list(tar_target(y, 1))"), file.path(dir, "third.R"))
+  writeLines(
+    "targetsboard::tar_board_app(scripts = c('other.R', 'third.R'))",
+    file.path(dir, "app.R")
+  )
+  app <- shinytest2::AppDriver$new(dir, name = "scripts", load_timeout = 60 * 1000)
+  withr::defer(app$stop())
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
+  expect_equal(app$get_value(input = "script"), "_targets.R")
+
+  # Typing filters the dropdown to the matching scripts.
+  app$run_js("const s = $('#script')[0].selectize; s.focus(); s.setTextboxValue('oth'); s.refreshOptions(true);")
+  app$wait_for_js("document.querySelector('.selectize-dropdown-content .option') !== null")
+  shown <- app$get_js(
+    "Array.from(document.querySelectorAll('.selectize-dropdown-content .option')).map(o => o.dataset.value)"
+  )
+  expect_equal(unlist(shown), "other.R")
+
+  # Choosing it and pressing Load draws its pipeline.
+  app$run_js("const s = $('#script')[0].selectize; s.setValue('other.R'); s.blur();")
+  app$click("load_script")
+  app$wait_for_js(
+    "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
+  )
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 1)
+})
