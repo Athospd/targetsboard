@@ -12,23 +12,26 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 coverage](https://codecov.io/gh/Athospd/targetsboard/graph/badge.svg)](https://app.codecov.io/gh/Athospd/targetsboard)
 <!-- badges: end -->
 
-A board for the author of a [targets](https://docs.ropensci.org/targets/)
-pipeline, to understand it while working on it: its structure, what is
-outdated, what each target produced and what a run is doing. It is meant to
-replace `targets::tar_watch()` for the author. The DAG is drawn with
-[React Flow](https://reactflow.dev): targets are coloured by status (up to
-date, outdated, running or errored), running targets show a spinner and the
-edges feeding them are animated, and targets whose last build raised
-warnings carry a warning mark. Clicking a target focuses it: what it depends
-on and what depends on it stay highlighted, and its value is previewed.
-When the pipeline changes, targets already drawn keep their place.
+A board for the author of a
+[targets](https://docs.ropensci.org/targets/) pipeline, to understand it
+while working on it: its structure, what is outdated, what each target
+produced and what a run is doing. It is meant to replace
+`targets::tar_watch()` for the author. The DAG is drawn with [React
+Flow](https://reactflow.dev): targets are coloured by status (up to
+date, outdated, running or errored), running targets show a spinner and
+the edges feeding them are animated, and targets whose last build raised
+warnings carry a warning mark. Clicking a target focuses it: what it
+depends on and what depends on it stay highlighted, and its value is
+previewed. When the pipeline changes, targets already drawn keep their
+place.
 
 <figure>
 <img src="man/figures/README-board.png"
-alt="The board while tar_make() runs: model_a is running, check errored, model_b and report are outdated, and clean, focused, raised a warning" />
+alt="The board while tar_make() runs: model_a is running, model_b and report are outdated, clean raised a warning, and check errored: its problem, traceback and code to reproduce it are in the pane on the right" />
 <figcaption aria-hidden="true">The board while tar_make() runs: model_a
-is running, check errored, model_b and report are outdated, and clean,
-focused, raised a warning</figcaption>
+is running, model_b and report are outdated, clean raised a warning, and
+check errored: its problem, traceback and code to reproduce it are in
+the pane on the right</figcaption>
 </figure>
 
 **Early stage.** Help, support and ideas are welcome!
@@ -57,31 +60,59 @@ browseURL(attr(app, "url"))            # reopen it after closing the tab
 app$kill()                             # shut it down, or press the power button
 ```
 
-You can also run the pipeline from the board. **Run all** makes the whole
-pipeline, and **Stop** kills the run going, wherever it was started.
-**Invalidate all** makes every target outdated with `targets::tar_invalidate()`,
-so the next run builds them all again: it asks first, and is disabled while a
-run is going. To run or invalidate some targets, right-click one, or use the
-toolbar over it. Ctrl-click (Cmd-click on a Mac) or Shift-drag selects several
-targets, and the menu can select what a target depends on or what depends on
-it: the menu and toolbar of a group act on all of it. Two switches under
-**Run all** help debugging: **Keep going after errors** builds what it can
-after an error, and **Stop at warnings** turns warnings into errors, so they
+You can also run the pipeline from the board. **Run all** makes the
+whole pipeline, and **Stop** kills the run going, wherever it was
+started. **Invalidate all** makes every target outdated with
+`targets::tar_invalidate()`, so the next run builds them all again: it
+asks first, and is disabled while a run is going. To run or invalidate
+some targets, right-click one, or use the toolbar over it. Ctrl-click
+(Cmd-click on a Mac) or Shift-drag selects several targets, and the menu
+can select what a target depends on or what depends on it: the menu and
+toolbar of a group act on all of it. Two switches under **Run all** help
+debugging: **Keep going after errors** builds what it can after an
+error, and **Stop at warnings** turns warnings into errors, so they
 leave a workspace. Runs from the board go on if the board stops.
 
+When a target errors or warns, its value preview starts with its
+problem: the error or warnings, the traceback through your own
+functions, and code to copy into the console, to reproduce it from what
+the target had or to stop in the debugger inside it
+(`debug_run_script()`). The **Problems** tab lists every target with a
+problem, and the **Log** tab shows the latest run’s output. While a run
+goes, a pattern shows how many of its branches are done.
+
 Like `targets::tar_watch()`, `tar_board()` needs no arguments: it shows
-the current project's pipeline, using the script and store from its targets
-configuration (`_targets.R` and `_targets/` unless `_targets.yaml` says
-otherwise). The graph comes from the script, since the store only records
-statuses; without a script yet, the board starts empty and draws the pipeline
-once the script appears. As `tar_watch()` does, `tar_board()` serves it on a
-random free port (or the `shiny.port` option), waits until it is up, opens it
-in your browser and prints its url; `browse = FALSE` skips the browser.
-It also takes a `script`, a `port`, a `host` and `targets_only`. To run the board in the foreground, or deploy it, use the
-Shiny app object instead:
+the current project’s pipeline, using the script and store from its
+targets configuration (`_targets.R` and `_targets/` unless
+`_targets.yaml` says otherwise). The graph comes from the script, since
+the store only records statuses; without a script yet, the board starts
+empty and draws the pipeline once the script appears. As `tar_watch()`
+does, `tar_board()` serves it on a random free port (or the `shiny.port`
+option), waits until it is up, opens it in your browser and prints its
+url; `browse = FALSE` skips the browser. It also takes a `script`, a
+`port`, a `host` and `targets_only`. To run the board in the foreground,
+or deploy it, use the Shiny app object instead:
 
 ``` r
 shiny::runApp(tar_board_app(script = "_targets.R"))
+```
+
+### Example pipelines
+
+From a clone of this repository, `inst/examples/pipelines/` has
+pipelines to try the board with: a bootstrap analysis with dynamic and
+static branching, row groups and values of unusual types; one pipeline
+per situation the tests cover (a slow run, problems, run modes, groups
+of targets, …); and two bootstraps at scale. Each is a targets project,
+with its own store:
+
+``` r
+Sys.setenv(
+  TAR_CONFIG = "inst/examples/pipelines/_targets.yaml",
+  TAR_PROJECT = "bootstrap" # or test_problems, test_slow, ...: see the file
+)
+targets::tar_make()
+targetsboard::tar_board()
 ```
 
 ### The DAG widget in your own Shiny app

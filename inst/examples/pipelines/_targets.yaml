@@ -1,0 +1,78 @@
+# One targets project per example pipeline, each with its own store, so
+# they don't mix: several use the same target names. From the project
+# folder, pick one and use targets and the board as usual:
+#
+#   Sys.setenv(TAR_CONFIG = "inst/examples/pipelines/_targets.yaml", TAR_PROJECT = "test_chain")
+#   targets::tar_make()
+#   targetsboard::tar_board()
+#
+# The project name is the file name without "targets_". Stores go to
+# _targets_examples/, which git and R CMD build ignore.
+
+and_tidymodels:
+  script: inst/examples/pipelines/targets_and_tidymodels.R
+  store: _targets_examples/and_tidymodels
+
+bootstrap:
+  script: inst/examples/pipelines/targets_bootstrap.R
+  store: _targets_examples/bootstrap
+
+long_run:
+  script: inst/examples/pipelines/targets_long_run.R
+  store: _targets_examples/long_run
+
+massive_pipeline:
+  script: inst/examples/pipelines/targets_massive_pipeline.R
+  store: _targets_examples/massive_pipeline
+
+randomly_breaking:
+  script: inst/examples/pipelines/targets_randomly_breaking.R
+  store: _targets_examples/randomly_breaking
+
+test_basic:
+  script: inst/examples/pipelines/targets_test_basic.R
+  store: _targets_examples/test_basic
+
+test_branch_progress:
+  script: inst/examples/pipelines/targets_test_branch_progress.R
+  store: _targets_examples/test_branch_progress
+
+test_chain:
+  script: inst/examples/pipelines/targets_test_chain.R
+  store: _targets_examples/test_chain
+
+test_dense_layers:
+  script: inst/examples/pipelines/targets_test_dense_layers.R
+  store: _targets_examples/test_dense_layers
+
+test_failing_run:
+  script: inst/examples/pipelines/targets_test_failing_run.R
+  store: _targets_examples/test_failing_run
+
+test_islands:
+  script: inst/examples/pipelines/targets_test_islands.R
+  store: _targets_examples/test_islands
+
+test_problems:
+  script: inst/examples/pipelines/targets_test_problems.R
+  store: _targets_examples/test_problems
+
+test_run_modes:
+  script: inst/examples/pipelines/targets_test_run_modes.R
+  store: _targets_examples/test_run_modes
+
+test_scale_dynamic:
+  script: inst/examples/pipelines/targets_test_scale_dynamic.R
+  store: _targets_examples/test_scale_dynamic
+
+test_scale_static:
+  script: inst/examples/pipelines/targets_test_scale_static.R
+  store: _targets_examples/test_scale_static
+
+test_slow:
+  script: inst/examples/pipelines/targets_test_slow.R
+  store: _targets_examples/test_slow
+
+test_warning:
+  script: inst/examples/pipelines/targets_test_warning.R
+  store: _targets_examples/test_warning
