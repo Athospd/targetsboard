@@ -142,13 +142,37 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       if (running() || !inherits(process, "process") || identical(process, notified)) return()
       notified <<- process
       error <- run_error(process)
+      # The targets that errored in this run: a run that keeps going after
+      # errors finishes, but with them.
+      errored <- run_errored_targets(tryCatch(
+        targets::tar_progress(fields = c("type", "parent", "progress")),
+        error = function(e) NULL
+      ))
+      show_problem <- if (length(errored)) {
+        shiny::tags$a(
+          href = "#", class = "tb-show-problem ms-1",
+          onclick = sprintf(
+            "Shiny.setInputValue('show_problem', %s, {priority: 'event'}); return false;",
+            jsonlite::toJSON(errored[1], auto_unbox = TRUE)
+          ),
+          "Show problem"
+        )
+      }
       if (isTRUE(runner$stopped)) {
         shiny::showNotification("Run stopped.", type = "warning")
-      } else if (is.null(error)) {
+      } else if (is.null(error) && length(errored) == 0) {
         shiny::showNotification("Run finished.", type = "message")
+      } else if (is.null(error)) {
+        shiny::showNotification(
+          shiny::tagList(paste0("Run finished, with errors in ", describe_names(errored), "."), show_problem),
+          type = "warning", duration = NULL
+        )
       } else {
         shiny::showNotification(
-          shiny::tagList("Run failed: ", shiny::tags$code(error)),
+          shiny::tagList(
+            paste0("Run failed", if (length(errored)) paste0(" in ", describe_names(errored)), ": "),
+            shiny::tags$code(error), show_problem
+          ),
           type = "error", duration = NULL
         )
       }
@@ -285,14 +309,19 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 
     # A target picked in the tar_meta() table: show it on the board, focused,
     # with what it depends on and what depends on it directly in view.
-    shiny::observeEvent(input$meta_row_clicked, {
-      name <- input$meta_row_clicked
+    show_on_board <- function(name, preview = FALSE) {
       edges <- board()$x$edges
       neighbours <- unique(c(name, edges$from[edges$to == name], edges$to[edges$from == name]))
       bslib::nav_select("view", "board")
+      if (preview) preview_open(TRUE)
       update_targetsboard_focus(session, "flow", name)
       targetsboard_fit_view(session, "flow", neighbours)
-    })
+    }
+    shiny::observeEvent(input$meta_row_clicked, show_on_board(input$meta_row_clicked))
+    # A problem picked in the Problems tab, or a run's notification: on the
+    # board, with its Problem in the value preview.
+    shiny::observeEvent(input$problem_row_clicked, show_on_board(input$problem_row_clicked, preview = TRUE))
+    shiny::observeEvent(input$show_problem, show_on_board(input$show_problem, preview = TRUE))
 
     # The graph follows the page's dark mode switch.
     shiny::observeEvent(input$dark_mode, {
@@ -336,6 +365,50 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         ),
         rowStyle = list(cursor = "pointer")
       )
+    })
+
+    # The Problems tab: what errored or warned in the latest builds.
+    problems <- shiny::reactive({
+      targets <- board_targets(board()$x$nodes)
+      problems_table(tar_meta_data(), if (length(targets)) targets)
+    })
+    output$problems_count <- shiny::renderUI({
+      n <- nrow(problems())
+      if (n == 0) return(NULL)
+      errors <- any(problems()$problem == "Error")
+      shiny::tags$span(class = paste("badge ms-1", if (errors) "text-bg-danger" else "text-bg-warning"), n)
+    })
+    output$problems <- reactable::renderReactable({
+      reactable::reactable(
+        problems(),
+        columns = list(
+          name = reactable::colDef(name = "Target", minWidth = 120),
+          problem = reactable::colDef(name = "Problem", width = 100),
+          message = reactable::colDef(name = "Message", minWidth = 300),
+          branches = reactable::colDef(name = "Branches", width = 140)
+        ),
+        wrap = FALSE,
+        defaultPageSize = 50,
+        language = reactable::reactableLang(noData = "No problems: no target errored or warned in its latest build."),
+        onClick = reactable::JS(
+          "function(row) { if (row && row.values && row.values.name) Shiny.setInputValue('problem_row_clicked', row.values.name, {priority: 'event'}); }"
+        ),
+        rowStyle = list(cursor = "pointer")
+      )
+    })
+
+    # The Log tab: the output of the latest run the board started, re-read
+    # while it grows.
+    run_log <- shiny::reactivePoll(
+      1000, session,
+      checkFunc = function() {
+        path <- attr(runner$process, "log")
+        if (is.null(path)) NA else paste(path, file.mtime(path))
+      },
+      valueFunc = function() read_run_log(attr(runner$process, "log"))
+    )
+    output$run_log <- shiny::renderText({
+      run_log() %||% "No run started from the board yet: the log of its next run shows here."
     })
 
     # The Internals tab, shown only to develop the board (board_dev_mode()).

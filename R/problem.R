@@ -318,3 +318,74 @@ debug_run_script <- function(name, script = targets::tar_config_get("script")) {
   }
   write_run_wrapper(script, debug = name)
 }
+
+#' The pipeline's problems: one row per target that errored or warned
+#'
+#' A pattern stands for its branches: its row counts those with problems.
+#' Errors come first.
+#'
+#' @param meta `tar_meta(targets_only = TRUE)`.
+#' @param targets The pipeline's targets: metadata of removed ones is left
+#'   out. `NULL` keeps all.
+#' @return A data frame: `name`, `problem` ("Error" or "Warnings"),
+#'   `message` and `branches` (e.g. "1 of 3 errored", or "").
+#' @noRd
+problems_table <- function(meta, targets = NULL) {
+  empty <- data.frame(name = character(), problem = character(), message = character(), branches = character())
+  if (is.null(meta) || nrow(meta) == 0) return(empty)
+  for (field in c("type", "parent", "error", "warnings")) {
+    if (!field %in% names(meta)) meta[[field]] <- NA_character_
+  }
+  meta$name <- ifelse(meta$type %in% "branch" & !is.na(meta$parent), meta$parent, meta$name)
+  if (!is.null(targets)) meta <- meta[meta$name %in% targets, ]
+  rows <- lapply(split(meta, factor(meta$name, unique(meta$name))), function(m) {
+    branches <- m[m$type %in% "branch", ]
+    errors <- m$error[!is.na(m$error)]
+    warnings <- m$warnings[!is.na(m$warnings)]
+    if (length(errors) == 0 && length(warnings) == 0) return(NULL)
+    data.frame(
+      name = m$name[1],
+      problem = if (length(errors)) "Error" else "Warnings",
+      message = if (length(errors)) errors[1] else warnings[1],
+      branches = if (nrow(branches) == 0) "" else {
+        n <- sum(!is.na(branches[[if (length(errors)) "error" else "warnings"]]))
+        sprintf("%d of %d %s", n, nrow(branches), if (length(errors)) "errored" else "warned")
+      }
+    )
+  })
+  out <- do.call(rbind, c(list(empty), rows))
+  rownames(out) <- NULL
+  out[order(out$problem != "Error", out$name), ]
+}
+
+#' The targets that errored in the latest run, from its progress
+#'
+#' A branch counts as its pattern.
+#' @param progress `tar_progress(fields = c("type", "parent", "progress"))`.
+#' @noRd
+run_errored_targets <- function(progress) {
+  if (is.null(progress) || nrow(progress) == 0) return(character())
+  errored <- progress[progress$progress %in% "errored", ]
+  if ("type" %in% names(errored) && "parent" %in% names(errored)) {
+    errored$name <- ifelse(errored$type %in% "branch" & !is.na(errored$parent), errored$parent, errored$name)
+  }
+  as.character(unique(errored$name))
+}
+
+# "a", "a and b", "a, b and 3 more".
+describe_names <- function(names, max = 3) {
+  shown <- utils::head(names, max)
+  rest <- length(names) - length(shown)
+  if (rest > 0) return(paste0(paste(shown, collapse = ", "), " and ", rest, " more"))
+  if (length(shown) <= 1) return(paste(shown))
+  paste0(paste(utils::head(shown, -1), collapse = ", "), " and ", utils::tail(shown, 1))
+}
+
+#' The end of a run's log, for the Log tab
+#' @noRd
+read_run_log <- function(path, lines = 500) {
+  if (is.null(path) || !file.exists(path)) return(NULL)
+  log <- tryCatch(readLines(path, warn = FALSE), error = function(e) character())
+  # Without the colours of the console.
+  cli::ansi_strip(paste(utils::tail(log, lines), collapse = "\n"))
+}

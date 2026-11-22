@@ -2,7 +2,9 @@
 #'
 #' The top bar holds only the title, the dark mode switch and the power
 #' button, which turns the board off. The page is one card of tabs: Board, the board's own graph;
-#' tar_visnetwork(), the graph as that function draws it; and tar_meta().
+#' Problems, what errored or warned, with a count in its title; Log, the
+#' output of the board's latest run; tar_visnetwork(), the graph as that
+#' function draws it; and tar_meta().
 #' With `options(targetsboard.dev = TRUE)`, an Internals tab shows the app's
 #' own inputs, to develop the board. Each tab's `value` is its snake_case id.
 #'
@@ -60,6 +62,14 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
               options = board_options(), layout = layout
             )
           )
+        ),
+        nav_panel(
+          tags$span("Problems", uiOutput("problems_count", inline = TRUE)), value = "problems",
+          reactable::reactableOutput("problems")
+        ),
+        nav_panel(
+          "Log", value = "log",
+          tags$div(class = "tb-run-log", verbatimTextOutput("run_log"))
         ),
         nav_panel(
           "tar_visnetwork()", value = "tar_visnetwork",

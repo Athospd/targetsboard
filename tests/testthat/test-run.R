@@ -171,7 +171,8 @@ test_that("a failed run is reported with its error", {
     expect_true(running())
     wait_for(function() !environment(server)$runner$process$is_alive(), timeout = 60)
     session$elapse(600)
-    expect_match(notes, "error Run failed:[[:space:]]*<code>boom</code>", all = FALSE)
+    expect_match(notes, "error Run failed in a:[[:space:]]*<code>boom</code>", all = FALSE)
+    expect_match(notes, "Show problem", fixed = TRUE, all = FALSE)
   })
 })
 
