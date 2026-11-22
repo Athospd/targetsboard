@@ -64,6 +64,32 @@ Two or more targets the author selected together, to run, invalidate or copy
 at once. The board highlights the group's lineage instead of the focus's.
 _Avoid_: Multi-selection, batch, set
 
+**Debugging**:
+Finding why a target errored or warned, by bringing its failure back into the
+author's own R session. The board shows what went wrong and prepares those
+steps; the interactive part happens in the author's console.
+_Avoid_: Troubleshooting, inspecting
+
+**Problem**:
+What went wrong with a target in its last build: its error, or its warnings,
+with what helps find the cause.
+_Avoid_: Issue, failure (for the whole), diagnostics
+
+**Workspace**:
+What a target saw when it ran (its inputs, the globals and its seed), saved so
+the author can load it into a session and run the target's command again.
+_Avoid_: Snapshot, environment dump, checkpoint
+
+**Traceback**:
+The calls that led to a target's error, from its command down to where it
+was raised.
+_Avoid_: Stack trace, call stack
+
+**Debug run**:
+A run that stops inside one target, in the author's console, to step through
+its command.
+_Avoid_: Debug mode, interactive run
+
 **Lineage**:
 A target, or a group, with everything it depends on and everything that depends
 on it, at every level, not only the direct neighbours.
