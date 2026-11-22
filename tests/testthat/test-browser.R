@@ -52,8 +52,11 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
        {id: 'flow', nodes: [], warnings: ['b']}}))"
   )
-  app$wait_for_js(paste0(node("b"), ".querySelector('.warning-mark') !== null"))
-  expect_true(has_class("a", "react-flow__node-running"))
+  # Checked together: the board's own status updates may arrive later.
+  app$wait_for_js(paste0(
+    node("b"), ".querySelector('.warning-mark') !== null && ",
+    node("a"), ".classList.contains('react-flow__node-running')"
+  ))
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
        {id: 'flow', nodes: [], warnings: []}}))"
@@ -423,16 +426,14 @@ test_that("a click on a tar_meta() row shows its target on the board", {
     unlist(app$get_js("Array.from(document.querySelectorAll('.react-flow__node.tb-focused')).map(n => n.dataset.id)")),
     "t6"
   )
-  # In view, with its neighbours, and the start of the chain out of it.
+  # In view, with its neighbours, and the start of the chain out of it, once
+  # the zoom has finished: mid-way, both can be in view.
   app$wait_for_js(paste0(
     "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",
-    " const r = ", node_js("t6"), ".getBoundingClientRect();",
-    " return w.width > 0 && r.left >= w.left && r.right <= w.right; })()"
+    " const inside = r => r.left >= w.left && r.right <= w.right;",
+    " return w.width > 0 && inside(", node_js("t6"), ".getBoundingClientRect())",
+    " && !inside(", node_js("t1"), ".getBoundingClientRect()); })()"
   ), timeout = 10 * 1000)
-  expect_false(app$get_js(paste0(
-    "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",
-    " const r = ", node_js("t1"), ".getBoundingClientRect(); return r.right <= w.right && r.left >= w.left; })()"
-  )))
 })
 
 test_that("the focused target's toolbar runs the board's actions", {
@@ -783,8 +784,16 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   # Click b, Ctrl-click d: a group of two.
   app$click(selector = ".react-flow__node[data-id='b']")
   app$wait_for_js(paste(group_toolbar, "=== null && document.querySelector('.tb-node-toolbar') !== null"))
-  ctrl_click(app, "d")
-  wait_after_ctrl_click(app, paste(group_toolbar, "!== null"))
+  if (isTRUE(app$get_js("navigator.userAgent.indexOf('Mac') >= 0"))) {
+    # A Cmd-click sent through Chrome's DevTools doesn't reach React Flow's
+    # key handling on macOS runners: the group is selected by command there,
+    # and the Ctrl-click is tested on Linux and Windows.
+    send_widget_message(app, "targetsboard:command", list(id = "flow", command = "select", nodes = c("b", "d")))
+    app$wait_for_js(paste(group_toolbar, "!== null"))
+  } else {
+    ctrl_click(app, "d")
+    wait_after_ctrl_click(app, paste(group_toolbar, "!== null"))
+  }
   expect_equal(selected(), c("b", "d"))
 
   # One toolbar, over the group: without Value, counting the targets.

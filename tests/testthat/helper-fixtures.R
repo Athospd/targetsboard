@@ -58,7 +58,8 @@ local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", .e
   skip_if_not_installed("chromote")
   skip_if(is.null(chromote::find_chrome()), "Chrome not found")
   writeLines(app, file.path(dir, "app.R"))
-  app <- shinytest2::AppDriver$new(dir, name = name, load_timeout = 60 * 1000)
+  # Slow CI runners can take over a minute to start Chrome and the app.
+  app <- shinytest2::AppDriver$new(dir, name = name, load_timeout = 120 * 1000)
   withr::defer(app$stop(), envir = .env)
   app
 }
