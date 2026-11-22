@@ -126,3 +126,21 @@ mouse_event <- function(app, id, type) {
     node_js(id), type, if (type == "contextmenu") 2L else 0L
   ))
 }
+
+# Closes the open modal with its Cancel button. Bootstrap ignores a hide while
+# the modal is still fading in, which a test can click into: on CI's faster
+# runners it did, and the modal stayed open. So click until it is gone.
+dismiss_modal <- function(app, attempts = 10) {
+  for (i in seq_len(attempts)) {
+    app$run_js(
+      "const b = document.querySelector('.modal-footer [data-bs-dismiss], .modal-footer [data-dismiss]');
+       if (b) b.click();"
+    )
+    closed <- tryCatch({
+      app$wait_for_js("document.querySelector('.modal-dialog') === null", timeout = 1000)
+      TRUE
+    }, error = function(e) FALSE)
+    if (closed) return(invisible())
+  }
+  stop("The modal did not close.")
+}

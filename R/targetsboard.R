@@ -42,8 +42,13 @@
 #' same target, so `observeEvent()` sees every one.
 #'
 #' @param inputId The input slot of the widget.
-#' @param nodes,edges The `nodes` and `edges` data frames of
-#'   `targets::tar_visnetwork()$x`.
+#' @param nodes For `targetsboard()` and `update_targetsboard()`: the `nodes`
+#'   data frame of `targets::tar_visnetwork()$x`. For
+#'   `targetsboard_fit_view()`: ids of the targets to fit in view; `NULL`, all
+#'   of them. For `update_targetsboard_selection()`: ids of the targets to
+#'   select, instead of those selected; `NULL` clears the selection. Ids not
+#'   in the widget are ignored.
+#' @param edges The `edges` data frame of `targets::tar_visnetwork()$x`.
 #' @param height,width CSS size of the widget.
 #' @param warnings Ids of the targets whose last build raised warnings, as in
 #'   the `warnings` field of `targets::tar_meta()`.
@@ -157,10 +162,6 @@ update_targetsboard_focus <- function(session, inputId, node = NULL) {
 }
 
 #' @rdname targetsboard
-#' @param nodes For `targetsboard_fit_view()`: ids of the targets to fit in
-#'   view; `NULL`, all of them. For `update_targetsboard_selection()`: ids of
-#'   the targets to select, instead of those selected; `NULL` clears the
-#'   selection. Ids not in the widget are ignored.
 #' @param padding For `targetsboard_fit_view()`: room around them, as a
 #'   fraction of the view.
 #' @param duration For `targetsboard_fit_view()`: length of the animation, in

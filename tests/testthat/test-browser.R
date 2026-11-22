@@ -318,8 +318,7 @@ test_that("double-click, right-click menu and viewport reach the server", {
   app$click(selector = ".tb-node-menu [data-action='invalidate']")
   app$wait_for_js("document.querySelector('.modal-dialog') !== null")
   expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>c</code>", fixed = TRUE)
-  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
-  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+  dismiss_modal(app)
 
   # The viewport, after a zoom.
   app$wait_for_value(input = "flow_viewport")
@@ -460,8 +459,7 @@ test_that("the focused target's toolbar runs the board's actions", {
   app$click(selector = ".tb-node-toolbar [data-action='invalidate']")
   app$wait_for_js("document.querySelector('.modal-dialog') !== null")
   expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>b</code>", fixed = TRUE)
-  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
-  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+  dismiss_modal(app)
 
   # It follows the focus, and goes with it.
   app$click(selector = ".react-flow__node[data-id='c']")
@@ -759,8 +757,7 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   expect_match(modal, "<code>b</code>", fixed = TRUE)
   expect_match(modal, "<code>d</code>", fixed = TRUE)
   expect_equal(sort(unlist(app$get_value(input = "flow_node_action")$nodes)), c("b", "d"))
-  app$run_js("document.querySelector('.modal-footer [data-dismiss], .modal-footer [data-bs-dismiss]').click()")
-  app$wait_for_js("document.querySelector('.modal-dialog') === null")
+  dismiss_modal(app)
 
   # Right-click on one of the group: the group's menu, for all of it.
   app$run_js(
