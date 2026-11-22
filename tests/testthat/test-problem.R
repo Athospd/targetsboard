@@ -97,6 +97,7 @@ test_that("the pane shows the snippets to copy, but no debug run while running",
   expect_match(html, 'data-target="params"', fixed = TRUE)
   expect_match(html, "1 call in packages", fixed = TRUE)
   expect_equal(lengths(regmatches(html, gregexpr(">Copy<", html, fixed = TRUE))), 2)
+  expect_match(html, "say(&#39;Copied&#39;)", fixed = TRUE) # says it copied
 
   html <- as.character(problem_ui(problem, running = TRUE))
   expect_match(html, "Debug run: not while a run is going.", fixed = TRUE)
@@ -140,6 +141,12 @@ test_that("the value preview leads with the problem; an errored target shows not
     html <- output$value_preview$html
     expect_match(html, 'data-target="warned"', fixed = TRUE)
     expect_match(html, "value_preview_content", fixed = TRUE) # and its value
+
+    # A pattern whose branch errored: its problem says why there is no value.
+    session$setInputs(flow_focused_node = "branch")
+    html <- output$value_preview$html
+    expect_match(html, 'data-target="branch"', fixed = TRUE)
+    expect_no_match(html, "No value stored", fixed = TRUE)
 
     session$setInputs(flow_focused_node = "data")
     expect_no_match(output$value_preview$html, "tb-problem", fixed = TRUE)
@@ -232,6 +239,9 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     expect_match(notes[[1]]$html, "Show problem", fixed = TRUE)
     expect_match(notes[[1]]$html, "show_problem", fixed = TRUE)
     expect_match(output$run_log, "errored pipeline", fixed = TRUE)
+    # Headed by what the run was.
+    expect_match(output$run_log, "^Run started [0-9-]+ [0-9:]+: all targets, keep going after errors
+")
 
     session$setInputs(show_problem = "branch")
     expect_equal(focused, "branch")
