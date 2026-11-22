@@ -25,9 +25,10 @@ When the pipeline changes, targets already drawn keep their place.
 
 <figure>
 <img src="man/figures/README-board.png"
-alt="The board while tar_make() runs: model_a is running" />
+alt="The board while tar_make() runs: model_a is running, check errored, model_b and report are outdated, and clean, focused, raised a warning" />
 <figcaption aria-hidden="true">The board while tar_make() runs: model_a
-is running</figcaption>
+is running, check errored, model_b and report are outdated, and clean,
+focused, raised a warning</figcaption>
 </figure>
 
 **Early stage.** Help, support and ideas are welcome!
