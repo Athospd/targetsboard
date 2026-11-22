@@ -34,6 +34,12 @@ check errored: its problem, traceback and code to reproduce it are in
 the pane on the right</figcaption>
 </figure>
 
+Watch the board in a 2.5-minute demo, with sound: a pipeline running,
+value previews, shaping the DAG and debugging an error.
+
+[![The demo video: the board while a pipeline runs, with a play
+button](man/figures/README-demo.jpg)](https://github.com/Athospd/targetsboard/releases/download/v0.1.0/targetsboard-demo.mp4)
+
 **Early stage.** Help, support and ideas are welcome!
 
 ## Installation
