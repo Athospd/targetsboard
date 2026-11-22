@@ -34,9 +34,9 @@ It needs:
 - **Python:** numpy, pillow and imageio-ffmpeg (which brings its own ffmpeg).
 
 Intermediate files go to `build/`. Neither they nor the video are committed:
-the video is attached to the GitHub release, and the README links to it
-through the poster `man/figures/README-demo.jpg`, which `make-demo.py`
-rewrites too.
+the video is on YouTube (https://youtu.be/z2TOGc4vmFk) and attached to the
+GitHub release. The README links to YouTube through the poster
+`man/figures/README-demo.jpg`, which `make-demo.py` rewrites too.
 
 To check a take without watching it, make a contact sheet: a frame every 5
 seconds of the recording.
