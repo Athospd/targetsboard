@@ -135,3 +135,41 @@ test_that("the run mode switches are off on start, and disabled without the inte
   page <- as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R"))
   expect_match(page, "Keep going after errors", fixed = TRUE)
 })
+
+test_that("a run's header says when it started, what it builds and its modes", {
+  time <- as.POSIXct("2026-11-22 14:00:36")
+  expect_equal(run_header(time = time), "Run started 2026-11-22 14:00:36: all targets")
+  expect_equal(
+    run_header(c("a", "b"), list(keep_going = TRUE, stop_at_warnings = TRUE), time),
+    "Run started 2026-11-22 14:00:36: a and b, keep going after errors and stop at warnings"
+  )
+  expect_equal(
+    run_header("a", list(keep_going = FALSE, stop_at_warnings = TRUE), time),
+    "Run started 2026-11-22 14:00:36: a, stop at warnings"
+  )
+})
+
+test_that("Run all names the run modes that are on", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+  labels <- character()
+  local_mocked_bindings(
+    updateActionButton = function(session, inputId, label = NULL, ...) {
+      if (identical(inputId, "run_all") && !is.null(label)) labels <<- c(labels, label)
+    },
+    .package = "shiny"
+  )
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    session$setInputs(keep_going = FALSE, stop_at_warnings = FALSE) # as the page starts
+    session$setInputs(keep_going = TRUE)
+    session$setInputs(stop_at_warnings = TRUE)
+    session$setInputs(keep_going = FALSE, stop_at_warnings = FALSE)
+  })
+  expect_equal(labels, c(
+    "Run all · keep going",
+    "Run all · keep going, stop at warnings",
+    "Run all"
+  ))
+})

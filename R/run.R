@@ -55,7 +55,30 @@ start_run <- function(script, names = NULL, modes = list()) {
     callr_arguments = list(stdout = log, stderr = "2>&1", supervise = FALSE)
   ))
   attr(process, "log") <- log
+  attr(process, "header") <- run_header(names, modes)
   process
+}
+
+#' What a run is: when it started, what it builds and its modes
+#'
+#' The first line of the Log tab. callr writes the log file itself, from
+#' its first byte, so the line is kept with the process instead.
+#' @noRd
+run_header <- function(names = NULL, modes = list(), time = Sys.time()) {
+  what <- if (is.null(names)) "all targets" else describe_names(names)
+  paste0(
+    "Run started ", format(time, "%Y-%m-%d %H:%M:%S"), ": ", what,
+    if (any_run_mode(modes)) paste0(", ", run_modes_label(modes))
+  )
+}
+
+# The run modes that are on, in words: "keep going after errors", ...
+run_modes_label <- function(modes) {
+  on <- c(
+    if (isTRUE(modes$keep_going)) "keep going after errors",
+    if (isTRUE(modes$stop_at_warnings)) "stop at warnings"
+  )
+  paste(on, collapse = " and ")
 }
 
 #' Why a finished run failed
