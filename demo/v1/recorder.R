@@ -1,9 +1,9 @@
 # Drives the board in Chrome and records it with the DevTools screencast.
 # Frames go to <OUT>/frames/<n>.jpg, with their timestamps in <OUT>/frames.csv.
 library(shinytest2)
-# Run from the package folder; make-demo.py sets both.
+# Run from the package folder; make-demo-v1.py sets both.
 DEMO <- Sys.getenv("DEMO_DIR", "demo")
-OUT <- Sys.getenv("DEMO_OUT", file.path(DEMO, "build"))
+OUT <- Sys.getenv("DEMO_OUT", file.path(DEMO, "v1", "build"))
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 
 start_recording <- function(app) {

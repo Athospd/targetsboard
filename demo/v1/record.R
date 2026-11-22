@@ -1,6 +1,6 @@
 # Records the board on the demo pipeline: frames to <OUT>/frames, see recorder.R.
 # Uses the installed targetsboard: R CMD INSTALL . first.
-source(file.path(Sys.getenv("DEMO_DIR", "demo"), "recorder.R"))
+source(file.path(Sys.getenv("DEMO_DIR", "demo"), "v1", "recorder.R"))
 source(file.path(DEMO, "pipeline.R"))
 dir <- file.path(OUT, "project")
 dir.create(dir, showWarnings = FALSE)
@@ -17,7 +17,7 @@ app$run_js("document.querySelector('.react-flow__controls-fitview').click()")
 Sys.sleep(1.5)
 
 # ---- Overlay: a cursor, click ripples, captions, a code card -----------------
-app$run_js(readr_overlay <- paste(readLines(file.path(DEMO, "overlay.js")), collapse = "\n"))
+app$run_js(readr_overlay <- paste(readLines(file.path(DEMO, "v1", "overlay.js")), collapse = "\n"))
 
 pos <- c(1150, 660); buttons <- 0
 dismiss <- function() js("document.querySelectorAll('.shiny-notification-close').forEach(b => b.click())")
