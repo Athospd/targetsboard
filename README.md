@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# targetsboard
+# targetsboard <img src="man/figures/logo.png" align="right" height="139" alt="targetsboard hex sticker" />
 
 <!-- badges: start -->
 
