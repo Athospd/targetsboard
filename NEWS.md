@@ -25,6 +25,14 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* A **Problems** tab lists the targets that errored or warned in their
+  latest build, errors first, with a count in its title; a pattern counts its
+  branches with problems. A click shows the target on the board with its
+  problem. A **Log** tab shows the output of the board's latest run.
+* When a board run ends with errors, also a run that keeps going after
+  them, its notification names the targets that errored and links to the
+  first one's problem.
+
 * The value preview of a target that errored or warned starts with its
   problem: the error or warnings, the traceback (the pipeline's own functions
   shown, calls in packages folded), the seed and links to its inputs. Two

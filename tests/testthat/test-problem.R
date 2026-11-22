@@ -145,3 +145,104 @@ test_that("the value preview leads with the problem; an errored target shows not
     expect_no_match(output$value_preview$html, "tb-problem", fixed = TRUE)
   })
 })
+
+test_that("the problems table has one row per target, a pattern counting its branches", {
+  meta <- data.frame(
+    name = c("ok", "model", "warned", "branch", "b_1", "b_2", "b_3", "gone"),
+    type = c("stem", "stem", "stem", "pattern", "branch", "branch", "branch", "stem"),
+    parent = c(NA, NA, NA, NA, "branch", "branch", "branch", NA),
+    error = c(NA, "object 'y' not found", NA, NA, NA, "bad branch", NA, "old"),
+    warnings = c(NA, NA, "2 rows dropped", NA, NA, NA, NA, NA)
+  )
+  table <- problems_table(meta, c("ok", "model", "warned", "branch"))
+  expect_equal(table$name, c("branch", "model", "warned")) # errors first
+  expect_equal(table$problem, c("Error", "Error", "Warnings"))
+  expect_equal(table$message, c("bad branch", "object 'y' not found", "2 rows dropped"))
+  expect_equal(table$branches, c("1 of 3 errored", "", ""))
+  expect_true("gone" %in% problems_table(meta)$name) # without the pipeline's targets
+  expect_equal(nrow(problems_table(meta[1, ])), 0)
+  expect_equal(nrow(problems_table(NULL)), 0)
+})
+
+test_that("a run's errored targets come from its progress, branches as their pattern", {
+  progress <- data.frame(
+    name = c("data", "model", "b_2", "b_3"),
+    type = c("stem", "stem", "branch", "branch"),
+    parent = c("data", "model", "branch", "branch"),
+    progress = c("completed", "errored", "errored", "errored")
+  )
+  expect_equal(run_errored_targets(progress), c("model", "branch"))
+  expect_equal(run_errored_targets(progress[1, ]), character())
+  expect_equal(describe_names("a"), "a")
+  expect_equal(describe_names(c("a", "b")), "a and b")
+  expect_equal(describe_names(c("a", "b", "c")), "a, b and c")
+  expect_equal(describe_names(letters[1:5]), "a, b, c and 2 more")
+})
+
+test_that("the run log shows the end of the log file", {
+  path <- withr::local_tempfile()
+  writeLines(paste("line", 1:600), path)
+  log <- read_run_log(path)
+  expect_match(log, "^line 101\n")
+  expect_match(log, "line 600$")
+  writeLines("\033[31m2 targets produced errors.\033[39m", path)
+  expect_equal(read_run_log(path), "2 targets produced errors.") # no colours
+  expect_null(read_run_log(NULL))
+  expect_null(read_run_log(file.path(tempdir(), "absent.log")))
+})
+
+test_that("the Problems tab lists the problems; a row or a notification shows one on the board", {
+  skip_on_cran()
+  local_problem_store()
+  server <- local_app_server()
+  notes <- list()
+  local_mocked_bindings(
+    showNotification = function(ui, ..., type = "default") {
+      notes[[length(notes) + 1]] <<- list(html = as.character(ui), type = type)
+    },
+    .package = "shiny"
+  )
+  focused <- NULL
+  local_mocked_bindings(
+    update_targetsboard_focus = function(session, id, node) focused <<- node,
+    targetsboard_fit_view = function(...) NULL
+  )
+
+  shiny::testServer(server, {
+    environment(server)$stop_poller()
+    expect_equal(problems()$name, c("branch", "model", "warned"))
+    expect_match(output$problems, "object 'y' not found", fixed = TRUE) # the table renders
+    expect_match(output$problems_count$html, ">3<", fixed = TRUE)
+    expect_match(output$problems_count$html, "text-bg-danger", fixed = TRUE)
+    expect_match(output$run_log, "No run started from the board yet", fixed = TRUE)
+
+    session$setInputs(problem_row_clicked = "model")
+    expect_equal(focused, "model")
+    expect_true(preview_open())
+
+    # A run that keeps going: it finishes, with errors, and says where.
+    preview_open(FALSE)
+    session$setInputs(keep_going = TRUE, run_all = 1)
+    session$elapse(600)
+    environment(server)$runner$process$wait(120 * 1000)
+    session$elapse(1100)
+    expect_length(notes, 1)
+    expect_equal(notes[[1]]$type, "warning")
+    expect_match(notes[[1]]$html, "Run finished, with errors in branch and model.", fixed = TRUE)
+    expect_match(notes[[1]]$html, "Show problem", fixed = TRUE)
+    expect_match(notes[[1]]$html, "show_problem", fixed = TRUE)
+    expect_match(output$run_log, "errored pipeline", fixed = TRUE)
+
+    session$setInputs(show_problem = "branch")
+    expect_equal(focused, "branch")
+    expect_true(preview_open())
+  })
+})
+
+test_that("the page has the Problems and Log tabs", {
+  html <- as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R"))
+  expect_match(html, 'data-value="problems"', fixed = TRUE)
+  expect_match(html, 'id="problems_count"', fixed = TRUE)
+  expect_match(html, 'data-value="log"', fixed = TRUE)
+  expect_match(html, 'id="run_log"', fixed = TRUE)
+})
