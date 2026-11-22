@@ -11,6 +11,6 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{zeallot}{\code{\link[zeallot:operator]{\%<-\%}}}
+  \item{zeallot}{\code{\link[zeallot:\%<-\%]{\%<-\%}}}
 }}
 

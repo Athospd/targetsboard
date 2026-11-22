@@ -7,7 +7,7 @@
 `\%not_in\%`(...)
 }
 \arguments{
-\item{...}{\code{x} and \code{table}, as for \link[base:match]{base::\%in\%}.}
+\item{...}{\code{x} and \code{table}, as for \link[base:\%in\%]{base::\%in\%}.}
 }
 \value{
 A logical vector as long as \code{x}.

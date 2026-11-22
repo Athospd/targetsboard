@@ -32,11 +32,21 @@ active_run <- function() {
 #' @param script Path to the targets script.
 #' @param names Targets to make, with whatever they depend on that is
 #'   outdated. `NULL` makes the whole pipeline.
+#' @param modes Run modes, `list(keep_going, stop_at_warnings)`: with any
+#'   on, the run loads the script through a wrapper that applies them
+#'   (`write_run_wrapper()`).
 #' @return The [callr::r_bg()] process. Its output goes to the file
 #'   `attr(, "log")`.
 #' @noRd
-start_run <- function(script, names = NULL) {
+start_run <- function(script, names = NULL, modes = list()) {
   log <- tempfile("targetsboard_run_", fileext = ".log")
+  if (any_run_mode(modes)) {
+    script <- write_run_wrapper(
+      script,
+      keep_going = isTRUE(modes$keep_going),
+      stop_at_warnings = isTRUE(modes$stop_at_warnings)
+    )
+  }
   process <- rlang::inject(targets::tar_make(
     names = !!names, # spliced in: the run happens in another process
     script = script,

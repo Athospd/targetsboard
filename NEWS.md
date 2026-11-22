@@ -25,6 +25,15 @@ First cleanup of the 2024 prototype.
 
 ## New features
 
+* Two run modes, switched on in the sidebar under **Run all**, change how the
+  board's runs go, for debugging: **Keep going after errors** builds the other
+  targets after one errors, so a run shows every error at once; **Stop at
+  warnings** turns a target's first warning into an error, which leaves a
+  workspace and a traceback where it warned. They apply to every run the
+  board starts and are off on every start. The board never edits the script:
+  the run loads it through a wrapper that changes its targets (ADR 0002). If
+  a version of targets changes what the wrapper relies on, the switches are
+  disabled and say what to add to the script instead.
 * Several targets can be selected and handled as a group: Ctrl-click (Cmd-click
   on a Mac) adds a target, Shift-drag selects those in a box, and the menu's
   "Select what it depends on", "Select what depends on it" and "Select its
