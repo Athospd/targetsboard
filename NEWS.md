@@ -21,6 +21,10 @@
 
 ## Bug fixes
 
+* A pattern whose run stopped at a branch's error (targets' default,
+  `error = "stop"`) shows that branch in its Problem: its error, traceback
+  and code to copy. It showed "No value stored for this target yet", because
+  the pattern has no metadata of its own then.
 * A script that stops loading, such as one with a typo, is notified, with
   its error, until it loads again. The board kept its last graph without a
   word.

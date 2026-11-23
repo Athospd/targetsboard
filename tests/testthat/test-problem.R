@@ -83,6 +83,35 @@ test_that("a pattern's problem lists its failed branches, with their positions",
   expect_match(html, "names = &quot;branch&quot;", fixed = TRUE)
 })
 
+test_that("a pattern whose run stopped at a branch's error still shows that branch", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  # targets' default error = "stop": the run ends at the failed branch, and
+  # the pattern itself never gets a row in the metadata.
+  writeLines(c(
+    "library(targets)",
+    "list(",
+    "  tar_target(nums, 1:3),",
+    "  tar_target(branch, if (nums == 2) stop('bad branch') else nums, pattern = map(nums))",
+    ")"
+  ), file.path(dir, "_targets.R"))
+  withr::local_dir(dir)
+  try(targets::tar_make(reporter = "silent"), silent = TRUE)
+  expect_false("branch" %in% targets::tar_meta(fields = type)$name)
+
+  problem <- target_problem("branch", "_targets.R")
+  expect_true(has_problem(problem))
+  expect_equal(problem$type, "pattern")
+  expect_equal(problem$command, "if (nums == 2) stop(\"bad branch\") else nums")
+  expect_length(problem$branches, 1)
+  expect_equal(problem$branches[[1]]$error, "bad branch")
+  expect_true(problem$branches[[1]]$workspace)
+  expect_match(as.character(problem_ui(problem)), "Branches with problems: 1", fixed = TRUE)
+
+  # A name with no metadata and no branches is still no problem.
+  expect_null(target_problem("absent", "_targets.R"))
+})
+
 test_that("the pane shows the snippets to copy, but no debug run while running", {
   problem <- list(
     name = "model", type = "stem", error = "boom", warnings = NULL, seed = 1L,
