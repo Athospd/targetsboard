@@ -73,6 +73,16 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       loading(FALSE)
       bslib::update_task_button("load_script", state = "ready")
     }
+    # Meanwhile a cover over the Board pane says so, and keeps the old graph
+    # and its preview from being used.
+    output$board_loading <- shiny::renderUI({
+      if (!loading()) return(NULL)
+      shiny::tags$div(
+        class = "tb-board-loading", role = "status",
+        shiny::tags$div(class = "spinner-border", `aria-hidden` = "true"),
+        shiny::tags$div(sprintf("Loading %s...", shiny::isolate(poller$script)))
+      )
+    })
 
     # A script that stops loading (a typo while editing it): say so, for as
     # long as it lasts, rather than silently keep the last graph.

@@ -53,19 +53,25 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
         nav_panel(
           "Board", value = "board",
           # The value preview belongs to the board's own graph: it follows
-          # the focused target.
-          layout_sidebar(
-            class = "p-0",
-            sidebar = sidebar(
-              id = "value_preview_sidebar",
-              width = "40%",
-              open = FALSE,
-              position = "right",
-              uiOutput("value_preview")
-            ),
-            targetsboard(
-              "flow", metadata$nodes, metadata$edges,
-              options = board_options(), layout = layout
+          # the focused target. While Load loads another script, a cover over
+          # both (board_loading) keeps the old graph from being used. One
+          # unpadded body holds them, so the board fills the card as before.
+          card_body(
+            class = "tb-board-pane", padding = 0, gap = 0,
+            uiOutput("board_loading"),
+            layout_sidebar(
+              class = "p-0",
+              sidebar = sidebar(
+                id = "value_preview_sidebar",
+                width = "40%",
+                open = FALSE,
+                position = "right",
+                uiOutput("value_preview")
+              ),
+              targetsboard(
+                "flow", metadata$nodes, metadata$edges,
+                options = board_options(), layout = layout
+              )
             )
           )
         ),
