@@ -982,4 +982,13 @@ test_that("the Script field filters the scripts as one types, and Load switches 
     "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
   )
   expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 1)
+
+  # A tab opened afterwards names the script it draws, not the launch script.
+  second <- shinytest2::AppDriver$new(app$get_url(), name = "scripts-second", load_timeout = 60 * 1000)
+  withr::defer(second$stop())
+  second$wait_for_js(
+    "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
+  )
+  second$wait_for_value(input = "script", ignore = list(NULL, "_targets.R"), timeout = 10 * 1000)
+  expect_equal(second$get_value(input = "script"), "other.R")
 })

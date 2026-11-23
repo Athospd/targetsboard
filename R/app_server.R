@@ -3,12 +3,15 @@
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
 #' @param targets_only Show only targets, without functions and globals.
+#' @param scripts Other scripts the Script field offers.
 #' @noRd
-app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE) {
+app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE,
+                       scripts = NULL) {
   # One background poller per app, shared by every browser session.
   # Restarted only when someone loads a different script.
   poller <- new.env()
   poller_rds_path <- shiny::reactiveVal(NULL)
+  loaded_script <- shiny::reactiveVal(script) # the script the poller draws
 
   stop_poller <- function() {
     if (inherits(poller$process, "r_process") && poller$process$is_alive())
@@ -21,6 +24,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     assets <- tar_visnetwork_bg(script = script, targets_only = targets_only)
     poller$process <- assets$process
     poller$script <- script
+    loaded_script(script)
     poller$refresh_path <- assets$refresh_path
     poller_rds_path(assets$tar_vis_path)
   }
@@ -305,6 +309,18 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       # renderer instead of piling up a new output per click.
       output$value_preview_content <- render_fun(value)
       shiny::tagList(problem_part, output_ui_fun("value_preview_content"))
+    })
+
+    # The Script field names the script the board draws. The poller is shared,
+    # so a tab opened after someone loaded another script, or open while they
+    # did, follows it.
+    shiny::observeEvent(loaded_script(), {
+      shown <- loaded_script()
+      if (identical(shown, shiny::isolate(input$script))) return()
+      shiny::updateSelectizeInput(
+        session, "script",
+        choices = script_choices(script, c(scripts, shown)), selected = shown
+      )
     })
 
     observeEvent(input$load_script, {
