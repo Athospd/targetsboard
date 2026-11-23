@@ -77,7 +77,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     shiny::observeEvent(board(), {
       current <- board()
       is_running <- shiny::isolate(running())
-      nodes <- current$x$nodes
+      nodes <- clear_invalidated_errors(current$x$nodes, recorded_errors())
       nodes$status <- settle_statuses(nodes$status, is_running)
       statuses <- live_statuses(shiny::isolate(progress()), current$progress_mtime)
       update_targetsboard(
@@ -498,6 +498,34 @@ live_statuses <- function(progress, since) {
     (is.null(since) || is.na(since) || progress$mtime > since)
   if (!fresh) return(stats::setNames(character(), character()))
   stats::setNames(data$progress, data$name)
+}
+
+#' Show invalidated targets as outdated, not errored
+#'
+#' `targets::tar_invalidate()` deletes a target's metadata but not its line in
+#' the progress file, so `tar_visnetwork()` still calls an invalidated target
+#' "errored". Keep that status only where the metadata still records an
+#' error: for the target itself or for one of its branches (a pattern that
+#' stopped on an error has no record of its own, only its failed branch has).
+#'
+#' @param nodes `tar_visnetwork()$x$nodes`.
+#' @param meta `tar_meta(fields = c("parent", "error"))`, or `NULL` when there
+#'   is no store yet.
+#' @noRd
+clear_invalidated_errors <- function(nodes, meta) {
+  if (is.null(meta) || !nrow(nodes)) return(nodes)
+  failed <- !is.na(meta$error)
+  recorded <- unique(stats::na.omit(c(meta$name[failed], meta$parent[failed])))
+  nodes$status[nodes$status %in% "errored" & !nodes$id %in% recorded] <- "outdated"
+  nodes
+}
+
+# The errors the store records, for clear_invalidated_errors().
+recorded_errors <- function() {
+  tryCatch(
+    targets::tar_meta(fields = c("parent", "error"), targets_only = TRUE),
+    error = function(e) NULL
+  )
 }
 
 # Put live statuses on the nodes of tar_visnetwork()$x$nodes.

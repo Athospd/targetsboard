@@ -203,7 +203,9 @@ test_that("tar_meta() is re-read only when the metadata file changes", {
   real_tar_meta <- targets::tar_meta
   local_mocked_bindings(
     tar_meta = function(...) {
-      reads <<- reads + 1
+      # Count the table's reads, all fields: a new graph also reads the
+      # recorded errors (clear_invalidated_errors()), once per recompute.
+      if (!"fields" %in% names(list(...))) reads <<- reads + 1
       real_tar_meta(...)
     },
     .package = "targets"
