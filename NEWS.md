@@ -21,6 +21,8 @@
 
 ## Bug fixes
 
+* On a narrow window the Board pane keeps a usable height. It collapsed to a
+  strip above the Control Panel.
 * The Load spinner no longer covers the Board pane for a moment when the
   board opens, which blocked clicks and drags until the server's first
   update. It shows only while Load loads.

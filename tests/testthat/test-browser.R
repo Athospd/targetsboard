@@ -128,7 +128,7 @@ test_that("the Load spinner covers the board only while Load loads, not at the s
   app$click(selector = "#load_script")
   app$wait_for_js(paste(
     "getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display !== 'none'",
-    "&& document.querySelector('#board_loading_caption').innerText === 'Loading slow.R...'"
+    "&& document.querySelector('#board_loading_caption').innerText === 'Loading pipeline\u2026'"
   ), timeout = 10000)
   expect_false(app$get_js(hit))
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='slow_a']\") !== null", timeout = 30000)

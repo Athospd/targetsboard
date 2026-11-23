@@ -99,7 +99,7 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     expect_length(states, 2)
     # A spinner covers the board meanwhile, so the old graph can't be used.
     expect_equal(spinner, "show board_loading")
-    expect_equal(output$board_loading_caption, "Loading slow.R...")
+    expect_equal(output$board_loading_caption, "Loading pipeline\u2026") # no script name
     rds_path <- environment(server)$poller_rds_path()
     wait_for(function() file.exists(rds_path))
     session$elapse(600)
@@ -111,7 +111,7 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     session$setInputs(script = "broken.R", load_script = 4)
     session$elapse(600)
     expect_length(states, 3)
-    expect_equal(output$board_loading_caption, "Loading broken.R...")
+    expect_equal(output$board_loading_caption, "Loading pipeline\u2026")
     wait_for(function() file.exists(poller_error_path(environment(server)$poller_rds_path())))
     session$elapse(600)
     expect_equal(states[[4]], "load_script ready")

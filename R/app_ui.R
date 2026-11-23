@@ -60,9 +60,10 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
             class = "tb-board-pane", padding = 0, gap = 0,
             tags$div(
               class = "tb-board-loading",
+              # Styled in index.css, from the theme's colours (custom.css).
               shinycssloaders::withSpinner(
                 uiOutput("board_loading"),
-                type = 8, color = "#0d6efd", hide.ui = FALSE, # Bootstrap's primary
+                type = 8, custom.css = TRUE, hide.ui = FALSE, id = "board_loading_spinner",
                 caption = textOutput("board_loading_caption", inline = TRUE)
               )
             ),
