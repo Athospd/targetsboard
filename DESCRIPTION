@@ -36,7 +36,6 @@ Suggests:
     ggplot2,
     plotly,
     shinytest2,
-    skimr,
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3

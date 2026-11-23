@@ -45,7 +45,7 @@ format_bytes <- function(bytes) {
 # Class and shape, for the frame's header: "data.frame, 200,000 x 2".
 value_facts <- function(x) {
   shape <- if (!is.null(dim(x))) {
-    paste(format(dim(x), big.mark = ",", trim = TRUE), collapse = " × ")
+    paste(format(dim(x), big.mark = ",", trim = TRUE), collapse = " \u00d7 ")
   } else if (is.atomic(x) || is.list(x)) {
     paste("length", format(length(x), big.mark = ","))
   }
@@ -205,16 +205,21 @@ preview_gate <- function(target, limit = preview_bytes_limit(), store = NULL) {
   )
 }
 
-#' Registers the preview methods of a project's `_targetsboard.R`
+#' Reads the preview methods of a project's `_targetsboard.R`
 #'
 #' Sources the file, and only it, into its own environment, which sees the
-#' package's exported functions, and registers its
-#' `tar_board_preview.<class>()` functions.
+#' package's exported functions, and keeps its `tar_board_preview.<class>()`
+#' functions in place of those read before: tar_board_preview() tries them
+#' first.
 #'
-#' @return The classes registered, invisibly; an error when the file fails.
+#' @return The classes read, invisibly; an error when the file fails, which
+#'   keeps the methods read before.
 #' @noRd
 load_preview_methods <- function(path = "_targetsboard.R") {
-  if (!file.exists(path)) return(invisible(character()))
+  if (!file.exists(path)) {
+    clear_project_methods()
+    return(invisible(character()))
+  }
   ns <- asNamespace("targetsboard")
   exports <- new.env(parent = globalenv())
   for (f in getNamespaceExports(ns)) assign(f, get(f, envir = ns), envir = exports)
@@ -223,8 +228,7 @@ load_preview_methods <- function(path = "_targetsboard.R") {
   methods <- ls(env, pattern = "^tar_board_preview[.]")
   methods <- methods[vapply(methods, function(m) is.function(get(m, envir = env)), logical(1))]
   classes <- sub("^tar_board_preview[.]", "", methods)
-  for (i in seq_along(methods)) {
-    registerS3method("tar_board_preview", classes[[i]], get(methods[[i]], envir = env), envir = ns)
-  }
+  clear_project_methods()
+  for (i in seq_along(methods)) assign(classes[[i]], get(methods[[i]], envir = env), envir = project_methods)
   invisible(classes)
 }

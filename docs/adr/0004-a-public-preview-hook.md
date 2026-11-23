@@ -32,8 +32,10 @@ registers the `tar_board_preview.<class>()` functions it defines.
 
 The generic, its arguments and the view contract are now public: changing them
 breaks other people's methods, so they change only with a deprecation. A method in
-`_targetsboard.R` replaces the board's own for the same class, and a method removed
-from that file stays registered until the board restarts. The frame reads a value
+`_targetsboard.R` replaces the board's own, or a package's, for the same class: the
+generic looks it up first, by the value's full class, because R finds a method by name
+in targetsboard's namespace before any registered one. Each reading of the file
+replaces the methods read before, so a method removed from it is dropped. The frame reads a value
 only after checking its size in the store (`targetsboard.preview_bytes`, 100 MB),
 so a method can assume the value fits in memory.
 

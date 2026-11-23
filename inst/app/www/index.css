@@ -189,3 +189,53 @@ body {
 .tb-preview-gate {
   font-size: 0.875rem;
 }
+
+/* Tables in the value preview (reactable): a column's name over its type,
+   numbers in tabular figures, and tiny histograms in the theme's colour. */
+.tb-preview .reactable {
+  font-variant-numeric: tabular-nums;
+}
+.tb-col-name {
+  display: block;
+}
+.tb-col-type,
+.tb-col-type-cell {
+  font-family: var(--bs-font-monospace);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--bs-secondary-color);
+}
+.tb-table-caption {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--bs-secondary-color);
+}
+.tb-spark rect {
+  fill: var(--bs-primary);
+  opacity: 0.75;
+}
+/* A vector: its facts, its statistics, its distribution, then its values. */
+.tb-scalar {
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.tb-vector-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--bs-secondary-color);
+}
+.tb-vector-stats {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+.tb-vector-spark {
+  margin-bottom: 0.75rem;
+}
+.tb-vector-values {
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
