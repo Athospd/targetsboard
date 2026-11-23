@@ -12,6 +12,13 @@
 * A script that stops loading, such as one with a typo, is notified, with
   its error, until it loads again. The board kept its last graph without a
   word.
+* The Script field names the script the board draws, in every tab: a tab
+  opened after a Load, or open during one, showed the launch script over the
+  loaded script's graph.
+* Invalidating a target that errored shows it as outdated. It stayed red,
+  because `targets::tar_invalidate()` keeps its line in the progress file: a
+  target now shows as errored only while the metadata still records its
+  error, or one of its branches'.
 
 # targetsboard 0.1.0
 

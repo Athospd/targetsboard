@@ -19,7 +19,8 @@ dev/metadata.rds
 inst/htmlwidgets/*.map
 _targets_examples
 
-# Demo video: attached to the GitHub release, rebuilt by demo/make-demo.py
+# Demo videos: attached to the GitHub release; each take (demo/v1/, demo/v2/, ...)
+# renders its frames and audio to its own build/ folder
 demo/**/*.mp4
-demo/build/
+demo/**/build/
 __pycache__/

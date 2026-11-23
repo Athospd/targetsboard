@@ -620,7 +620,9 @@ initial_metadata <- function(script, targets_only = TRUE, ...) {
     message("No targets script at ", script, " yet: the board will draw it once it exists.")
     return(empty_metadata())
   }
-  targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
+  x <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
+  x$nodes <- clear_invalidated_errors(x$nodes, recorded_errors())
+  x
 }
 
 # The shape of tar_visnetwork()$x, without targets.
@@ -662,7 +664,7 @@ tar_board_app <- function(script = targets::tar_config_get("script"), targets_on
     # A function of the request: each page load opens the board with the
     # layout saved last, not the one there was when the app started.
     function(request) app_ui(metadata, script, layout = read_board_layout(), scripts = scripts),
-    app_server(metadata, script, targets_only),
+    app_server(metadata, script, targets_only, scripts),
     options = options
   )
 }

@@ -3,12 +3,15 @@
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
 #' @param targets_only Show only targets, without functions and globals.
+#' @param scripts Other scripts the Script field offers.
 #' @noRd
-app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE) {
+app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE,
+                       scripts = NULL) {
   # One background poller per app, shared by every browser session.
   # Restarted only when someone loads a different script.
   poller <- new.env()
   poller_rds_path <- shiny::reactiveVal(NULL)
+  loaded_script <- shiny::reactiveVal(script) # the script the poller draws
 
   stop_poller <- function() {
     if (inherits(poller$process, "r_process") && poller$process$is_alive())
@@ -21,6 +24,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     assets <- tar_visnetwork_bg(script = script, targets_only = targets_only)
     poller$process <- assets$process
     poller$script <- script
+    loaded_script(script)
     poller$refresh_path <- assets$refresh_path
     poller_rds_path(assets$tar_vis_path)
   }
@@ -101,7 +105,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     shiny::observeEvent(board(), {
       current <- board()
       is_running <- shiny::isolate(running())
-      nodes <- current$x$nodes
+      nodes <- clear_invalidated_errors(current$x$nodes, recorded_errors())
       nodes$status <- settle_statuses(nodes$status, is_running)
       statuses <- live_statuses(shiny::isolate(progress()), current$progress_mtime)
       update_targetsboard(
@@ -331,6 +335,18 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       shiny::tagList(problem_part, output_ui_fun("value_preview_content"))
     })
 
+    # The Script field names the script the board draws. The poller is shared,
+    # so a tab opened after someone loaded another script, or open while they
+    # did, follows it.
+    shiny::observeEvent(loaded_script(), {
+      shown <- loaded_script()
+      if (identical(shown, shiny::isolate(input$script))) return()
+      shiny::updateSelectizeInput(
+        session, "script",
+        choices = script_choices(script, c(scripts, shown)), selected = shown
+      )
+    })
+
     observeEvent(input$load_script, {
       new_script <- input$script
       if (!file.exists(new_script)) {
@@ -522,6 +538,34 @@ live_statuses <- function(progress, since) {
     (is.null(since) || is.na(since) || progress$mtime > since)
   if (!fresh) return(stats::setNames(character(), character()))
   stats::setNames(data$progress, data$name)
+}
+
+#' Show invalidated targets as outdated, not errored
+#'
+#' `targets::tar_invalidate()` deletes a target's metadata but not its line in
+#' the progress file, so `tar_visnetwork()` still calls an invalidated target
+#' "errored". Keep that status only where the metadata still records an
+#' error: for the target itself or for one of its branches (a pattern that
+#' stopped on an error has no record of its own, only its failed branch has).
+#'
+#' @param nodes `tar_visnetwork()$x$nodes`.
+#' @param meta `tar_meta(fields = c("parent", "error"))`, or `NULL` when there
+#'   is no store yet.
+#' @noRd
+clear_invalidated_errors <- function(nodes, meta) {
+  if (is.null(meta) || !nrow(nodes)) return(nodes)
+  failed <- !is.na(meta$error)
+  recorded <- unique(stats::na.omit(c(meta$name[failed], meta$parent[failed])))
+  nodes$status[nodes$status %in% "errored" & !nodes$id %in% recorded] <- "outdated"
+  nodes
+}
+
+# The errors the store records, for clear_invalidated_errors().
+recorded_errors <- function() {
+  tryCatch(
+    targets::tar_meta(fields = c("parent", "error"), targets_only = TRUE),
+    error = function(e) NULL
+  )
 }
 
 # Put live statuses on the nodes of tar_visnetwork()$x$nodes.

@@ -3,7 +3,7 @@
 # (Fmaj7 - Em7 - Dm9 - Cmaj7), sub bass, a pentatonic melody in the middle,
 # vinyl crackle, and a warm low-pass over the whole mix.
 #
-#   python demo/soundtrack.py <seconds> <out.wav>
+#   python demo/v1/soundtrack.py <seconds> <out.wav>
 import sys, wave
 import numpy as np
 

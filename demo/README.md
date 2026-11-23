@@ -1,8 +1,15 @@
-# The demo video
+# The demo videos
 
-`make-demo.py` builds `targetsboard-demo.mp4`, the 2.5-minute walkthrough
-linked from the package README. It is a real recording of the board, in
-headless Chrome, on an air-quality pipeline:
+Real recordings of the board, in headless Chrome, on an air-quality
+pipeline. Each take has its own folder and builds its own video:
+
+| Take | Video | What it is |
+|---|---|---|
+| `v1/` | `targetsboard-demo-v1.mp4` | the first 2.5-minute walkthrough, with a title card |
+| `v2/` | `targetsboard-demo-v2.mp4` | faster, on DAG control, values and debugging; camera moves and chapter cards drawn in post |
+| `v3/` | `targetsboard-demo-v3.mp4` | v2's path with the waits cut out, zooms framed on what they show, the fix in three steps, and a jazz soundtrack; linked from the package README |
+
+Take one goes like this:
 
 1. **Watch it run**: Run all, spinners and flowing edges, a pattern's branch
    counts, then the warning and error marks.
@@ -14,45 +21,61 @@ headless Chrome, on an air-quality pipeline:
    fixed and the errored target alone is rebuilt.
 5. **And more**: the Log tab and dark mode.
 
-The soundtrack is synthesized from scratch by `soundtrack.py`: no samples,
-no licences.
+Each take's soundtrack is synthesized from scratch by its `soundtrack.py`:
+no samples, no licences.
 
-## Rebuilding it
+## Rebuilding a take
 
-From the package folder, with the package installed (the recording uses the
+From the package folder, with the package installed (the recordings use the
 installed targetsboard):
 
 ```sh
 R CMD INSTALL .
-python demo/make-demo.py              # about 4 minutes
-python demo/make-demo.py --no-record  # reuse the frames, redo cards, music and video
+python demo/v1/make-demo-v1.py              # about 4 minutes
+python demo/v1/make-demo-v1.py --no-record  # reuse the frames, redo cards, music and video
 ```
+
+`v2/make-demo-v2.py` and `v3/make-demo-v3.py` work the same way.
 
 It needs:
 - **R:** shinytest2, chromote, skimr, ggplot2, broom and gt;
 - **Chrome;**
 - **Python:** numpy, pillow and imageio-ffmpeg (which brings its own ffmpeg).
 
-Intermediate files go to `build/`. Neither they nor the video are committed:
-the video is on YouTube (https://youtu.be/z2TOGc4vmFk) and attached to the
-GitHub release. The README links to YouTube through the poster
-`man/figures/README-demo.jpg`, which `make-demo.py` rewrites too.
+Intermediate files go to each take's `build/`. Neither they nor the videos
+are committed: they are on YouTube, v1 at https://youtu.be/z2TOGc4vmFk and
+v3 at https://youtu.be/pEsTN9rke2U. The README links to v3 through the
+poster `man/figures/README-demo.jpg`, which `v3/make-demo-v3.py` rewrites
+too.
 
 To check a take without watching it, make a contact sheet: a frame every 5
 seconds of the recording.
 
 ```sh
-python demo/sheet.py 0 150 5 sheet.png demo/build
+python demo/sheet.py 0 150 5 sheet.png demo/v1/build
 ```
+
+v2 and v3 can also render single frames of the finished cut:
+`python demo/v3/assemble.py demo/v3/build demo/v3/build/end.png - - --stills 5 20 40`.
+
+## Files
+
+Shared by every take, in `demo/`:
 
 | File | Role |
 |---|---|
-| `make-demo.py` | runs every step |
 | `pipeline.R` | the demo pipeline, broken or fixed |
-| `record_demo.R` | the scenes: cursor moves, clicks, captions |
-| `recorder.R` | the screencast to `build/frames/` |
-| `overlay.js` | the cursor, click ripples, captions and code card drawn over the page |
 | `cards.R`, `cards/` | the title and end cards |
+| `common.py` | finding Rscript |
+| `sheet.py` | contact sheets, to review a take |
+
+In each take's folder:
+
+| File | Role |
+|---|---|
+| `make-demo-v*.py` | runs every step |
+| `record.R` | the scenes: cursor moves, clicks, captions (v2, v3: also camera moves and cuts, as events) |
 | `soundtrack.py` | the music |
 | `assemble.py` | frames, cards and music into the video |
-| `sheet.py` | contact sheets, to review a take |
+| `v1/recorder.R` | the screencast to `build/frames/` |
+| `v1/overlay.js` | the cursor, click ripples, captions and code card, drawn over the page |
