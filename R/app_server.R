@@ -60,7 +60,37 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       }
     )
     shiny::observeEvent(poller_board(), {
-      board(poller_board())
+      new_board <- poller_board()
+      # While the author decides on a large graph, the poller's next
+      # recomputations wait with it.
+      if (!is.null(pending_board())) return(pending_board(new_board))
+      nodes <- nrow(new_board$x$nodes %||% data.frame())
+      if (shiny::isolate(loading()) && nodes > confirm_nodes_limit()) {
+        pending_board(new_board)
+        shiny::showModal(large_graph_modal(shiny::isolate(poller$script), nodes, targets_only))
+        return()
+      }
+      board(new_board)
+      load_done()
+    })
+
+    # A newly loaded script's graph over the size limit is held back until
+    # the author says to draw it: too many targets can use up the browser's
+    # memory. Cancel keeps the current graph and goes back to its script.
+    pending_board <- shiny::reactiveVal(NULL)
+    previous_script <- NULL
+    shiny::observeEvent(input$draw_large_graph, {
+      shiny::req(pending_board())
+      board(pending_board())
+      pending_board(NULL)
+      shiny::removeModal()
+      load_done()
+    })
+    shiny::observeEvent(input$cancel_large_graph, {
+      shiny::req(pending_board())
+      pending_board(NULL)
+      shiny::removeModal()
+      start_poller(previous_script)
       load_done()
     })
 
@@ -377,6 +407,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       }
       loading(TRUE)
       shinycssloaders::showSpinner("board_loading")
+      previous_script <<- poller$script
       start_poller(new_script)
     })
 
@@ -611,4 +642,29 @@ warned_targets_of <- function(meta) {
     names[branch] <- warned$parent[branch]
   }
   sort(unique(names))
+}
+
+# Graphs with more targets than this ask before the board draws them, when
+# loaded from the Script field: React Flow keeps every target in the page, and
+# thousands of them can use up the browser's memory.
+confirm_nodes_limit <- function() getOption("targetsboard.confirm_nodes", 500)
+
+large_graph_modal <- function(script, nodes, targets_only = TRUE) {
+  what <- if (targets_only) "targets" else "targets, functions and globals"
+  shiny::modalDialog(
+    title = "A large pipeline",
+    shiny::tags$p(sprintf("%s has %s %s.", script, format(nodes, big.mark = ","), what)),
+    shiny::tags$p(sprintf(
+      paste(
+        "Drawing more than %s can use a lot of memory, and may make the",
+        "browser slow or crash the tab."
+      ),
+      format(confirm_nodes_limit(), big.mark = ",")
+    )),
+    footer = shiny::tagList(
+      shiny::actionButton("cancel_large_graph", "Cancel: keep the current graph"),
+      shiny::actionButton("draw_large_graph", "Draw it anyway", class = "btn-danger")
+    ),
+    easyClose = FALSE
+  )
 }

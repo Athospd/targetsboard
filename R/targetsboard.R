@@ -474,6 +474,14 @@ NULL
 #' free port, waits until it is up, opens it in your browser and prints its
 #' url.
 #'
+#' @section Large pipelines:
+#' The page keeps every target on the graph in memory, so very large graphs
+#' can make the browser slow or crash the tab. When a script loaded from the
+#' Script field has more than 500 targets on its graph, the board asks
+#' before drawing it, and Cancel keeps the current graph. Set the limit with
+#' `options(targetsboard.confirm_nodes = )` before starting the board, e.g.
+#' `Inf` never to ask.
+#'
 #' @param script Path to the targets script. Defaults to the project's, as
 #'   `targets::tar_config_get("script")` gives it.
 #' @param port Port to serve the board on. Defaults to the `shiny.port` option
@@ -533,8 +541,8 @@ tar_board <- function(script = targets::tar_config_get("script"),
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, host, port, targets_only, dev) {
-      options(targetsboard.dev = dev)
+    \(metadata, script, scripts, host, port, targets_only, dev, confirm_nodes) {
+      options(targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes)
       print(targetsboard::tar_board_app(
         script = script,
         scripts = scripts,
@@ -550,7 +558,8 @@ tar_board <- function(script = targets::tar_config_get("script"),
       host = host,
       port = port,
       targets_only = targets_only,
-      dev = board_dev_mode()
+      dev = board_dev_mode(),
+      confirm_nodes = confirm_nodes_limit()
     ),
     supervise = TRUE,
     poll_connection = TRUE,

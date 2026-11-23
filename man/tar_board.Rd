@@ -80,6 +80,16 @@ Also like \code{targets::tar_watch()}, \code{tar_board()} serves the board on a 
 free port, waits until it is up, opens it in your browser and prints its
 url.
 }
+\section{Large pipelines}{
+
+The page keeps every target on the graph in memory, so very large graphs
+can make the browser slow or crash the tab. When a script loaded from the
+Script field has more than 500 targets on its graph, the board asks
+before drawing it, and Cancel keeps the current graph. Set the limit with
+\code{options(targetsboard.confirm_nodes = )} before starting the board, e.g.
+\code{Inf} never to ask.
+}
+
 \examples{
 \dontrun{
 app <- tar_board()                 # opens the board in your browser
