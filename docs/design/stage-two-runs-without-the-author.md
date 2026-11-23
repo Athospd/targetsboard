@@ -11,7 +11,9 @@ workers stay in stage three.
 
 ## Where the board stands against an orchestrator
 
-The full comparisons are in `airflow-comparison.md` and `prefect-comparison.md`.
+The full comparisons are in `airflow-comparison.md` and `prefect-comparison.md`;
+`snakemake-comparison.md` compares a closer relative of targets and asks
+whether the board could serve Snakemake too.
 
 Airflow is a scheduler of runs. Each run is a dated record kept in a database,
 started by a clock, an event or a person, and its UI is mostly a grid of runs
