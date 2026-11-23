@@ -56,21 +56,35 @@ test_that("the poller recomputes once a run ends, with the progress it reflects"
   expect_identical(board$progress_mtime, file.mtime("_targets/meta/progress"))
 })
 
-test_that("a broken script doesn't kill the poller", {
+test_that("a broken script doesn't kill the poller, which reports it until it's fixed", {
   skip_on_cran()
   local_pipeline()
   poller <- local_poller()
   before <- written_at(poller)
+  error_path <- poller_error_path(poller$tar_vis_path)
+  expect_false(file.exists(error_path))
 
   Sys.sleep(1.1)
   writeLines("stop('broken')", "_targets.R")
-  Sys.sleep(2)
+  wait_for(function() file.exists(error_path))
+  expect_match(paste(readLines(error_path), collapse = " "), "broken")
   expect_true(poller$process$is_alive())
   expect_identical(written_at(poller), before)
 
   writeLines(c("library(targets)", "list(tar_target(z, 1))"), "_targets.R")
   wait_for_rewrite(poller, before)
   expect_equal(readRDS(poller$tar_vis_path)$x$nodes$id, "z")
+  expect_false(file.exists(error_path))
+})
+
+test_that("the notification of a broken script names it, its error, and what the board shows", {
+  expect_null(script_error_text("_targets.R", NULL))
+  expect_null(script_error_text("_targets.R", character()))
+  text <- script_error_text("_targets.R", c("object 'x' not found", "in tar_target()"))
+  expect_match(text, "^_targets.R doesn't load")
+  expect_match(text, "last working graph")
+  expect_match(text, "object 'x' not found in tar_target()", fixed = TRUE)
+  expect_lte(nchar(script_error_text("s.R", strrep("x", 1000))), 450)
 })
 
 test_that("a killed run still counts as ended", {
