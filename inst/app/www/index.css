@@ -32,22 +32,34 @@ body {
 .tb-run-log { height: 100%; overflow: auto; padding: 0.5rem; }
 .tb-run-log pre { white-space: pre-wrap; font-size: 0.8rem; margin: 0; }
 
-/* While Load loads another script: a cover over the Board pane (the graph
-   and its preview), so the old graph can't be used. It takes every click. */
+/* While Load loads another script: shinycssloaders' spinner over the Board
+   pane (the graph and its preview), so the old graph can't be used. The
+   wrapper lets clicks through; the spinner, while shown, takes them all. */
 .tb-board-pane {
   position: relative;
 }
 .tb-board-loading {
-  position: absolute; /* over the pane; its output has no box of its own */
+  position: absolute;
   inset: 0;
   z-index: 1050;
+  pointer-events: none;
+}
+.tb-board-loading .shiny-spinner-output-container {
+  height: 100%;
+}
+.tb-board-loading .load-container:not(.shiny-spinner-hidden) {
+  inset: 0;
+  top: 0;
+  transform: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  pointer-events: auto;
+  cursor: progress;
   background: color-mix(in srgb, var(--bs-body-bg) 70%, transparent);
   backdrop-filter: blur(2px);
-  cursor: progress;
+}
+.tb-board-loading .shiny-spinner-caption {
   font-size: 1.1rem;
 }
