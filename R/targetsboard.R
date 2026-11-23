@@ -496,8 +496,8 @@ NULL
 #'   script yet.
 #' @param options Passed on to [shiny::shinyApp()], e.g. `list(port = 8080)`.
 #' @param scripts Optional: other targets scripts to switch to, offered in the
-#'   board's Script field. The field lists them under `script`, filters them
-#'   as you type, and still takes any other path. Pick one and press Load.
+#'   board's Script field. The field lists them under `script` and filters
+#'   them as you type; only these can be chosen. Pick one and press Load.
 #' @param ... Passed on to [targets::tar_visnetwork()] for the first render.
 #'
 #' @return `tar_board()`: the background process, a [callr::r_bg()] object,

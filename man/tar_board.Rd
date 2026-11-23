@@ -47,8 +47,8 @@ or, without one, \code{"127.0.0.1"}: only your own machine can reach it.}
 \item{verbose}{Show a spinner while the board starts, and print its url.}
 
 \item{scripts}{Optional: other targets scripts to switch to, offered in the
-board's Script field. The field lists them under \code{script}, filters them
-as you type, and still takes any other path. Pick one and press Load.}
+board's Script field. The field lists them under \code{script} and filters
+them as you type; only these can be chosen. Pick one and press Load.}
 
 \item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}} for the first render.}
 

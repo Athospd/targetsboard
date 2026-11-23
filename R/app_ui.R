@@ -146,18 +146,14 @@ run_mode_switches <- function(supported = run_modes_supported()) {
   )
 }
 
-#' The Script field: a text field with a dropdown of `scripts`, filtered as
-#' one types. Any other path can still be typed (`create`), and is kept when
-#' the field loses focus, so that Load gets it.
+#' The Script field: a dropdown of the launch script and `scripts`, filtered
+#' as one types. Only those can be chosen: no path of one's own.
 #' @noRd
 script_input <- function(script, scripts = NULL) {
   shiny::selectizeInput(
     "script", "Script",
     choices = script_choices(script, scripts), selected = script,
-    options = list(
-      create = TRUE, createOnBlur = TRUE, persist = FALSE,
-      placeholder = "Path to a targets script"
-    )
+    options = list(placeholder = "Choose a targets script")
   )
 }
 

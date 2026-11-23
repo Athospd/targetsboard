@@ -4,7 +4,7 @@
 
 * `tar_board()` and `tar_board_app()` gain `scripts`: other targets scripts
   to switch to. The Script field lists them under `script`, the one shown on
-  launch, filters them as you type and still takes any other path; Load
+  launch and filters them as you type; only these can be chosen. Load
   switches to the chosen one.
 * Load shows it is loading until the chosen script's graph is drawn or the
   script turns out not to load: a large pipeline can take a while. The button
