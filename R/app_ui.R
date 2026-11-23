@@ -81,7 +81,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
                   shinycssloaders::withSpinner(
                     uiOutput("value_preview"),
                     type = 8, custom.css = TRUE, hide.ui = FALSE, id = "value_preview_spinner",
-                    caption = "Loading value…"
+                    caption = "Loading value\u2026"
                   )
                 )
               ),

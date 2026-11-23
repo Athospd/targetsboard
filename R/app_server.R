@@ -113,7 +113,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     output$board_loading <- shiny::renderUI(NULL)
     shiny::outputOptions(output, "board_loading", suspendWhenHidden = FALSE)
     output$board_loading_caption <- shiny::renderText({
-      if (loading()) "Loading pipeline…"
+      if (loading()) "Loading pipeline\u2026"
     })
     # The cover shows only with a caption (index.css): the caption has to
     # update while the cover is hidden.
@@ -419,8 +419,21 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
           output[[plot_ids[[i]]]] <- render_preview_plot(view, plot_ids[[i]], session)
         })
       }
+      # A file's view is built here, in the session, when its section
+      # opens: the first now, the others on value_preview_file_open.
+      files <- Find(function(view) inherits(view, "tar_board_preview_files"), built$views)
+      preview_files(list(paths = files$paths, target = target))
+      if (!is.null(files)) render_file_section(1)
       shiny::tagList(problem_part, preview_frame(target, built, plot_ids, store))
     })
+    preview_files <- shiny::reactiveVal(NULL)
+    render_file_section <- function(i) {
+      files <- shiny::isolate(preview_files())
+      if (is.null(files) || i > length(files$paths)) return()
+      path <- files$paths[[i]]
+      output[[file_output_id(i)]] <- shiny::renderUI(file_section_view(path, files$target))
+    }
+    shiny::observeEvent(input$value_preview_file_open, render_file_section(input$value_preview_file_open))
     read_anyway <- shiny::reactiveVal(character())
     shiny::observeEvent(input$value_preview_read, {
       target <- preview_target(input$flow_focused_node, targets::tar_config_get("store"))

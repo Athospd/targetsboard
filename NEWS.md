@@ -21,6 +21,13 @@
   high, at twice the pixels, with ragg if installed; its text reads at the
   size its theme gives. A plot or an htmlwidget fills the frame in
   full-screen, and Escape leaves full-screen without closing the preview.
+* A file target previews its files by type: images, PDF and HTML files in
+  place, CSV and TSV files as tables, Markdown rendered, and the first 200
+  lines of text files. Several files show as sections, 50 at a time, each
+  read only when opened. Each path is dispatched as
+  `tar_board_file_<extension>`, so a method adds a type.
+* R code is in colour: R files in the preview, and the Problem pane's code
+  and traceback (highlight.js, bundled).
 * The value preview reads a value larger than 100 MB in the store only when
   asked; set the limit with `options(targetsboard.preview_bytes = )`. It shows
   a spinner while it reads, and keeps the last few previews, so going back to

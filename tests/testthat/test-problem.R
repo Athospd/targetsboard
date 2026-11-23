@@ -119,7 +119,7 @@ test_that("the pane shows the snippets to copy, but no debug run while running",
     command = "analyze(data)", functions = "analyze", branches = list()
   )
   html <- as.character(problem_ui(problem, c("data", "params"), script = "_targets.R"))
-  expect_match(html, "<pre>targets::tar_workspace(model)", fixed = TRUE)
+  expect_match(html, "<pre class=\"language-r\">targets::tar_workspace(model)", fixed = TRUE)
   expect_match(html, ">Error<", fixed = TRUE)
   expect_match(html, "callr_function = NULL, use_crew = FALSE, as_job = FALSE", fixed = TRUE)
   expect_match(html, "# Restart R first", fixed = TRUE)

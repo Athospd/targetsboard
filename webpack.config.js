@@ -1,12 +1,21 @@
 var path = require('path');
 
-// `npm run build` makes the minified bundle that is committed and shipped;
-// `npm run dev` / `npm run watch` add a source map for local debugging.
+// `npm run build` makes the minified bundles that are committed and shipped:
+// the widget, and the board's code highlighter; `npm run dev` / `npm run
+// watch` add a source map for local debugging.
+const outputs = {
+    targetsboard: 'htmlwidgets/targetsboard.js',
+    highlight: 'app/www/highlight.js'
+};
+
 module.exports = (env, argv) => ({
-    entry: path.join(__dirname, 'srcjs', 'targetsboard.jsx'),
+    entry: {
+        targetsboard: path.join(__dirname, 'srcjs', 'targetsboard.jsx'),
+        highlight: path.join(__dirname, 'srcjs', 'highlight.js')
+    },
     output: {
-        path: path.join(__dirname, 'inst/htmlwidgets'),
-        filename: 'targetsboard.js'
+        path: path.join(__dirname, 'inst'),
+        filename: (chunk) => outputs[chunk.chunk.name]
     },
     module: {
         rules: [

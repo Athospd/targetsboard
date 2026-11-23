@@ -19,7 +19,10 @@ add_external_resources <- function() {
 
   shiny::tags$head(
     shiny::tags$title("Targets board"),
-    shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/index.css")
+    shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/index.css"),
+    # Colours R code (srcjs/highlight.js): highlight.js, BSD-3, see
+    # www/highlight.js.LICENSE.
+    shiny::tags$script(src = "www/highlight.js", defer = NA)
   )
 }
 
