@@ -1,7 +1,7 @@
 """Assembles the demo: the recorded frames, the title and end cards and the
 soundtrack, all in <out>, into <video>.
 
-    python demo/assemble.py <out> <video>
+    python demo/v1/assemble.py <out> <video>
 """
 import csv, os, subprocess, sys
 import imageio_ffmpeg
