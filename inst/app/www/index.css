@@ -47,25 +47,86 @@ body {
 .tb-board-loading .shiny-spinner-output-container {
   height: 100%;
 }
+/* The cover: the pane dimmed and softly blurred, fading in, with a small
+   card in its middle: a spinner and "Loading pipeline...". Colours come from
+   the theme, so dark mode follows. shinycssloaders' own look for the spinner
+   (a large white ring) is replaced in full. */
 .tb-board-loading .load-container:not(.shiny-spinner-hidden) {
   inset: 0;
   top: 0;
   transform: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-content: center;
   justify-content: center;
+  align-items: center;
+  column-gap: 0.625rem;
+  padding: 1rem;
   pointer-events: auto;
   cursor: progress;
-  background: color-mix(in srgb, var(--bs-body-bg) 70%, transparent);
-  backdrop-filter: blur(2px);
+  background: color-mix(in srgb, var(--bs-body-bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  animation: tb-cover-in 0.2s ease-out;
 }
-.tb-board-loading .shiny-spinner-caption {
-  font-size: 1.1rem;
+/* The card, behind the spinner and the caption: they sit in one grid row. */
+.tb-board-loading .load-container::before {
+  content: "";
+  grid-row: 1;
+  grid-column: 1 / -1;
+  align-self: stretch;
+  margin: -0.75rem -1.125rem;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color-translucent);
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: var(--bs-box-shadow);
+}
+.tb-board-loading .load-container .loader {
+  grid-row: 1;
+  grid-column: 1;
+  position: relative;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  font-size: inherit;
+  border: 2.5px solid color-mix(in srgb, var(--bs-primary) 20%, transparent);
+  border-top-color: var(--bs-primary);
+  border-right-color: var(--bs-primary);
+  border-radius: 50%;
+  animation: tb-spin 0.8s linear infinite;
+}
+.tb-board-loading .load-container .loader::after {
+  content: none;
+}
+/* Its id outranks the colour and size shinycssloaders gives the caption by
+   id, which it does even with custom.css. */
+.tb-board-loading #board_loading_spinner__caption {
+  grid-row: 1;
+  grid-column: 2;
+  position: relative;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--bs-body-color);
+  white-space: nowrap;
+}
+@keyframes tb-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes tb-cover-in {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tb-board-loading .load-container .loader { animation-duration: 2.4s; }
+  .tb-board-loading .load-container:not(.shiny-spinner-hidden) { animation: none; }
+}
+/* On a narrow window the page no longer fills its height, and the Board
+   pane, which has no height of its own, collapsed to a strip. */
+@media (max-width: 575.98px) {
+  .tb-board-pane { min-height: max(22rem, 65vh); }
 }
 /* shinycssloaders shows a spinner from the moment its output binds until
    the output's first value, which comes with the server's first update: the
-   cover would block the board at startup. The caption ("Loading <script>...")
+   cover would block the board at startup. The caption ("Loading pipeline...")
    is only filled while Load loads, so without it there's no cover. */
 .tb-board-loading:has(#board_loading_caption:empty) .load-container {
   display: none;
