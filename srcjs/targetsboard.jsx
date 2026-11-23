@@ -586,11 +586,12 @@ function Flow({ configuration }) {
 
   // Escape closes the menu, if one is open (the menu does it); else it
   // clears the focus and the selection. Not while typing elsewhere on the
-  // page, or in a dialog.
+  // page, in a dialog, or in the value preview: there it leaves full-screen,
+  // and clearing the focus would close the preview too.
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || menuRef.current) return;
-      if (event.target?.closest?.('input, textarea, select, [contenteditable="true"], .modal')) return;
+      if (event.target?.closest?.('input, textarea, select, [contenteditable="true"], .modal, .tb-preview')) return;
       const unselect = (items) =>
         items.some((x) => x.selected) ? items.map((x) => (x.selected ? { ...x, selected: false } : x)) : items;
       setFocusId(null);

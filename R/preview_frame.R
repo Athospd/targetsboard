@@ -173,7 +173,9 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL) {
     view <- built$views[[title]]
     if (inherits(view, "tar_board_preview_plot")) {
       i <<- i + 1
-      view <- shiny::plotOutput(plot_ids[[i]], height = "400px")
+      view <- shiny::tags$div(class = "tb-preview-plot", shiny::imageOutput(plot_ids[[i]], height = "100%"))
+    } else if (inherits(view, "htmlwidget")) {
+      view <- shiny::tags$div(class = "tb-preview-widget", size_widget(view))
     }
     bslib::nav_panel(title, shiny::tags$div(class = "tb-preview-view", view))
   })
@@ -231,4 +233,42 @@ load_preview_methods <- function(path = "_targetsboard.R") {
   clear_project_methods()
   for (i in seq_along(methods)) assign(classes[[i]], get(methods[[i]], envir = env), envir = project_methods)
   invisible(classes)
+}
+
+# A widget fills the preview's width, at a height of its own unless it set
+# one; in full-screen, CSS lets it fill the frame.
+size_widget <- function(widget) {
+  widget$width <- "100%"
+  if (is.null(widget$height)) widget$height <- 420
+  widget
+}
+
+# The pixels per inch of a plot at its CSS size: 96, as browsers count, so a
+# plot's text reads at the size its theme gives in points.
+preview_plot_dpi <- 96
+
+#' Draws a plot view at the size of its output, at twice the pixels
+#'
+#' The output's size comes from the page: the preview's CSS gives it 0.65 of
+#' its width in height, or the frame in full-screen, and a change of either
+#' draws the plot again. ragg draws it when installed, else png().
+#' @noRd
+render_preview_plot <- function(view, id, session) {
+  shiny::renderImage({
+    data <- session$clientData
+    width <- data[[paste0("output_", id, "_width")]]
+    height <- data[[paste0("output_", id, "_height")]]
+    shiny::req(width > 0, height > 0)
+    file <- tempfile(fileext = ".png")
+    draw_png(view, file, width, height)
+    list(src = file, width = width, height = height, alt = "A plot of the value", contentType = "image/png")
+  }, deleteFile = TRUE)
+}
+
+draw_png <- function(view, file, width, height, scale = 2) {
+  device <- if (rlang::is_installed("ragg")) ragg::agg_png else grDevices::png
+  device(file, width = width * scale, height = height * scale, res = preview_plot_dpi * scale, units = "px")
+  on.exit(grDevices::dev.off())
+  draw_preview_plot(view)
+  invisible(file)
 }

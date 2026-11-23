@@ -305,3 +305,26 @@ test_that("vectors preview as a summary, a distribution and their values", {
   expect_null(tar_board_preview(matrix(1:4, 2), target))
   expect_null(tar_board_preview(numeric(), target))
 })
+
+test_that("a plot is drawn at twice the pixels of its size on the page", {
+  file <- withr::local_tempfile(fileext = ".png")
+  draw_png(tar_board_preview_plot(function() plot(1:10)), file, width = 300, height = 195)
+  header <- readBin(file, "raw", 24)
+  dims <- vapply(c(17, 21), function(at) sum(as.integer(header[at:(at + 3)]) * 256^(3:0)), numeric(1))
+  expect_equal(dims, c(600, 390))
+  skip_if_not_installed("ggplot2")
+  draw_png(tar_board_preview_plot(ggplot2::ggplot()), file, width = 200, height = 130)
+  expect_gt(file.size(file), 0)
+})
+
+test_that("the frame gives a plot an image sized by the page, and a widget the width", {
+  plot_view <- tar_board_preview_plot(function() plot(1))
+  built <- list(facts = list(class = "x"), views = list(Preview = plot_view, Printed = shiny::tags$pre("x")))
+  html <- as.character(preview_frame(list(name = "p"), built, plot_ids = "value_preview_plot_1"))
+  expect_match(html, '<div class="tb-preview-plot">[[:space:]]*<div id="value_preview_plot_1" class="shiny-image-output" style="width:100%;height:100%;">')
+
+  widget <- size_widget(reactable::reactable(data.frame(a = 1)))
+  expect_equal(widget[c("width", "height")], list(width = "100%", height = 420))
+  tall <- reactable::reactable(data.frame(a = 1), height = 600)
+  expect_equal(size_widget(tall)$height, "600px") # its own height stays
+})

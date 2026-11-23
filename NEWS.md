@@ -17,6 +17,10 @@
   A vector previews as its summary, its distribution and its values, or its
   counts; a single value shows in full. Tables follow dark mode. skimr is no
   longer suggested.
+* A plot in the value preview is drawn at the preview's width, 0.65 of it
+  high, at twice the pixels, with ragg if installed; its text reads at the
+  size its theme gives. A plot or an htmlwidget fills the frame in
+  full-screen, and Escape leaves full-screen without closing the preview.
 * The value preview reads a value larger than 100 MB in the store only when
   asked; set the limit with `options(targetsboard.preview_bytes = )`. It shows
   a spinner while it reads, and keeps the last few previews, so going back to
