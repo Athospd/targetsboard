@@ -416,7 +416,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       for (i in seq_along(plots)) {
         local({
           view <- plots[[i]]
-          output[[plot_ids[[i]]]] <- shiny::renderPlot(draw_preview_plot(view))
+          output[[plot_ids[[i]]]] <- render_preview_plot(view, plot_ids[[i]], session)
         })
       }
       shiny::tagList(problem_part, preview_frame(target, built, plot_ids, store))

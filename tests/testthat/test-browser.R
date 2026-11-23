@@ -38,6 +38,13 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   expect_true(has_class("c", "tb-focused"))
   expect_false(has_class("a", "tb-dimmed")) # upstream of c: in its lineage
 
+  # Escape in the preview, as when leaving its full-screen, keeps the focus
+  # and the preview: only the board's own Escape clears them.
+  app$run_js("document.querySelector('.tb-preview-name').setAttribute('tabindex', '-1'); document.querySelector('.tb-preview-name').focus();")
+  press_key(app, "Escape")
+  expect_equal(app$get_value(input = "flow_focused_node"), "c")
+  expect_true(app$get_js("!!document.querySelector('.tb-preview-printed')"))
+
   # A status-only update retypes the node in place, without moving it, and
   # warning marks come and go without changing the status.
   before <- transform("a")

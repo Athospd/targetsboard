@@ -239,3 +239,20 @@ body {
   font-size: 0.8rem;
   white-space: pre-wrap;
 }
+
+/* Plots and widgets in the value preview: a plot is 0.65 of the card's
+   width in height, a widget sets its own; in full-screen both fill the frame
+   below the header and tabs. */
+.tb-preview-plot {
+  aspect-ratio: 1 / 0.65;
+}
+.tb-preview-plot img {
+  display: block;
+}
+.tb-preview[data-full-screen="true"] .tb-preview-plot {
+  aspect-ratio: auto;
+  height: calc(100vh - 13rem);
+}
+.tb-preview[data-full-screen="true"] .tb-preview-widget .html-widget {
+  height: calc(100vh - 13rem) !important;
+}
