@@ -11,9 +11,7 @@ workers stay in stage three.
 
 ## Where the board stands against an orchestrator
 
-The full comparison with Airflow is in `airflow-comparison.md`.
-
-The full comparison with Airflow is in `airflow-comparison.md`.
+The full comparisons are in `airflow-comparison.md` and `prefect-comparison.md`.
 
 Airflow is a scheduler of runs. Each run is a dated record kept in a database,
 started by a clock, an event or a person, and its UI is mostly a grid of runs
@@ -68,13 +66,19 @@ three behind the same DBI calls.
 project   id, script (absolute path), store (absolute path), name, added_at
 run       id (ULID), project_id, trigger (board | console | schedule | event | api),
           mode (keep_going, stop_at_warnings), names (requested targets, or all),
-          started_at, ended_at, outcome (succeeded | errored | stopped | crashed),
+          scheduled_for, started_at, ended_at,
+          outcome (succeeded | errored | stopped | crashed),
           r_version, targets_version, git_commit (of the project, when it is a repo)
 build     run_id, name, parent (for branches), type, outcome (completed | skipped |
           errored | canceled), seconds, bytes, data (hash), warnings, error
 problem   run_id, name, traceback, workspace_path (a copy, see the retention question)
 log       run_id, text (the run's console output; a file for long logs)
 ```
+
+The outcomes follow Prefect's states: `errored` means the pipeline's code
+failed, while `crashed` means the run itself was lost (killed, out of memory,
+the machine restarted). Prefect calls these "Failed" and "Crashed". A scheduled
+run that starts well after `scheduled_for` is late, which the Runs tab shows.
 
 `build` has a row for every target and branch of the run, skipped ones
 included: the grid needs them. Patterns keep their branch rows, so the grid can
@@ -105,6 +109,11 @@ version-aware cloud storage, which the history can point to later.
 - **Compare two runs**: which targets were rebuilt, and why the values differ.
 
 ### 3. The board server, the queue and the scheduler
+
+Start like Prefect's `serve()`: the board's own process runs the schedules of
+the project it shows, with no separate server, for as long as it is open.
+That ships schedules early. The separate server comes next, for projects
+that must run with no board open.
 
 A long-running R process, separate from the Shiny app, started with something
 like `targetsboard::board_server()` and kept alive by the operating system
@@ -137,6 +146,10 @@ On a run's outcome (errored, back to succeeded, or slower than usual), per
 project: email (blastula), a Slack or Teams webhook, or an R function the
 author supplies. Each alert links to the run in the board.
 
+Alerts also fire on what does not happen, like Prefect's proactive triggers:
+no successful run of a project within a set time, or a scheduled run that did
+not start. For pipelines on a schedule, these catch more than failures do.
+
 ## Considered options
 
 - **Leave scheduling to Airflow, cron or GitHub Actions, and build only the
@@ -147,6 +160,10 @@ author supplies. Each alert links to the run in the board.
 - **Keep the history in the targets store** (`_targets/user/`): rejected. It
   would be per project and lost with the store, and `tar_destroy()` is routine.
 - **Store values per run**: rejected. See "What is not recorded".
+- **Discover the graph at run time, as Prefect does**: rejected. Prefect gave
+  up declared DAGs for Python's control flow, and so it can't tell before a
+  run what is outdated, or why. targets' static graph is what lets the board
+  show that, and skip up-to-date targets across runs.
 - **Write the server in another language** (Go or Python): rejected for stage
   two. Every part of it calls targets, and one R process keeps installation to
   `install.packages()`.
