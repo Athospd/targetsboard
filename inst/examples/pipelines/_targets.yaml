@@ -25,6 +25,10 @@ massive_pipeline:
   script: inst/examples/pipelines/targets_massive_pipeline.R
   store: _targets_examples/massive_pipeline
 
+preview_gallery:
+  script: inst/examples/pipelines/targets_preview_gallery.R
+  store: _targets_examples/preview_gallery
+
 randomly_breaking:
   script: inst/examples/pipelines/targets_randomly_breaking.R
   store: _targets_examples/randomly_breaking

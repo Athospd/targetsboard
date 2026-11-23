@@ -227,12 +227,12 @@ test_that("the value preview leads with the problem; an errored target shows not
     html <- output$value_preview$html
     expect_match(html, 'class="tb-problem" data-target="model"', fixed = TRUE)
     expect_match(html, 'data-target="data"', fixed = TRUE) # its input, linked
-    expect_no_match(html, "value_preview_content", fixed = TRUE)
+    expect_no_match(html, "tb-preview-printed", fixed = TRUE)
 
     session$setInputs(flow_focused_node = "warned")
     html <- output$value_preview$html
     expect_match(html, 'data-target="warned"', fixed = TRUE)
-    expect_match(html, "value_preview_content", fixed = TRUE) # and its value
+    expect_match(html, "tb-preview-printed", fixed = TRUE) # and its value
 
     # A pattern whose branch errored: its problem says why there is no value.
     session$setInputs(flow_focused_node = "branch")

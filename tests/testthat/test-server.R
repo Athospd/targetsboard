@@ -189,13 +189,11 @@ test_that("a double-click previews a target's value, then the preview follows th
     expect_error(output$value_preview) # focusing alone reads no value
 
     session$setInputs(flow_double_clicked_node = "c")
-    expect_match(output$value_preview$html, "value_preview_content")
-    expect_match(output$value_preview_content, "4")
+    expect_match(output$value_preview$html, '<pre class="tb-preview-printed">[1] 4</pre>', fixed = TRUE)
 
-    # One reused output, following the focus while open.
+    # It follows the focus while open.
     session$setInputs(flow_focused_node = "b")
-    invisible(output$value_preview)
-    expect_match(output$value_preview_content, "2")
+    expect_match(output$value_preview$html, '<pre class="tb-preview-printed">[1] 2</pre>', fixed = TRUE)
 
     # Clearing the focus closes it, and focusing again doesn't reopen it.
     session$setInputs(flow_focused_node = NULL)
@@ -247,7 +245,7 @@ test_that("a target's menu runs it, invalidates it after confirmation, or previe
 
     session$setInputs(flow_focused_node = "a", flow_node_action = list(action = "value", node = "a"))
     expect_true(preview_open())
-    expect_match(output$value_preview_content, "1")
+    expect_match(output$value_preview$html, '<pre class="tb-preview-printed">[1] 1</pre>', fixed = TRUE)
   })
 })
 

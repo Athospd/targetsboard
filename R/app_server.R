@@ -12,6 +12,8 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
   poller <- new.env()
   poller_rds_path <- shiny::reactiveVal(NULL)
   loaded_script <- shiny::reactiveVal(script) # the script the poller draws
+  # The value previews built last, shared by every browser session.
+  previews <- preview_cache()
 
   stop_poller <- function() {
     if (inherits(poller$process, "r_process") && poller$process$is_alive())
@@ -273,7 +275,25 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       path <- poller$refresh_path
       if (!is.null(path)) writeLines(format(Sys.time(), "%H:%M:%OS6"), path)
     }
-    shiny::observeEvent(input$refresh, request_refresh())
+    # The preview methods of the project's _targetsboard.R: at start, and
+    # again on Refresh, so editing them needs no restart.
+    preview_methods <- shiny::reactiveVal(0)
+    reload_preview_methods <- function() {
+      loaded <- tryCatch(load_preview_methods(), error = function(e) e)
+      if (inherits(loaded, "error")) {
+        shiny::showNotification(
+          paste("_targetsboard.R didn't load:", conditionMessage(loaded)),
+          type = "error", duration = NULL
+        )
+      }
+      previews$clear()
+      preview_methods(shiny::isolate(preview_methods()) + 1)
+    }
+    reload_preview_methods()
+    shiny::observeEvent(input$refresh, {
+      request_refresh()
+      reload_preview_methods()
+    })
 
     # Invalidate targets, after a confirmation: the next run builds them
     # again, which can take long. The confirmation is for the targets it
@@ -369,20 +389,42 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         )
         if (!is.null(problem$error)) return(problem_part)
       }
-      no_value <- new.env() # a value can be NULL itself
-      value <- tryCatch(suppressWarnings(targets::tar_read_raw(name)), error = function(e) no_value)
-      if (identical(value, no_value)) {
-        # The problem says why there is no value: a pattern whose branches
-        # errored. Without one, say it plainly.
-        if (!is.null(problem_part)) return(problem_part)
-        value <- shiny::p("No value stored for this target yet.")
+      preview_methods()
+      # The problem says why there is no value: a pattern whose branches
+      # errored. Without one, say it plainly.
+      no_value <- function() problem_part %||% shiny::p("No value stored for this target yet.")
+      store <- targets::tar_config_get("store")
+      target <- preview_target(name, store)
+      if (is.null(target)) return(no_value())
+      key <- preview_key(target)
+      # A large value is read only when asked: it can take long and fill
+      # the board's memory.
+      if (preview_too_large(target) && !key %in% read_anyway()) {
+        return(shiny::tagList(problem_part, preview_gate(target, store = store)))
       }
-
-      c(render_fun, output_ui_fun) %<-% render_and_output_bundle(value)
-      # Reuse one output id: assigning it again replaces the previous
-      # renderer instead of piling up a new output per click.
-      output$value_preview_content <- render_fun(value)
-      shiny::tagList(problem_part, output_ui_fun("value_preview_content"))
+      built <- previews$get(key)
+      if (is.null(built)) {
+        missing <- new.env() # a value can be NULL itself
+        value <- tryCatch(suppressWarnings(targets::tar_read_raw(name, store = store)), error = function(e) missing)
+        if (identical(value, missing)) return(no_value())
+        built <- previews$set(key, build_preview(value, target))
+      }
+      # Plots are drawn by the board, at the size of the preview. Reusing
+      # the ids replaces the previous renderers instead of piling them up.
+      plots <- Filter(function(view) inherits(view, "tar_board_preview_plot"), built$views)
+      plot_ids <- sprintf("value_preview_plot_%d", seq_along(plots))
+      for (i in seq_along(plots)) {
+        local({
+          view <- plots[[i]]
+          output[[plot_ids[[i]]]] <- shiny::renderPlot(draw_preview_plot(view))
+        })
+      }
+      shiny::tagList(problem_part, preview_frame(target, built, plot_ids, store))
+    })
+    read_anyway <- shiny::reactiveVal(character())
+    shiny::observeEvent(input$value_preview_read, {
+      target <- preview_target(input$flow_focused_node, targets::tar_config_get("store"))
+      if (!is.null(target)) read_anyway(union(read_anyway(), preview_key(target)))
     })
 
     # The Script field names the script the board draws. The poller is shared,

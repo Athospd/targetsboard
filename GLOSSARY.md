@@ -54,6 +54,16 @@ _Avoid_: Cause, trigger, root cause
 What a target produced, as `tar_read()` returns it; for a file target, the file.
 _Avoid_: Output, artifact, result
 
+**Preview**:
+How the board shows a target's value: a frame with what the store knows about the
+target, and a tab for each view of the value, the last one what `print()` shows.
+_Avoid_: Value viewer, output panel, render
+
+**Renderer**:
+What gives the views of a value of some class: a `tar_board_preview()` method, from
+targetsboard, another package, or the project's `_targetsboard.R`.
+_Avoid_: Bundle, output function, display hook
+
 **Focus**:
 The one target the author is looking at: the board shows its value and reasons
 and highlights what it depends on and what depends on it.

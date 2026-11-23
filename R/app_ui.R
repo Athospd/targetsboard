@@ -59,7 +59,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
           card_body(
             class = "tb-board-pane", padding = 0, gap = 0,
             tags$div(
-              class = "tb-board-loading",
+              class = "tb-board-loading tb-loading",
               # Styled in index.css, from the theme's colours (custom.css).
               shinycssloaders::withSpinner(
                 uiOutput("board_loading"),
@@ -74,7 +74,16 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
                 width = "40%",
                 open = FALSE,
                 position = "right",
-                uiOutput("value_preview")
+                # The same spinner card as Load's while a value is read and
+                # its preview built, over the previous preview.
+                tags$div(
+                  class = "tb-preview-loading tb-loading",
+                  shinycssloaders::withSpinner(
+                    uiOutput("value_preview"),
+                    type = 8, custom.css = TRUE, hide.ui = FALSE, id = "value_preview_spinner",
+                    caption = "Loading value…"
+                  )
+                )
               ),
               targetsboard(
                 "flow", metadata$nodes, metadata$edges,

@@ -482,6 +482,13 @@ NULL
 #' `options(targetsboard.confirm_nodes = )` before starting the board, e.g.
 #' `Inf` never to ask.
 #'
+#' @section Value previews:
+#' A double-click on a target opens its value in a frame, with a tab per view
+#' of it and a last tab with what `print()` shows. A class gets its own views
+#' with a [tar_board_preview()] method, from a package or from the project's
+#' `_targetsboard.R`. A value larger than 100 MB in the store is read only
+#' when asked; set the limit with `options(targetsboard.preview_bytes = )`.
+#'
 #' @param script Path to the targets script. Defaults to the project's, as
 #'   `targets::tar_config_get("script")` gives it.
 #' @param port Port to serve the board on. Defaults to the `shiny.port` option
@@ -541,8 +548,11 @@ tar_board <- function(script = targets::tar_config_get("script"),
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, host, port, targets_only, dev, confirm_nodes) {
-      options(targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes)
+    \(metadata, script, scripts, host, port, targets_only, dev, confirm_nodes, preview_bytes) {
+      options(
+        targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes,
+        targetsboard.preview_bytes = preview_bytes
+      )
       print(targetsboard::tar_board_app(
         script = script,
         scripts = scripts,
@@ -559,7 +569,8 @@ tar_board <- function(script = targets::tar_config_get("script"),
       port = port,
       targets_only = targets_only,
       dev = board_dev_mode(),
-      confirm_nodes = confirm_nodes_limit()
+      confirm_nodes = confirm_nodes_limit(),
+      preview_bytes = preview_bytes_limit()
     ),
     supervise = TRUE,
     poll_connection = TRUE,

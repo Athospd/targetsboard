@@ -48,10 +48,11 @@ body {
   height: 100%;
 }
 /* The cover: the pane dimmed and softly blurred, fading in, with a small
-   card in its middle: a spinner and "Loading pipeline...". Colours come from
+   card in its middle: a spinner and "Loading pipeline..." (or "Loading
+   value..." over the value preview). Colours come from
    the theme, so dark mode follows. shinycssloaders' own look for the spinner
    (a large white ring) is replaced in full. */
-.tb-board-loading .load-container:not(.shiny-spinner-hidden) {
+.tb-loading .load-container:not(.shiny-spinner-hidden) {
   inset: 0;
   top: 0;
   transform: none;
@@ -69,7 +70,7 @@ body {
   animation: tb-cover-in 0.2s ease-out;
 }
 /* The card, behind the spinner and the caption: they sit in one grid row. */
-.tb-board-loading .load-container::before {
+.tb-loading .load-container::before {
   content: "";
   grid-row: 1;
   grid-column: 1 / -1;
@@ -80,7 +81,7 @@ body {
   border-radius: var(--bs-border-radius-lg);
   box-shadow: var(--bs-box-shadow);
 }
-.tb-board-loading .load-container .loader {
+.tb-loading .load-container .loader {
   grid-row: 1;
   grid-column: 1;
   position: relative;
@@ -94,12 +95,13 @@ body {
   border-radius: 50%;
   animation: tb-spin 0.8s linear infinite;
 }
-.tb-board-loading .load-container .loader::after {
+.tb-loading .load-container .loader::after {
   content: none;
 }
 /* Its id outranks the colour and size shinycssloaders gives the caption by
    id, which it does even with custom.css. */
-.tb-board-loading #board_loading_spinner__caption {
+.tb-loading #board_loading_spinner__caption,
+.tb-loading #value_preview_spinner__caption {
   grid-row: 1;
   grid-column: 2;
   position: relative;
@@ -116,8 +118,8 @@ body {
   from { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tb-board-loading .load-container .loader { animation-duration: 2.4s; }
-  .tb-board-loading .load-container:not(.shiny-spinner-hidden) { animation: none; }
+  .tb-loading .load-container .loader { animation-duration: 2.4s; }
+  .tb-loading .load-container:not(.shiny-spinner-hidden) { animation: none; }
 }
 /* On a narrow window the page no longer fills its height, and the Board
    pane, which has no height of its own, collapsed to a strip. */
@@ -130,4 +132,60 @@ body {
    is only filled while Load loads, so without it there's no cover. */
 .tb-board-loading:has(#board_loading_caption:empty) .load-container {
   display: none;
+}
+
+/* The value preview's spinner covers the previous preview while a value is
+   read; the frame needs some height for its card to sit in. */
+.tb-preview-loading .shiny-spinner-output-container {
+  min-height: 10rem;
+}
+
+/* The value preview: a frame with the target's facts, and a tab per view. */
+.tb-preview {
+  margin: 0;
+}
+/* bslib lays a card header out in a row: the name and its facts stack. */
+.tb-preview .tb-preview-header {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+.tb-preview-name {
+  padding: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--bs-body-color);
+  background: none;
+  overflow-wrap: anywhere;
+}
+.tb-preview-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.25rem;
+  color: var(--bs-secondary-color);
+}
+.tb-preview-body .nav-underline {
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--bs-border-color-translucent);
+  font-size: 0.875rem;
+}
+.tb-preview-view {
+  padding: 0.75rem;
+  overflow: auto;
+}
+.tb-preview-printed {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.tb-preview-note {
+  margin: 0.75rem 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--bs-warning-text-emphasis);
+  background: var(--bs-warning-bg-subtle);
+  border-radius: var(--bs-border-radius);
+}
+.tb-preview-gate {
+  font-size: 0.875rem;
 }
