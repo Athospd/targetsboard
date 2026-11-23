@@ -11,6 +11,10 @@ workers stay in stage three.
 
 ## Where the board stands against an orchestrator
 
+The full comparison with Airflow is in `airflow-comparison.md`.
+
+The full comparison with Airflow is in `airflow-comparison.md`.
+
 Airflow is a scheduler of runs. Each run is a dated record kept in a database,
 started by a clock, an event or a person, and its UI is mostly a grid of runs
 against tasks. targets is a build system. It keeps only the latest state of
