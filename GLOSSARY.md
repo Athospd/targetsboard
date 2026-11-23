@@ -125,3 +125,42 @@ _Avoid_: Warned (as a status)
 **Run**:
 One pass of the pipeline that builds outdated targets; the board can watch one live.
 _Avoid_: Make, build, job
+
+**Run record**:
+A run as the history keeps it: when and why it started, its outcome, and each
+target's outcome in it. Designed for stage two; not built yet.
+_Avoid_: Run log, execution, job history
+
+**History**:
+Every run record of every project of the author, in one place on their machine.
+Remembers what happened, never the values themselves.
+_Avoid_: Audit log, archive, database (for the concept)
+
+**Grid**:
+Runs against targets, each cell showing what happened to that target in that run.
+_Avoid_: Matrix, heatmap, timeline
+
+### Running without the author
+
+These are designed for stage two and not built yet.
+
+**Project**:
+A pipeline's script and its store, as the board server knows it.
+_Avoid_: Pipeline (for the registered pair), workspace, repo
+
+**Board server**:
+The long-running process that starts runs of its projects when nobody has the board open.
+_Avoid_: Daemon, scheduler (for the whole process), backend
+
+**Schedule**:
+When a project runs on its own, as a cron expression with a timezone.
+_Avoid_: Cron job, timer, trigger
+
+**Event**:
+A change outside the pipeline that asks for a run: a watched path changing, or a
+check returning `TRUE`.
+_Avoid_: Sensor, asset, trigger, hook
+
+**Alert**:
+A message sent to the author about a run's outcome, or about a run that did not happen.
+_Avoid_: Notification (the board's in-browser messages), alarm

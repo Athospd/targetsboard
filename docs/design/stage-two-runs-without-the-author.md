@@ -1,6 +1,6 @@
 # Stage two: runs that happen without the author
 
-Status: proposal, for discussion. Nothing here is built.
+Status: accepted design; the author's decisions are settled (ADR 0003). Nothing here is built yet.
 
 ADR 0001 scopes stage one to a local, read-only board for one author and names
 the vision: an orchestrator in the class of Airflow, whose steps carry
@@ -73,7 +73,7 @@ run       id (ULID), project_id, trigger (board | console | schedule | event | a
           r_version, targets_version, git_commit (of the project, when it is a repo)
 build     run_id, name, parent (for branches), type, outcome (completed | skipped |
           errored | canceled), seconds, bytes, data (hash), warnings, error
-problem   run_id, name, traceback, workspace_path (a copy, see the retention question)
+problem   run_id, name, traceback, workspace_path (a copy; the last N per target are kept)
 log       run_id, text (the run's console output; a file for long logs)
 ```
 
@@ -170,23 +170,20 @@ not start. For pipelines on a schedule, these catch more than failures do.
   two. Every part of it calls targets, and one R process keeps installation to
   `install.packages()`.
 
-## Decisions for the author
+## Decisions
 
-1. **History location**: one database per user (proposed), or one per project
-   next to the store?
-2. **Problem retention**: copy each failing run's workspaces into the history
-   (complete debugging of past runs, more disk), or keep only the latest, as
-   targets does? Proposed: copy, keep the last N per target.
-3. **Console runs**: record `tar_make()` runs from the author's console
-   (proposed), or only runs started from the board or the server?
-4. **Dependencies**: DBI and RSQLite in Imports for stage 2.1 (proposed), or in
-   Suggests, with the history switched off without them?
-5. **First release**: ship the recorder and the Runs tab (parts 1 and 2) as
-   0.2.0 before starting the server (proposed)?
+The author settled these on 2026-11-22, each as proposed. ADR 0003 records them.
 
-## Terms this would add to the glossary
+1. **History location**: one database per user, shared by all their projects.
+2. **Problem retention**: copy each failing run's workspaces into the history,
+   and keep the last N per target.
+3. **Console runs**: recorded, as well as runs from the board and the server.
+4. **Dependencies**: DBI and RSQLite in Imports.
+5. **First release**: the recorder and the Runs tab (parts 1 and 2) ship as
+   0.2.0, before the board server.
 
-**Run record** (a run kept in the history), **History**, **Grid**, **Board
-server**, **Project** (a script and its store, registered with the server),
-**Schedule**, **Event** (a watched path or check that requests a run),
-**Alert**. They go into `GLOSSARY.md` once the decisions above settle them.
+## Terms
+
+**Run record**, **History**, **Grid**, **Project**, **Board server**,
+**Schedule**, **Event** and **Alert** are in `GLOSSARY.md`, marked as designed
+and not built yet.
