@@ -113,7 +113,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     output$board_loading <- shiny::renderUI(NULL)
     shiny::outputOptions(output, "board_loading", suspendWhenHidden = FALSE)
     output$board_loading_caption <- shiny::renderText({
-      if (loading()) "Loading pipeline…"
+      if (loading()) "Loading pipeline\u2026"
     })
     # The cover shows only with a caption (index.css): the caption has to
     # update while the cover is hidden.
