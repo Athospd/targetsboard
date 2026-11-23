@@ -155,17 +155,23 @@ test_that("the Internals tab is only there to develop the board", {
   expect_match(html, 'id="internals"', fixed = TRUE)
 })
 
-test_that("tar_board() hands the dev option to its background process", {
+test_that("tar_board() hands the dev and confirm_nodes options to its background process", {
   local_mocked_bindings(port_in_use = function(port, host) FALSE)
   local_mocked_bindings(r_bg = function(func, args, ...) list(func = func, args = args), .package = "callr")
   metadata <- list(nodes = fake_nodes(), edges = fake_edges())
-  expect_false(suppressMessages(tar_board(metadata = metadata, browse = FALSE))$args$dev)
+  bg <- suppressMessages(tar_board(metadata = metadata, browse = FALSE))
+  expect_false(bg$args$dev)
+  expect_equal(bg$args$confirm_nodes, 500)
 
-  withr::local_options(targetsboard.dev = TRUE)
+  withr::local_options(targetsboard.dev = TRUE, targetsboard.confirm_nodes = 2000)
   bg <- suppressMessages(tar_board(metadata = metadata, browse = FALSE))
   expect_true(bg$args$dev)
-  # The background process sets it before building the app.
-  expect_match(paste(deparse(bg$func), collapse = " "), "options(targetsboard.dev = dev)", fixed = TRUE)
+  expect_equal(bg$args$confirm_nodes, 2000)
+  # The background process sets them before building the app.
+  expect_match(
+    paste(deparse(bg$func), collapse = " "),
+    "options(targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes)", fixed = TRUE
+  )
 })
 
 test_that("the Script field offers the scripts, with the launch script first and chosen", {

@@ -10,6 +10,9 @@
   script turns out not to load: a large pipeline can take a while. The button
   shows a spinner, and a shinycssloaders spinner over the Board pane keeps
   the old graph and its preview from being used meanwhile.
+* Load asks before drawing a script with more than 500 targets on its graph,
+  which can use up the browser's memory; Cancel keeps the current graph. Set
+  the limit with `options(targetsboard.confirm_nodes = )`.
 
 ## Minor changes
 

@@ -93,6 +93,66 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
   })
 })
 
+test_that("Load asks before drawing a graph over the size limit, and Cancel keeps the current one", {
+  skip_on_cran()
+  local_pipeline() # a, b and c: under the limit
+  writeLines(c("library(targets)", "list(tar_target(w, 1), tar_target(x, w), tar_target(y, x), tar_target(z, y))"), "big.R")
+  writeLines(c("library(targets)", "list(tar_target(v1, 1), tar_target(v2, v1), tar_target(v3, v2), tar_target(v4, v3))"), "bigger.R")
+  withr::local_options(targetsboard.confirm_nodes = 3)
+  server <- local_app_server()
+  modals <- list()
+  local_mocked_bindings(
+    showModal = function(ui, ...) modals[[length(modals) + 1]] <<- ui,
+    removeModal = function(...) modals[[length(modals) + 1]] <<- "removed",
+    .package = "shiny"
+  )
+  local_mocked_bindings(update_task_button = function(...) NULL, .package = "bslib")
+  spinner <- character()
+  local_mocked_bindings(
+    showSpinner = function(id, expr) spinner[[length(spinner) + 1]] <<- "show",
+    hideSpinner = function(id, expr) spinner[[length(spinner) + 1]] <<- "hide",
+    .package = "shinycssloaders"
+  )
+
+  shiny::testServer(server, {
+    wait_new_graph <- function() {
+      rds_path <- environment(server)$poller_rds_path()
+      wait_for(function() file.exists(rds_path))
+      session$elapse(600)
+    }
+    wait_new_graph() # the launch script's graph, as the poller recomputes it
+
+    # Over the limit: held back, and the author is asked, with the count.
+    session$setInputs(script = "big.R", load_script = 1)
+    wait_new_graph()
+    expect_length(modals, 1)
+    expect_match(as.character(modals[[1]]), "4 targets")
+    expect_false("w" %in% board()$x$nodes$id)
+    expect_equal(spinner, "show")
+
+    # Draw it anyway: drawn, and the spinner goes.
+    session$setInputs(draw_large_graph = 1)
+    expect_true(all(c("w", "z") %in% board()$x$nodes$id))
+    expect_equal(spinner, c("show", "hide"))
+    expect_identical(modals[[2]], "removed")
+
+    # Another one over the limit, cancelled: the current graph stays, and
+    # the board goes back to the script it showed.
+    session$setInputs(script = "bigger.R", load_script = 2)
+    wait_new_graph()
+    expect_length(modals, 3)
+    session$setInputs(cancel_large_graph = 1)
+    expect_true("w" %in% board()$x$nodes$id)
+    expect_false("v1" %in% board()$x$nodes$id)
+    expect_equal(poller_of(server)$script, "big.R")
+    expect_equal(spinner, c("show", "hide", "show", "hide"))
+
+    # The cancelled script's graph never arrives later either.
+    wait_new_graph()
+    expect_false("v1" %in% board()$x$nodes$id)
+  })
+})
+
 test_that("a double-click previews a target's value, then the preview follows the focus", {
   skip_on_cran()
   local_pipeline(make = TRUE)
