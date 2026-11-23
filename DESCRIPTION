@@ -13,7 +13,7 @@ Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.1.0)
 Imports:
-    bslib,
+    bslib (>= 0.7.0),
     callr,
     cli,
     digest,

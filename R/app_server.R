@@ -59,7 +59,20 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         tryCatch(readRDS(path), error = function(e) NULL)
       }
     )
-    shiny::observeEvent(poller_board(), board(poller_board()))
+    shiny::observeEvent(poller_board(), {
+      board(poller_board())
+      load_done()
+    })
+
+    # Load stays busy from the click until the new script's graph arrives, or
+    # it turns out not to load. The poller writes a new file for each script,
+    # so the first one it writes is that script's graph.
+    loading <- shiny::reactiveVal(FALSE)
+    load_done <- function() {
+      if (!shiny::isolate(loading())) return()
+      loading(FALSE)
+      bslib::update_task_button("load_script", state = "ready")
+    }
 
     # A script that stops loading (a typo while editing it): say so, for as
     # long as it lasts, rather than silently keep the last graph.
@@ -77,6 +90,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       }
     )
     shiny::observeEvent(script_error(), ignoreNULL = FALSE, {
+      if (!is.null(script_error())) load_done()
       text <- script_error_text(poller$script, script_error())
       if (is.null(text)) {
         shiny::removeNotification("script_error", session)
@@ -354,9 +368,15 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
           paste0("Script not found: ", new_script),
           type = "error"
         )
+        bslib::update_task_button("load_script", state = "ready")
         return()
       }
-      if (!identical(new_script, poller$script)) start_poller(new_script)
+      if (identical(new_script, poller$script)) {
+        bslib::update_task_button("load_script", state = "ready")
+        return()
+      }
+      loading(TRUE)
+      start_poller(new_script)
     })
 
     # The graph as tar_visnetwork() draws it, the view tar_watch() shows:
