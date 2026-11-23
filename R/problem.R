@@ -117,24 +117,48 @@ fold_traceback <- function(calls, functions = character()) {
 #'
 #' With a workspace, loading it is enough: its inputs, the globals and its
 #' seed. Without one (a target that only warned), the code loads the same.
+#' The code names the board's script and store when they aren't targets'
+#' defaults, and the folder it runs from, so it runs as pasted.
 #'
+#' @param script,store The board's script and store.
+#' @param dir The board's folder, which those paths are relative to.
 #' @noRd
-reproduce_code <- function(name, command, workspace, inputs = character(), seed = NULL) {
+reproduce_code <- function(name, command, workspace, inputs = character(), seed = NULL,
+                           script = NULL, store = NULL, dir = NULL) {
   command <- command %||% "# (the target's command)"
   if (workspace) {
     return(paste0(
-      "targets::tar_workspace(", name, ") # its inputs, the globals and its seed\n",
+      folder_comment(dir),
+      "targets::tar_workspace(", paste(c(name, script_arg(script), store_arg(store)), collapse = ", "),
+      ") # its inputs, the globals and its seed\n",
       command
     ))
   }
   paste0(
-    "targets::tar_load_globals()\n",
+    folder_comment(dir),
+    "targets::tar_load_globals(", script_arg(script), ")\n",
     if (length(inputs)) {
-      paste0("targets::tar_load(c(", paste(inputs, collapse = ", "), ")) # its inputs\n")
+      inputs <- paste0("c(", paste(inputs, collapse = ", "), ")")
+      paste0("targets::tar_load(", paste(c(inputs, store_arg(store)), collapse = ", "), ") # its inputs\n")
     },
     if (!is.null(seed)) paste0("set.seed(", seed, ") # its seed\n"),
     command
   )
+}
+
+# The arguments that point targets at the board's script and store: only
+# when they aren't targets' defaults, which the console would use anyway.
+script_arg <- function(script) {
+  if (!is.null(script) && !identical(script, "_targets.R")) paste0("script = ", deparse(script))
+}
+store_arg <- function(store) {
+  if (!is.null(store) && !identical(store, "_targets")) paste0("store = ", deparse(store))
+}
+
+# The script and store paths are relative to the board's folder, and so are
+# the paths in the pipeline itself.
+folder_comment <- function(dir) {
+  if (!is.null(dir)) paste0("# Run from ", dir, ", the board's folder.\n")
 }
 
 #' R code for a debug run of one target, in the author's console
@@ -142,18 +166,16 @@ reproduce_code <- function(name, command, workspace, inputs = character(), seed 
 #' The run builds only `run` (the target, or a branch's pattern) and what it
 #' needs: a cue of "never" alone would still run other targets that errored.
 #' @noRd
-debug_run_code <- function(name, script = NULL, run = name) {
-  script_arg <- if (!is.null(script) && !identical(script, "_targets.R")) {
-    paste0(", script = ", deparse(script))
-  } else {
-    ""
-  }
+debug_run_code <- function(name, script = NULL, run = name, store = NULL, dir = NULL) {
   paste0(
+    folder_comment(dir),
     "# Restart R first: a debug run uses this session, and objects left in it\n",
     "# can change what the pipeline builds.\n",
     "targets::tar_make(\n",
     "  names = \"", run, "\",\n",
-    "  script =targetsboard::debug_run_script(\"", name, "\"", script_arg, "),\n",
+    "  script = targetsboard::debug_run_script(",
+    paste(c(deparse(name), script_arg(script)), collapse = ", "), "),\n",
+    if (!is.null(store_arg(store))) paste0("  ", store_arg(store), ",\n"),
     "  callr_function = NULL, use_crew = FALSE, as_job = FALSE\n",
     ")"
   )
@@ -164,9 +186,11 @@ debug_run_code <- function(name, script = NULL, run = name) {
 #' @param problem `target_problem()`.
 #' @param inputs The ids of the targets it depends on directly.
 #' @param running Whether a run is going: no debug run then.
-#' @param script The targets script, for the debug run.
+#' @param script,store The board's script and store, and `dir` its folder:
+#'   for the code to copy.
 #' @noRd
-problem_ui <- function(problem, inputs = character(), running = FALSE, script = NULL) {
+problem_ui <- function(problem, inputs = character(), running = FALSE, script = NULL,
+                       store = NULL, dir = NULL) {
   shiny::tags$div(
     class = "tb-problem",
     `data-target` = problem$name,
@@ -194,9 +218,10 @@ problem_ui <- function(problem, inputs = character(), running = FALSE, script = 
       shiny::tagList(
         code_block(
           "Reproduce", "reproduce",
-          reproduce_code(problem$name, problem$command, problem$workspace, inputs, problem$seed)
+          reproduce_code(problem$name, problem$command, problem$workspace, inputs, problem$seed,
+                         script = script, store = store, dir = dir)
         ),
-        debug_run_block(problem$name, running, script)
+        debug_run_block(problem$name, running, script, store = store, dir = dir)
       )
     },
     if (length(problem$branches)) {
@@ -217,10 +242,11 @@ problem_ui <- function(problem, inputs = character(), running = FALSE, script = 
             if (branch$workspace) {
               code_block(
                 "Reproduce", "reproduce",
-                reproduce_code(branch$name, problem$command, TRUE)
+                reproduce_code(branch$name, problem$command, TRUE,
+                               script = script, store = store, dir = dir)
               )
             },
-            debug_run_block(branch$name, running, script, run = problem$name)
+            debug_run_block(branch$name, running, script, run = problem$name, store = store, dir = dir)
           )
         })
       )
@@ -263,11 +289,11 @@ traceback_ui <- function(segments) {
   )
 }
 
-debug_run_block <- function(name, running, script, run = name) {
+debug_run_block <- function(name, running, script, run = name, store = NULL, dir = NULL) {
   if (running) {
     return(shiny::tags$p(class = "tb-debug-run text-muted", "Debug run: not while a run is going."))
   }
-  code_block("Debug run", "debug_run", debug_run_code(name, script, run))
+  code_block("Debug run", "debug_run", debug_run_code(name, script, run, store = store, dir = dir))
 }
 
 # Copies the button's code, then says so for a moment (or that it couldn't:

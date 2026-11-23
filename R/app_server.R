@@ -360,7 +360,10 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       if (has_problem(problem)) {
         edges <- board()$x$edges
         inputs <- intersect(edges$from[edges$to == name], board_targets(board()$x$nodes))
-        problem_part <- problem_ui(problem, inputs, running = running(), script = poller$script)
+        problem_part <- problem_ui(
+          problem, inputs, running = running(), script = poller$script,
+          store = targets::tar_config_get("store"), dir = normalizePath(getwd(), winslash = "/")
+        )
         if (!is.null(problem$error)) return(problem_part)
       }
       no_value <- new.env() # a value can be NULL itself
