@@ -34,7 +34,12 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
       sidebar = sidebar(
         title = "Control Panel",
         script_input(script, scripts),
-        actionButton("load_script", "Load", icon = icon("folder-open")),
+        # Busy, with a spinner, until the script's graph arrives: loading a
+        # pipeline can take a while.
+        bslib::input_task_button(
+          "load_script", "Load", icon = icon("folder-open"), label_busy = "Loading...",
+          type = "default", auto_reset = FALSE
+        ),
         actionButton("refresh", "Refresh", icon = icon("rotate")),
         tags$hr(),
         actionButton("run_all", "Run all", icon = icon("play")),

@@ -42,6 +42,45 @@ test_that("Load restarts the poller only for an existing, different script", {
   })
 })
 
+test_that("Load stays busy until the new script's graph arrives, or the script fails to load", {
+  skip_on_cran()
+  local_pipeline()
+  writeLines(c("Sys.sleep(2)", "library(targets)", "list(tar_target(x, 1))"), "slow.R")
+  writeLines("stop('broken pipeline')", "broken.R")
+  server <- local_app_server()
+  states <- character()
+  local_mocked_bindings(
+    update_task_button = function(id, ..., state = NULL) states[[length(states) + 1]] <<- paste(id, state),
+    .package = "bslib"
+  )
+
+  shiny::testServer(server, {
+    # Nothing to load: the button is ready again at once.
+    session$setInputs(script = "missing.R", load_script = 1)
+    expect_equal(states, "load_script ready")
+    session$setInputs(script = "_targets.R", load_script = 2)
+    expect_equal(states, rep("load_script ready", 2))
+
+    # A script that takes a while: busy until its graph is drawn.
+    session$setInputs(script = "slow.R", load_script = 3)
+    session$elapse(600)
+    expect_length(states, 2)
+    rds_path <- environment(server)$poller_rds_path()
+    wait_for(function() file.exists(rds_path))
+    session$elapse(600)
+    expect_equal(states[[3]], "load_script ready")
+    expect_true("x" %in% board()$x$nodes$id)
+
+    # A script that doesn't load: ready again, and the error says why.
+    session$setInputs(script = "broken.R", load_script = 4)
+    session$elapse(600)
+    expect_length(states, 3)
+    wait_for(function() file.exists(poller_error_path(environment(server)$poller_rds_path())))
+    session$elapse(600)
+    expect_equal(states[[4]], "load_script ready")
+  })
+})
+
 test_that("a double-click previews a target's value, then the preview follows the focus", {
   skip_on_cran()
   local_pipeline(make = TRUE)
