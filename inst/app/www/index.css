@@ -339,3 +339,65 @@ pre.hljs {
 [data-bs-theme="dark"] .hljs-comment { color: #8b949e; }
 [data-bs-theme="dark"] .hljs-params,
 [data-bs-theme="dark"] .hljs-variable { color: #ffa657; }
+
+/* A list in the value preview: its items as a tree, each on one line with
+   its name, type and first values. */
+.tb-tree {
+  font-size: 0.8125rem;
+}
+.tb-tree-items .tb-tree-items {
+  margin-left: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--bs-border-color-translucent);
+}
+.tb-tree-leaf,
+.tb-tree-node > summary {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.125rem 0;
+  min-width: 0;
+}
+.tb-tree-leaf {
+  padding-left: 1rem;
+}
+/* The marker is drawn: a flex summary loses the browser's. */
+.tb-tree-node > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.tb-tree-node > summary::-webkit-details-marker {
+  display: none;
+}
+.tb-tree-node > summary::before {
+  content: "\25B8";
+  flex: 0 0 0.5rem;
+  margin-right: 0.5rem;
+  color: var(--bs-secondary-color);
+}
+.tb-tree-node[open] > summary::before {
+  content: "\25BE";
+}
+.tb-tree-name {
+  padding: 0;
+  background: none;
+  color: var(--bs-body-color);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tb-tree-type {
+  font-family: var(--bs-font-monospace);
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color);
+  white-space: nowrap;
+}
+.tb-tree-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.tb-tree-more {
+  padding: 0.125rem 0 0.125rem 1rem;
+  color: var(--bs-secondary-color);
+}

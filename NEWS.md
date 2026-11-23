@@ -28,6 +28,13 @@
   `tar_board_file_<extension>`, so a method adds a type.
 * R code is in colour: R files in the preview, and the Problem pane's code
   and traceback (highlight.js, bundled).
+* A list previews as a tree, two levels deep and 50 items a level, each
+  item with its type and first values. A model previews as its estimates and
+  fit, from broom when it knows the model (lm, glm, tests, kmeans and many
+  more), or else as its `summary()`; other objects made of a list, as a tree.
+* The preview gallery, an example pipeline with one target per kind of view
+  (`TAR_PROJECT = "preview_gallery"` in `inst/examples/pipelines`), is built
+  and checked by the tests.
 * The value preview reads a value larger than 100 MB in the store only when
   asked; set the limit with `options(targetsboard.preview_bytes = )`. It shows
   a spinner while it reads, and keeps the last few previews, so going back to

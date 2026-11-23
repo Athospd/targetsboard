@@ -73,7 +73,9 @@ spark_histogram <- function(x, width = 96, height = 22) {
   x <- x[is.finite(x)]
   # Too few values make bars, not a distribution.
   if (length(x) < 10 || length(unique(x)) < 3) return(NULL)
-  counts <- graphics::hist(x, breaks = 16, plot = FALSE)$counts
+  # From zero: hist() overflows on large values, such as a date-time's
+  # seconds since 1970. The shape is the same.
+  counts <- graphics::hist(x - min(x), breaks = 16, plot = FALSE)$counts
   bar <- width / length(counts)
   heights <- counts / max(counts) * (height - 1)
   bars <- vapply(seq_along(counts), function(i) {
