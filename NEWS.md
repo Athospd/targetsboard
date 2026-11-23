@@ -25,6 +25,10 @@
   `error = "stop"`) shows that branch in its Problem: its error, traceback
   and code to copy. It showed "No value stored for this target yet", because
   the pattern has no metadata of its own then.
+* The code a Problem offers to copy (Reproduce and Debug run) runs as pasted
+  for a script other than `_targets.R` or a store other than `_targets`: it
+  names them, and says which folder to run it from. Reproduce failed with
+  "cannot open file '_targets.R'" there.
 * A script that stops loading, such as one with a typo, is notified, with
   its error, until it loads again. The board kept its last graph without a
   word.

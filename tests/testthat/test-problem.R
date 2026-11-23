@@ -135,6 +135,69 @@ test_that("the pane shows the snippets to copy, but no debug run while running",
   expect_match(debug_run_code("model", "pipelines/a.R"), 'debug_run_script("model", script = "pipelines/a.R")', fixed = TRUE)
 })
 
+test_that("the code to copy names the script, the store and the folder, and runs as is in a fresh R", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "pipelines"))
+  writeLines(c(
+    "library(targets)",
+    "tar_option_set(error = 'continue')",
+    "analyze <- function(data) fit(data)",
+    "fit <- function(data) stats::lm(y ~ x, data = data)",
+    "list(",
+    "  tar_target(data, data.frame(x = 1:3)),",
+    "  tar_target(model, analyze(data)),",
+    "  tar_target(warned, {warning('2 rows dropped'); data})",
+    ")"
+  ), file.path(dir, "pipelines", "p.R"))
+  withr::local_dir(dir)
+  targets::tar_make(script = "pipelines/p.R", store = "my_store", reporter = "silent")
+  seed <- targets::tar_meta(warned, seed, store = "my_store")$seed
+  place <- list(script = "pipelines/p.R", store = "my_store", dir = dir)
+
+  model <- reproduce_code("model", "analyze(data)", TRUE,
+                          script = place$script, store = place$store, dir = place$dir)
+  expect_match(model, paste0("# Run from ", dir, ", the board's folder."), fixed = TRUE)
+  expect_match(model, 'targets::tar_workspace(model, script = "pipelines/p.R", store = "my_store")', fixed = TRUE)
+  warned <- reproduce_code("warned", "{warning('2 rows dropped'); data}", FALSE, "data", seed,
+                           script = place$script, store = place$store, dir = place$dir)
+  expect_match(warned, 'targets::tar_load_globals(script = "pipelines/p.R")', fixed = TRUE)
+  expect_match(warned, 'targets::tar_load(c(data), store = "my_store")', fixed = TRUE)
+  debug <- debug_run_code("model", place$script, store = place$store, dir = place$dir)
+  expect_match(debug, 'script = targetsboard::debug_run_script("model", script = "pipelines/p.R")', fixed = TRUE)
+  expect_match(debug, 'store = "my_store"', fixed = TRUE)
+  expect_match(debug, "# Run from ", fixed = TRUE)
+
+  # Pasted into a fresh R in the board's folder, each reproduces the problem
+  # itself: the target's own error, or its warning.
+  run_pasted <- function(code) {
+    callr::r(function(dir, code) {
+      setwd(dir)
+      warned <- character()
+      error <- tryCatch(
+        withCallingHandlers(
+          { eval(parse(text = code), envir = globalenv()); NA_character_ },
+          warning = function(w) { warned <<- c(warned, conditionMessage(w)); invokeRestart("muffleWarning") }
+        ),
+        error = function(e) conditionMessage(e)
+      )
+      list(error = error, warnings = warned)
+    }, list(dir, code))
+  }
+  expect_match(run_pasted(model)$error, "object 'y' not found")
+  expect_true("2 rows dropped" %in% run_pasted(warned)$warnings)
+  # The debug run builds the target again, in the board's store (its
+  # progress file rewritten), and makes no store of its own.
+  progress_file <- file.path("my_store", "meta", "progress")
+  before <- file.mtime(progress_file)
+  Sys.sleep(1.1) # file times have a second's resolution on some systems
+  run_pasted(debug)
+  expect_gt(file.mtime(progress_file), before)
+  progress <- targets::tar_progress(store = "my_store")
+  expect_equal(progress$progress[progress$name == "model"], "errored")
+  expect_false(dir.exists("_targets"))
+})
+
 test_that("a debug run stops in its target, after building what it needs", {
   skip_on_cran()
   local_problem_store()
