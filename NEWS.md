@@ -7,6 +7,11 @@
   launch, filters them as you type and still takes any other path; Load
   switches to the chosen one.
 
+## Minor changes
+
+* Run all keeps its plain label: it no longer names the run modes that are
+  on ("Run all · keep going"). The switches below it show them.
+
 ## Bug fixes
 
 * A script that stops loading, such as one with a typo, is notified, with
