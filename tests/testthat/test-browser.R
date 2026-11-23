@@ -100,6 +100,42 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
                          node("c"), ".classList.contains('tb-focused')"))
 })
 
+test_that("the Load spinner covers the board only while Load loads, not at the start", {
+  dir <- local_pipeline()
+  writeLines(c(
+    "library(targets)",
+    "Sys.sleep(3)",
+    "list(tar_target(slow_a, 1), tar_target(slow_b, slow_a))"
+  ), file.path(dir, "slow.R"))
+  app <- local_board_app(dir, "spinner_only_while_loading", "targetsboard::tar_board_app(scripts = 'slow.R')")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length > 0")
+  # Straight after the graph is drawn, before the server's first update: a
+  # click in a target's middle reaches the target, not a cover.
+  hit <- paste0(
+    "(() => { const r = document.querySelector('.react-flow__node').getBoundingClientRect();",
+    " const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);",
+    " return e.closest('.react-flow__node') !== null; })()"
+  )
+  expect_true(app$get_js(hit))
+  expect_equal(app$get_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display"), "none")
+  # And still none once the server has answered.
+  app$wait_for_js("Shiny.shinyapp.$values['board_loading'] !== undefined")
+  expect_true(app$get_js(hit))
+
+  # Load a slow script: the spinner covers the pane, captioned, and takes the
+  # click; then it goes once the new graph is drawn.
+  app$run_js("const s = $('#script')[0].selectize; s.setValue('slow.R'); s.blur();")
+  app$click(selector = "#load_script")
+  app$wait_for_js(paste(
+    "getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display !== 'none'",
+    "&& document.querySelector('#board_loading_caption').innerText === 'Loading slow.R...'"
+  ), timeout = 10000)
+  expect_false(app$get_js(hit))
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='slow_a']\") !== null", timeout = 30000)
+  app$wait_for_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display === 'none'")
+  expect_true(app$get_js(hit))
+})
+
 test_that("a board started before its script draws the pipeline once it appears", {
   skip_on_cran()
   skip_if_not_installed("shinytest2")
