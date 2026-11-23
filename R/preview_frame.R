@@ -34,7 +34,8 @@ preview_key <- function(target) {
 
 # Whether a value is too large to read without asking.
 preview_too_large <- function(target, limit = preview_bytes_limit()) {
-  !is.null(target$bytes) && isTRUE(target$bytes > limit)
+  # A file target's value is only its paths: its size is its files'.
+  !is_file_target(target) && !is.null(target$bytes) && isTRUE(target$bytes > limit)
 }
 
 format_bytes <- function(bytes) {
@@ -71,7 +72,7 @@ printed_text <- function(x, max_lines = 500) {
 }
 
 is_preview_view <- function(x) {
-  inherits(x, c("shiny.tag", "shiny.tag.list", "html", "htmlwidget", "tar_board_preview_plot"))
+  inherits(x, c("shiny.tag", "shiny.tag.list", "html", "htmlwidget", "tar_board_preview_plot", "tar_board_preview_files"))
 }
 
 #' The views of a value, with the Printed fallback
@@ -89,7 +90,7 @@ build_preview <- function(x, target) {
     list()
   }
   views <- tryCatch({
-    result <- tar_board_preview(x, target)
+    result <- tar_board_preview(dispatch_value(x, target), target)
     views <- if (is.null(result)) {
       list()
     } else if (is_preview_view(result)) {
@@ -176,6 +177,8 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL) {
       view <- shiny::tags$div(class = "tb-preview-plot", shiny::imageOutput(plot_ids[[i]], height = "100%"))
     } else if (inherits(view, "htmlwidget")) {
       view <- shiny::tags$div(class = "tb-preview-widget", size_widget(view))
+    } else if (inherits(view, "tar_board_preview_files")) {
+      view <- files_sections(view)
     }
     bslib::nav_panel(title, shiny::tags$div(class = "tb-preview-view", view))
   })

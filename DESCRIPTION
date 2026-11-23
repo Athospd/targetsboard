@@ -1,8 +1,11 @@
 Package: targetsboard
 Title: Targets Board
 Version: 0.1.0.9000
-Authors@R:
-    person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre"))
+Authors@R: c(
+    person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre")),
+    person("Ivan", "Sagalaev", role = "cph",
+           comment = "highlight.js library, in inst/app/www/highlight.js")
+  )
 Description: A board for the author of a 'targets' pipeline, to understand
     it while working on it: its structure, what is outdated, what each target
     produced and what a run is doing. Meant to replace targets::tar_watch()

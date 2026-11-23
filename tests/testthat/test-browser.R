@@ -35,6 +35,8 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   mouse_event(app, "c", "dblclick")
   app$wait_for_js(preview_of("c"))
   expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "4")
+  # The page's R code highlighter (www/highlight.js) loaded, with R.
+  expect_true(app$get_js("!!window.targetsboardHighlight && !!window.targetsboardHighlight.getLanguage('r')"))
   expect_true(has_class("c", "tb-focused"))
   expect_false(has_class("a", "tb-dimmed")) # upstream of c: in its lineage
 

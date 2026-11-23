@@ -30,6 +30,16 @@ serve_html_report <- function(path) {
 #' The frame always adds a last tab, "Printed", with what `print()` shows,
 #' and falls back to it alone when a method errors.
 #'
+#' @section Files:
+#' The value of a file target (`format = "file"`) is its paths. The board
+#' shows each file in its own section, 50 at a time, and builds a file's view
+#' only when its section opens: `tar_board_preview()` is called with the
+#' path, of class `tar_board_file_<extension>` (lower case) and
+#' `tar_board_file`. The board's method shows images, PDF and HTML files,
+#' CSV and TSV files as tables, Markdown, and the first lines of text files,
+#' with R code in colour. A method for, say, `tar_board_file_parquet` adds a
+#' type.
+#'
 #' @section Where methods come from:
 #' A package registers its methods as usual, with `S3method()` in its
 #' NAMESPACE (roxygen2's `@exportS3Method targetsboard::tar_board_preview`).
@@ -123,13 +133,11 @@ tar_board_preview.character <- function(x, target, ...) {
     if (!is_plain_vector(x) || !length(x)) return(NULL)
     return(vector_view(x))
   }
+  # A path to an HTML report, from a target that isn't a file target.
   path <- extract_html_file_path(x)[1]
   shiny::tagList(
-    shiny::tags$p(path),
-    shiny::tags$iframe(
-      src = serve_html_report(path), width = "100%", height = "800px",
-      frameborder = 0, scrolling = "auto"
-    )
+    file_facts(path),
+    shiny::tags$iframe(class = "tb-preview-document", src = serve_html_report(path), title = basename(path))
   )
 }
 

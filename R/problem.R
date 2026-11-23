@@ -282,7 +282,7 @@ traceback_ui <- function(segments) {
     class = "tb-traceback",
     shiny::tags$div(class = "text-muted", "Traceback"),
     lapply(segments, function(segment) {
-      lines <- shiny::tags$pre(paste(segment$calls, collapse = "\n"))
+      lines <- shiny::tags$pre(class = "language-r", paste(segment$calls, collapse = "\n"))
       if (segment$own) {
         shiny::tags$div(class = "tb-traceback-own", lines)
       } else {
@@ -328,7 +328,7 @@ code_block <- function(title, kind, code) {
       )
     ),
     # Text alone in <pre>: a nested tag would indent the first line.
-    shiny::tags$pre(code)
+    shiny::tags$pre(class = "language-r", code)
   )
 }
 
