@@ -328,3 +328,9 @@ test_that("the frame gives a plot an image sized by the page, and a widget the w
   tall <- reactable::reactable(data.frame(a = 1), height = 600)
   expect_equal(size_widget(tall)$height, "600px") # its own height stays
 })
+
+test_that("date-times get a histogram without overflowing hist()", {
+  stamps <- as.POSIXct("2026-01-01", tz = "UTC") + seq(0, 86400 * 30, length.out = 40)
+  expect_no_warning(spark <- spark_histogram(stamps))
+  expect_match(as.character(spark), "<rect", fixed = TRUE)
+})

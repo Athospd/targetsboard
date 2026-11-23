@@ -35,6 +35,7 @@ Imports:
     visNetwork,
     zeallot
 Suggests:
+    broom,
     chromote,
     ggplot2,
     plotly,

@@ -109,10 +109,6 @@ draw_preview_plot <- function(view) {
 
 #' @rdname tar_board_preview
 #' @export
-tar_board_preview.default <- function(x, target, ...) NULL
-
-#' @rdname tar_board_preview
-#' @export
 tar_board_preview.ggplot <- function(x, target, ...) {
   if (!rlang::is_installed("ggplot2")) return(NULL)
   tar_board_preview_plot(x)
