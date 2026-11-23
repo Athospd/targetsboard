@@ -64,6 +64,14 @@ local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", .e
   app
 }
 
+# JS: whether the value preview shows target `id`'s value, in its frame.
+preview_of <- function(id) {
+  sprintf(
+    "(() => { const n = document.querySelector('.tb-preview-name'); return n !== null && n.textContent === '%s' && document.querySelector('.tb-preview-printed') !== null; })()",
+    id
+  )
+}
+
 # JS for the board's node of target `id`.
 node_js <- function(id) sprintf("document.querySelector(\".react-flow__node[data-id='%s']\")", id)
 

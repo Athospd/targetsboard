@@ -2,6 +2,19 @@
 
 ## New features
 
+* The value preview shows a value in a frame: a header with its class, shape,
+  size in the store, format and build time, a Copy for `tar_read()`, and a
+  tab per view of the value, the last one "Printed", with what `print()`
+  shows. A preview that fails falls back to Printed with a note, and the
+  frame opens full-screen.
+* `tar_board_preview()` is a public hook: a method for a class gives the
+  views of its values, and `tar_board_preview_plot()` makes a plot one of
+  them. Methods come from packages, or from a project's `_targetsboard.R`,
+  which the board reads at start and on Refresh.
+* The value preview reads a value larger than 100 MB in the store only when
+  asked; set the limit with `options(targetsboard.preview_bytes = )`. It shows
+  a spinner while it reads, and keeps the last few previews, so going back to
+  a target is instant until it is built again.
 * `tar_board()` and `tar_board_app()` gain `scripts`: other targets scripts
   to switch to. The Script field lists them under `script`, the one shown on
   launch and filters them as you type; only these can be chosen. Load

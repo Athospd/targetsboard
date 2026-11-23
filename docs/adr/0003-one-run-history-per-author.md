@@ -8,7 +8,9 @@ shared by all their projects. It records every run of a project, including `tar_
 from the author's console, not only runs the board started. When a target errors, the
 recorder copies its workspace into the history and keeps the last N per target, so past
 problems stay debuggable after targets overwrites them. DBI and RSQLite become hard
-dependencies. The recorder and the Runs tab ship as 0.2.0, before the board server.
+dependencies. The recorder and the Runs tab ship as 0.3.0, before the board server.
+(Amended: they were to be 0.2.0; the value preview overhaul, ADR 0004, ships first as
+0.2.0, while the recorder is on hold.)
 
 ## Considered Options
 

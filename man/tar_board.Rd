@@ -90,6 +90,15 @@ before drawing it, and Cancel keeps the current graph. Set the limit with
 \code{Inf} never to ask.
 }
 
+\section{Value previews}{
+
+A double-click on a target opens its value in a frame, with a tab per view
+of it and a last tab with what \code{print()} shows. A class gets its own views
+with a \code{\link[=tar_board_preview]{tar_board_preview()}} method, from a package or from the project's
+\verb{_targetsboard.R}. A value larger than 100 MB in the store is read only
+when asked; set the limit with \code{options(targetsboard.preview_bytes = )}.
+}
+
 \examples{
 \dontrun{
 app <- tar_board()                 # opens the board in your browser

@@ -33,8 +33,8 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   app$wait_for_value(input = "flow_focused_node")
   expect_equal(app$get_value(input = "flow_focused_node"), "c")
   mouse_event(app, "c", "dblclick")
-  app$wait_for_value(output = "value_preview_content")
-  expect_match(app$get_value(output = "value_preview_content"), "4")
+  app$wait_for_js(preview_of("c"))
+  expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "4")
   expect_true(has_class("c", "tb-focused"))
   expect_false(has_class("a", "tb-dimmed")) # upstream of c: in its lineage
 
@@ -332,7 +332,7 @@ test_that("double-click, right-click menu and viewport reach the server", {
   expect_equal(app$get_value(input = "flow_double_clicked_node"), "a")
   # It opens the value preview: let its sidebar finish sliding in, which
   # narrows the graph.
-  app$wait_for_value(output = "value_preview_content")
+  app$wait_for_js(preview_of("a"))
   Sys.sleep(1)
 
   # Right-click: reports and focuses the target, and opens its menu.
@@ -509,8 +509,8 @@ test_that("the focused target's toolbar runs the board's actions", {
   )))
 
   app$click(selector = ".tb-node-toolbar [data-action='value']")
-  app$wait_for_value(output = "value_preview_content")
-  expect_match(app$get_value(output = "value_preview_content"), "2")
+  app$wait_for_js(preview_of("b"))
+  expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "2")
 
   app$click(selector = ".tb-node-toolbar [data-action='invalidate']")
   app$wait_for_js("document.querySelector('.modal-dialog') !== null")
