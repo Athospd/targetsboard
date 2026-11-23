@@ -181,8 +181,10 @@ test_that("the Script field offers the scripts, with the launch script first and
   expect_match(html, '<option value="b.R" selected>b.R</option>', fixed = TRUE)
   options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
   expect_equal(options, paste0('<option value="', c("b.R", "a.R", "c.R"), '"'))
-  # Any other path can still be typed, and the list filters as one types.
-  expect_match(html, '"create":true', fixed = TRUE)
+  # Only the listed scripts can be chosen: no typed path, no "Add ..." entry.
+  # Typing still filters the list.
+  expect_no_match(html, '"create":true', fixed = TRUE)
+  expect_no_match(html, '"createOnBlur"', fixed = TRUE)
 
   # Without scripts, the field offers just the launch script, as before.
   html <- as.character(app_ui(metadata, "_targets.R"))

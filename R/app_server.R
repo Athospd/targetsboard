@@ -399,6 +399,12 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 
     observeEvent(input$load_script, {
       new_script <- input$script
+      # Empty when a typed text that matches no script was left in the field.
+      if (!nzchar(new_script %||% "")) {
+        shiny::showNotification("Choose a script to load.", type = "warning")
+        bslib::update_task_button("load_script", state = "ready")
+        return()
+      }
       if (!file.exists(new_script)) {
         shiny::showNotification(
           paste0("Script not found: ", new_script),

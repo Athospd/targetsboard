@@ -42,6 +42,32 @@ test_that("Load restarts the poller only for an existing, different script", {
   })
 })
 
+test_that("Load with no script chosen asks for one, and keeps the board as it is", {
+  skip_on_cran()
+  local_pipeline()
+  server <- local_app_server()
+  notes <- character()
+  local_mocked_bindings(
+    showNotification = function(ui, ...) notes[[length(notes) + 1]] <<- as.character(ui),
+    .package = "shiny"
+  )
+  states <- character()
+  local_mocked_bindings(
+    update_task_button = function(id, ..., state = NULL) states[[length(states) + 1]] <<- paste(id, state),
+    .package = "bslib"
+  )
+
+  shiny::testServer(server, {
+    pid <- poller_of(server)$process$get_pid()
+    # The field is empty once a typed text that matches no script is left.
+    session$setInputs(script = "", load_script = 1)
+    expect_equal(notes, "Choose a script to load.")
+    expect_equal(states, "load_script ready")
+    expect_equal(poller_of(server)$process$get_pid(), pid)
+    expect_equal(poller_of(server)$script, "_targets.R")
+  })
+})
+
 test_that("Load stays busy, and covers the board, until the new script's graph arrives or the script fails to load", {
   skip_on_cran()
   local_pipeline()
