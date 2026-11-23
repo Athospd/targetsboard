@@ -13,7 +13,16 @@ target_problem <- function(name, script = targets::tar_config_get("script")) {
     targets::tar_meta(fields = c("type", "parent", "error", "warnings", "seed")),
     error = function(e) NULL
   )
-  if (is.null(meta) || !name %in% meta$name) return(NULL)
+  if (is.null(meta)) return(NULL)
+  if (!name %in% meta$name) {
+    # A pattern whose run stopped at a branch's error (targets' default) has
+    # no row of its own, only its branches': stand one in for it.
+    if (!name %in% meta$parent) return(NULL)
+    meta <- rbind(meta, data.frame(
+      name = name, type = "pattern", parent = NA_character_,
+      error = NA_character_, warnings = NA_character_, seed = NA_integer_
+    )[names(meta)])
+  }
   row <- meta[meta$name == name, ]
   workspaces <- tryCatch(targets::tar_workspaces(), error = function(e) character())
   functions <- meta$name[meta$type %in% "function"]

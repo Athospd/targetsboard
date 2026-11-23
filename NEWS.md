@@ -21,6 +21,10 @@
 
 ## Bug fixes
 
+* A pattern whose run stopped at a branch's error (targets' default,
+  `error = "stop"`) shows that branch in its Problem: its error, traceback
+  and code to copy. It showed "No value stored for this target yet", because
+  the pattern has no metadata of its own then.
 * The code a Problem offers to copy (Reproduce and Debug run) runs as pasted
   for a script other than `_targets.R` or a store other than `_targets`: it
   names them, and says which folder to run it from. Reproduce failed with
