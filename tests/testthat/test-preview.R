@@ -27,8 +27,8 @@ test_that("serve_html_report() serves only the report's folder", {
 
 test_that("tar_board_preview() gives the built-in views by class", {
   target <- list(name = "x")
-  expect_null(tar_board_preview(1:3, target)) # no view of its own: Printed only
-  expect_null(tar_board_preview("not a file", target))
+  expect_null(tar_board_preview(quote(a + b), target)) # no view of its own: Printed only
+  expect_match(as.character(tar_board_preview("not a file", target)), "tb-scalar", fixed = TRUE)
   expect_identical(tar_board_preview(shiny::p("hi"), target), shiny::p("hi"))
 
   dir <- withr::local_tempdir()
@@ -43,10 +43,10 @@ test_that("tar_board_preview() gives the built-in views by class", {
 
 test_that("a preview is its views as tabs, with Printed always last", {
   target <- list(name = "x")
-  built <- build_preview(1:3, target)
+  built <- build_preview(quote(a + b), target)
   expect_equal(names(built$views), "Printed")
-  expect_match(as.character(built$views$Printed), "[1] 1 2 3", fixed = TRUE)
-  expect_equal(built$facts, list(class = "integer", shape = "length 3"))
+  expect_match(as.character(built$views$Printed), "a + b", fixed = TRUE)
+  expect_equal(built$facts$class, "call")
   expect_null(built$note)
 
   built <- build_preview(shiny::p("hi"), target)
@@ -57,7 +57,7 @@ test_that("a preview is its views as tabs, with Printed always last", {
   })
   built <- build_preview(data.frame(x = 1:2), target)
   expect_equal(names(built$views), c("Rows", "Columns", "Printed"))
-  expect_equal(built$facts$shape, "2 × 1")
+  expect_equal(built$facts$shape, "2 \u00d7 1")
 })
 
 test_that("a preview that fails falls back to Printed, with a note", {
@@ -152,6 +152,17 @@ test_that("_targetsboard.R adds preview methods for a project's own classes", {
 
   writeLines("stop('typo')", path)
   expect_error(load_preview_methods(path), "typo")
+  # Removed from the file: dropped. With no file, there are none.
+  writeLines("# nothing yet", path)
+  load_preview_methods(path)
+  expect_null(project_preview_method(thing))
+  writeLines("tar_board_preview.numeric <- function(x, target, ...) htmltools::tags$i('mine')", path)
+  load_preview_methods(path)
+  # Also for a class the board has a method for.
+  expect_match(as.character(tar_board_preview(2.5, list(name = "x"))), "<i>mine</i>", fixed = TRUE)
+  unlink(path)
+  load_preview_methods(path)
+  expect_match(as.character(tar_board_preview(2.5, list(name = "x"))), "tb-scalar", fixed = TRUE)
 })
 
 test_that("the value preview shows a frame, asks before a large value, and caches what it built", {
@@ -162,11 +173,8 @@ test_that("the value preview shows a frame, asks before a large value, and cache
     "  htmltools::tags$b(class = 'tb-test-view', paste('number', x))",
     "}"
   ), "_targetsboard.R")
-  # Registered for the session: take it away again for the other tests.
-  withr::defer(rm(
-    list = "tar_board_preview.numeric",
-    envir = get(".__S3MethodsTable__.", envir = asNamespace("targetsboard"))
-  ))
+  # Kept for the session: take it away again for the other tests.
+  withr::defer(clear_project_methods())
   server <- local_app_server()
   reads <- 0
   read <- targets::tar_read_raw
@@ -231,7 +239,8 @@ test_that("a _targetsboard.R that fails to load is notified, and the board carri
 })
 
 test_that("the methods test left no numeric method behind", {
-  expect_null(tar_board_preview(1.5, list(name = "x")))
+  html <- as.character(tar_board_preview(1.5, list(name = "x")))
+  expect_match(html, '<div class="tb-scalar">1.5</div>', fixed = TRUE) # the board's own
 })
 
 test_that("Printed doesn't draw a plot on R's default device", {
@@ -242,4 +251,57 @@ test_that("Printed doesn't draw a plot on R's default device", {
   build_preview(ggplot2::ggplot(), list(name = "x"))
   expect_false(file.exists("Rplots.pdf"))
   expect_equal(grDevices::dev.list(), devices) # and closes what it opened
+})
+
+test_that("a data frame previews as Rows and Columns tables", {
+  frame <- data.frame(
+    n = c(1.5, 2.5, NA), word = c("a", "b", "a"), flag = c(TRUE, FALSE, TRUE),
+    day = as.Date("2026-01-01") + 0:2, kind = factor(c("x", "y", "x")),
+    stringsAsFactors = FALSE
+  )
+  built <- build_preview(frame, list(name = "x"))
+  expect_equal(names(built$views), c("Rows", "Columns", "Printed"))
+  expect_null(built$note)
+  expect_s3_class(built$views$Columns, "reactable")
+
+  expect_match(as.character(built$views$Columns$x$tag$attribs$columns[[5]]$cell[[1]]), "min 1.5", fixed = TRUE)
+  summary <- column_summary(c(frame$n, 3:10))
+  expect_equal(summary[c("type", "missing", "unique")], list(type = "dbl", missing = 1L, unique = 10L))
+  expect_equal(summary$stats, "min 1.5 \u00b7 mean 5.6 \u00b7 max 10")
+  expect_match(as.character(summary$spark), "<svg class=\"tb-spark\"", fixed = TRUE)
+  expect_equal(column_summary(frame$word)$stats, "a (2), b (1)")
+  expect_equal(column_summary(frame$flag)$stats, "2 TRUE, 1 FALSE")
+  expect_equal(column_summary(frame$day)$stats, "2026-01-01 to 2026-01-03")
+  expect_equal(
+    vapply(frame, type_abbr, character(1)),
+    c(n = "dbl", word = "chr", flag = "lgl", day = "date", kind = "fct")
+  )
+})
+
+test_that("a long data frame sends only its first rows, and says so", {
+  long <- data.frame(i = seq_len(2500))
+  html <- as.character(rows_view(long))
+  expect_match(html, "The first 1,000 of 2,500 rows.", fixed = TRUE)
+  expect_no_match(as.character(rows_view(long[1:10, , drop = FALSE])), "The first", fixed = TRUE)
+  # A list column shows as text instead of failing.
+  listy <- data.frame(id = 1:2)
+  listy$items <- list(1:3, letters[1:2])
+  expect_s3_class(rows_view(listy), "shiny.tag.list")
+})
+
+test_that("vectors preview as a summary, a distribution and their values", {
+  target <- list(name = "x")
+  expect_match(as.character(tar_board_preview(42.195, target)), '<div class="tb-scalar">42.195</div>', fixed = TRUE)
+
+  html <- as.character(tar_board_preview(c(1:10, NA), target))
+  for (part in c("<span>int</span>", "<span>length 11</span>", "<span>1 missing</span>", "min 1 \u00b7 mean 5.5 \u00b7 max 10", "tb-spark")) {
+    expect_match(html, part, fixed = TRUE)
+  }
+  expect_no_match(as.character(tar_board_preview(c(1, 2, 3), target)), "tb-spark", fixed = TRUE) # too few for one
+  expect_match(as.character(tar_board_preview(factor(c("a", "b", "a")), target)), "<span>fct</span>", fixed = TRUE)
+  expect_s3_class(tar_board_preview(c(alpha = 1, beta = 2), target), "shiny.tag.list") # a name and value table
+  expect_match(as.character(tar_board_preview(as.Date("2026-01-01") + 0:9, target)), "2026-01-01 to 2026-01-10", fixed = TRUE)
+  # Matrices aren't vectors: no view of their own yet.
+  expect_null(tar_board_preview(matrix(1:4, 2), target))
+  expect_null(tar_board_preview(numeric(), target))
 })

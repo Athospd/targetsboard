@@ -37,8 +37,9 @@ serve_html_report <- function(path) {
 #' in the board's folder, beside `_targets.R`. The board sources that file,
 #' and only that file, when it starts and on Refresh, and registers the
 #' `tar_board_preview.<class>()` functions it defines. A method there
-#' replaces the board's own for the same class. The pipeline itself never
-#' runs inside the board.
+#' replaces the board's own, or a package's, for the same class, and is
+#' dropped when it is removed from the file. The pipeline itself never runs
+#' inside the board.
 #'
 #' @param x The target's value, as [targets::tar_read()] returns it.
 #' @param target What the board knows about the target, from the store: a
@@ -55,7 +56,28 @@ serve_html_report <- function(path) {
 #'   )
 #' }
 #' @export
-tar_board_preview <- function(x, target, ...) UseMethod("tar_board_preview")
+tar_board_preview <- function(x, target, ...) {
+  # A method from the project's _targetsboard.R comes first, also for a
+  # class the board has its own method for: R would find the board's by name
+  # in this namespace before any registered one.
+  method <- project_preview_method(x)
+  if (!is.null(method)) return(method(x, target, ...))
+  UseMethod("tar_board_preview")
+}
+
+# The methods of the project's _targetsboard.R, by class: replaced in full
+# each time the file is read.
+project_methods <- new.env(parent = emptyenv())
+
+project_preview_method <- function(x) {
+  if (!length(ls(project_methods))) return(NULL)
+  for (class in .class2(x)) {
+    if (exists(class, envir = project_methods, inherits = FALSE)) return(get(class, envir = project_methods))
+  }
+  NULL
+}
+
+clear_project_methods <- function() rm(list = ls(project_methods), envir = project_methods)
 
 #' A plot, as a view of a value
 #'
@@ -97,7 +119,10 @@ tar_board_preview.htmlwidget <- function(x, target, ...) x
 #' @rdname tar_board_preview
 #' @export
 tar_board_preview.character <- function(x, target, ...) {
-  if (!is_html_file_path(x)) return(NULL)
+  if (!is_html_file_path(x)) {
+    if (!is_plain_vector(x) || !length(x)) return(NULL)
+    return(vector_view(x))
+  }
   path <- extract_html_file_path(x)[1]
   shiny::tagList(
     shiny::tags$p(path),
@@ -115,10 +140,3 @@ tar_board_preview.shiny.tag <- function(x, target, ...) x
 #' @rdname tar_board_preview
 #' @export
 tar_board_preview.shiny.tag.list <- function(x, target, ...) x
-
-#' @rdname tar_board_preview
-#' @export
-tar_board_preview.data.frame <- function(x, target, ...) {
-  if (!rlang::is_installed("skimr")) return(NULL)
-  list(Summary = shiny::tags$pre(printed_text(skimr::skim(x))))
-}
