@@ -10,6 +10,11 @@
   is drawn or the script turns out not to load: a large pipeline can take a
   while.
 
+## Minor changes
+
+* Run all keeps its plain label: it no longer names the run modes that are
+  on ("Run all · keep going"). The switches below it show them.
+
 ## Bug fixes
 
 * A script that stops loading, such as one with a typo, is notified, with

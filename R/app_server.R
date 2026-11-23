@@ -171,16 +171,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     }
     shiny::observeEvent(input$run_all, launch_run())
 
-    # Run all says which run modes are on: the switches are easy to miss.
-    shiny::observeEvent(list(input$keep_going, input$stop_at_warnings), {
-      modes <- c(
-        if (isTRUE(input$keep_going)) "keep going",
-        if (isTRUE(input$stop_at_warnings)) "stop at warnings"
-      )
-      label <- if (length(modes)) paste0("Run all \u00b7 ", paste(modes, collapse = ", ")) else "Run all"
-      shiny::updateActionButton(session, "run_all", label = label)
-    }, ignoreInit = TRUE)
-
     # Stops the run going, whoever started it.
     shiny::observeEvent(input$stop, {
       if (board_run_alive()) {
