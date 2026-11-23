@@ -53,6 +53,12 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     update_task_button = function(id, ..., state = NULL) states[[length(states) + 1]] <<- paste(id, state),
     .package = "bslib"
   )
+  spinner <- character()
+  local_mocked_bindings(
+    showSpinner = function(id, expr) spinner[[length(spinner) + 1]] <<- paste("show", id),
+    hideSpinner = function(id, expr) spinner[[length(spinner) + 1]] <<- paste("hide", id),
+    .package = "shinycssloaders"
+  )
 
   shiny::testServer(server, {
     # Nothing to load: the button is ready again at once.
@@ -65,24 +71,25 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     session$setInputs(script = "slow.R", load_script = 3)
     session$elapse(600)
     expect_length(states, 2)
-    # The board is covered meanwhile, so the old graph can't be used.
-    expect_match(output$board_loading$html, "Loading slow.R")
+    # A spinner covers the board meanwhile, so the old graph can't be used.
+    expect_equal(spinner, "show board_loading")
+    expect_equal(output$board_loading_caption, "Loading slow.R...")
     rds_path <- environment(server)$poller_rds_path()
     wait_for(function() file.exists(rds_path))
     session$elapse(600)
     expect_equal(states[[3]], "load_script ready")
     expect_true("x" %in% board()$x$nodes$id)
-    expect_false(any(grepl("Loading", output$board_loading$html)))
+    expect_equal(spinner, c("show board_loading", "hide board_loading"))
 
     # A script that doesn't load: ready again, and the error says why.
     session$setInputs(script = "broken.R", load_script = 4)
     session$elapse(600)
     expect_length(states, 3)
-    expect_match(output$board_loading$html, "Loading broken.R")
+    expect_equal(output$board_loading_caption, "Loading broken.R...")
     wait_for(function() file.exists(poller_error_path(environment(server)$poller_rds_path())))
     session$elapse(600)
     expect_equal(states[[4]], "load_script ready")
-    expect_false(any(grepl("Loading", output$board_loading$html)))
+    expect_equal(spinner, rep(c("show board_loading", "hide board_loading"), 2))
   })
 })
 

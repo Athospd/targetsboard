@@ -8,8 +8,8 @@
   switches to the chosen one.
 * Load shows it is loading until the chosen script's graph is drawn or the
   script turns out not to load: a large pipeline can take a while. The button
-  shows a spinner, and a cover over the Board pane keeps the old graph and
-  its preview from being used meanwhile.
+  shows a spinner, and a shinycssloaders spinner over the Board pane keeps
+  the old graph and its preview from being used meanwhile.
 
 ## Minor changes
 

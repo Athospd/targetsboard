@@ -26,6 +26,7 @@ Imports:
     reactable,
     reactR,
     rlang,
+    shinycssloaders (>= 1.1.0),
     shiny (>= 1.8.1),
     targets,
     visNetwork,

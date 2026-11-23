@@ -53,12 +53,19 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
         nav_panel(
           "Board", value = "board",
           # The value preview belongs to the board's own graph: it follows
-          # the focused target. While Load loads another script, a cover over
-          # both (board_loading) keeps the old graph from being used. One
-          # unpadded body holds them, so the board fills the card as before.
+          # the focused target. While Load loads another script, a spinner
+          # over both keeps the old graph from being used. One unpadded body
+          # holds them, so the board fills the card as before.
           card_body(
             class = "tb-board-pane", padding = 0, gap = 0,
-            uiOutput("board_loading"),
+            tags$div(
+              class = "tb-board-loading",
+              shinycssloaders::withSpinner(
+                uiOutput("board_loading"),
+                type = 8, color = "#0d6efd", hide.ui = FALSE, # Bootstrap's primary
+                caption = textOutput("board_loading_caption", inline = TRUE)
+              )
+            ),
             layout_sidebar(
               class = "p-0",
               sidebar = sidebar(

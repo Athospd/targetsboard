@@ -72,16 +72,16 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       if (!shiny::isolate(loading())) return()
       loading(FALSE)
       bslib::update_task_button("load_script", state = "ready")
+      shinycssloaders::hideSpinner("board_loading")
     }
-    # Meanwhile a cover over the Board pane says so, and keeps the old graph
-    # and its preview from being used.
-    output$board_loading <- shiny::renderUI({
-      if (!loading()) return(NULL)
-      shiny::tags$div(
-        class = "tb-board-loading", role = "status",
-        shiny::tags$div(class = "spinner-border", `aria-hidden` = "true"),
-        shiny::tags$div(sprintf("Loading %s...", shiny::isolate(poller$script)))
-      )
+    # Meanwhile a shinycssloaders spinner covers the Board pane, and keeps the
+    # old graph and its preview from being used. board_loading is only its
+    # anchor: an empty output, whose first value hides the spinner the
+    # package shows when an output binds.
+    output$board_loading <- shiny::renderUI(NULL)
+    shiny::outputOptions(output, "board_loading", suspendWhenHidden = FALSE)
+    output$board_loading_caption <- shiny::renderText({
+      if (loading()) sprintf("Loading %s...", shiny::isolate(poller$script))
     })
 
     # A script that stops loading (a typo while editing it): say so, for as
@@ -376,6 +376,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         return()
       }
       loading(TRUE)
+      shinycssloaders::showSpinner("board_loading")
       start_poller(new_script)
     })
 
