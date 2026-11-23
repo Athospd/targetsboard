@@ -113,6 +113,9 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     output$board_loading_caption <- shiny::renderText({
       if (loading()) sprintf("Loading %s...", shiny::isolate(poller$script))
     })
+    # The cover shows only with a caption (index.css): the caption has to
+    # update while the cover is hidden.
+    shiny::outputOptions(output, "board_loading_caption", suspendWhenHidden = FALSE)
 
     # A script that stops loading (a typo while editing it): say so, for as
     # long as it lasts, rather than silently keep the last graph.

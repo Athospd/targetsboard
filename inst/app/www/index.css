@@ -63,3 +63,10 @@ body {
 .tb-board-loading .shiny-spinner-caption {
   font-size: 1.1rem;
 }
+/* shinycssloaders shows a spinner from the moment its output binds until
+   the output's first value, which comes with the server's first update: the
+   cover would block the board at startup. The caption ("Loading <script>...")
+   is only filled while Load loads, so without it there's no cover. */
+.tb-board-loading:has(#board_loading_caption:empty) .load-container {
+  display: none;
+}

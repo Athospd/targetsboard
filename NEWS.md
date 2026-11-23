@@ -21,6 +21,9 @@
 
 ## Bug fixes
 
+* The Load spinner no longer covers the Board pane for a moment when the
+  board opens, which blocked clicks and drags until the server's first
+  update. It shows only while Load loads.
 * A pattern whose run stopped at a branch's error (targets' default,
   `error = "stop"`) shows that branch in its Problem: its error, traceback
   and code to copy. It showed "No value stored for this target yet", because
