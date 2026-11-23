@@ -620,7 +620,9 @@ initial_metadata <- function(script, targets_only = TRUE, ...) {
     message("No targets script at ", script, " yet: the board will draw it once it exists.")
     return(empty_metadata())
   }
-  targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
+  x <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
+  x$nodes <- clear_invalidated_errors(x$nodes, recorded_errors())
+  x
 }
 
 # The shape of tar_visnetwork()$x, without targets.

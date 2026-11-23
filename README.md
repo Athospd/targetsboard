@@ -34,12 +34,13 @@ check errored: its problem, traceback and code to reproduce it are in
 the pane on the right</figcaption>
 </figure>
 
-Watch the board in a 2.5-minute demo, with sound: a pipeline running,
-value previews, shaping the DAG and debugging an error.
+Watch the board in a demo of under 2 minutes, with sound: a pipeline
+running, shaping the DAG, value previews, and an error found, fixed and
+rebuilt.
 
-[![Watch the demo (2.5 minutes): a pipeline running, value previews,
-shaping the DAG and debugging an
-error](man/figures/README-demo.jpg)](https://youtu.be/z2TOGc4vmFk)
+[![Watch the demo (under 2 minutes): a pipeline running, shaping the
+DAG, value previews, and an error found, fixed and
+rebuilt](man/figures/README-demo.jpg)](https://youtu.be/pEsTN9rke2U)
 
 **Early stage.** Help, support and ideas are welcome!
 
