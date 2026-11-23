@@ -42,7 +42,7 @@ test_that("Load restarts the poller only for an existing, different script", {
   })
 })
 
-test_that("Load stays busy until the new script's graph arrives, or the script fails to load", {
+test_that("Load stays busy, and covers the board, until the new script's graph arrives or the script fails to load", {
   skip_on_cran()
   local_pipeline()
   writeLines(c("Sys.sleep(2)", "library(targets)", "list(tar_target(x, 1))"), "slow.R")
@@ -65,19 +65,24 @@ test_that("Load stays busy until the new script's graph arrives, or the script f
     session$setInputs(script = "slow.R", load_script = 3)
     session$elapse(600)
     expect_length(states, 2)
+    # The board is covered meanwhile, so the old graph can't be used.
+    expect_match(output$board_loading$html, "Loading slow.R")
     rds_path <- environment(server)$poller_rds_path()
     wait_for(function() file.exists(rds_path))
     session$elapse(600)
     expect_equal(states[[3]], "load_script ready")
     expect_true("x" %in% board()$x$nodes$id)
+    expect_false(any(grepl("Loading", output$board_loading$html)))
 
     # A script that doesn't load: ready again, and the error says why.
     session$setInputs(script = "broken.R", load_script = 4)
     session$elapse(600)
     expect_length(states, 3)
+    expect_match(output$board_loading$html, "Loading broken.R")
     wait_for(function() file.exists(poller_error_path(environment(server)$poller_rds_path())))
     session$elapse(600)
     expect_equal(states[[4]], "load_script ready")
+    expect_false(any(grepl("Loading", output$board_loading$html)))
   })
 })
 

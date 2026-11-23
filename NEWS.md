@@ -6,9 +6,10 @@
   to switch to. The Script field lists them under `script`, the one shown on
   launch, filters them as you type and still takes any other path; Load
   switches to the chosen one.
-* Load shows it is loading, with a spinner, until the chosen script's graph
-  is drawn or the script turns out not to load: a large pipeline can take a
-  while.
+* Load shows it is loading until the chosen script's graph is drawn or the
+  script turns out not to load: a large pipeline can take a while. The button
+  shows a spinner, and a cover over the Board pane keeps the old graph and
+  its preview from being used meanwhile.
 
 ## Minor changes
 
