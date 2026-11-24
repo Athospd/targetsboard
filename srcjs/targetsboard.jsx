@@ -290,11 +290,9 @@ const savedPositions = (layout) =>
       ([, p]) => Number.isFinite(p?.x) && Number.isFinite(p?.y),
     ).map(([id, p]) => [id, { x: p.x, y: p.y }]),
   );
-const savedViewport = (viewport) =>
-  ['x', 'y', 'zoom'].every((k) => Number.isFinite(viewport?.[k])) ? viewport : null;
 
 function Flow({ configuration }) {
-  const { fitView, getNodes, getViewport, setViewport } = useReactFlow();
+  const { fitView, getNodes, getViewport } = useReactFlow();
   const [nodes, setNodes] = useState(configuration.nodes ?? []);
   const [edges, setEdges] = useState(configuration.edges ?? []);
   // A saved layout is read once, when the widget is first drawn.
@@ -315,8 +313,9 @@ function Flow({ configuration }) {
   const [layoutPending, setLayoutPending] = useState(
     savedPositions(configuration.layout).size > 0 ? 'restore' : 'all',
   );
-  // Once the laid-out targets are drawn: true fits the view to the graph, a
-  // viewport ({x, y, zoom}) restores that one.
+  // Once the laid-out targets are drawn, fit the view to the graph, as the
+  // Fit View button does: on first render, with a saved layout too, and
+  // when another pipeline is loaded.
   const [fitPending, setFitPending] = useState(false);
   // Report the layout once the new positions are drawn.
   const [reportPending, setReportPending] = useState(false);
@@ -472,13 +471,12 @@ function Flow({ configuration }) {
       setFitPending(true);
     } else if (saved) {
       // Saved targets where they were; targets the layout doesn't know (new
-      // in the pipeline since) next to their neighbours. The saved view only
-      // if it shows every target as it was.
+      // in the pipeline since) next to their neighbours.
       const restored = nodes.map((n) =>
         saved.has(n.id) ? { ...n, position: saved.get(n.id), ...handlePositions(direction) } : n,
       );
       setNodes(unsaved.size ? placeNewNodes(restored, edges, unsaved, direction) : restored);
-      setFitPending((unsaved.size === 0 && savedViewport(savedLayout.current?.viewport)) || true);
+      setFitPending(true);
     } else {
       setNodes(placeNewNodes(nodes, edges, newIdsRef.current, direction));
       setReportPending(true);
@@ -493,11 +491,10 @@ function Flow({ configuration }) {
   // targets still stacked at the origin: zoomed all the way in.
   useEffect(() => {
     if (!fitPending) return;
-    if (fitPending === true) fitView();
-    else setViewport(fitPending);
+    fitView();
     setFitPending(false);
     setReportPending(true);
-  }, [fitPending, nodes, fitView, setViewport]);
+  }, [fitPending, nodes, fitView]);
 
   useEffect(() => {
     if (!reportPending) return;
@@ -519,12 +516,14 @@ function Flow({ configuration }) {
       const added = incomingNodes.filter((n) => !known.has(n.id)).map((n) => n.id);
       added.forEach((id) => newIdsRef.current.add(id));
       setEdges(incomingEdges);
-      // Nothing placed yet: lay out everything (or restore the saved
-      // layout). Otherwise place only the new.
+      // Nothing placed yet, or another pipeline (no target in common): lay
+      // out everything (or restore the saved layout), and fit. Otherwise
+      // place only the new.
+      const another = incomingNodes.length > 0 && added.length === incomingNodes.length;
       setLayoutPending((pending) =>
         pending === 'all' || pending === 'restore'
           ? pending
-          : known.size === 0 ? 'all' : added.length ? 'new' : pending,
+          : known.size === 0 || another ? 'all' : added.length ? 'new' : pending,
       );
     }
   }, [configuration.nodes, configuration.edges]);
