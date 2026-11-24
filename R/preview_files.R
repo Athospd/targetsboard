@@ -43,29 +43,19 @@ files_page <- 50
 files_sections <- function(view) {
   paths <- view$paths
   if (length(paths) == 1) return(shiny::uiOutput(file_output_id(1)))
-  # Opening a section adds its output, binds it, and asks for its view.
-  ontoggle <- paste0(
-    "if (this.open && !this.querySelector('.tb-preview-file-body')) {",
-    " const d = document.createElement('div');",
-    " d.id = 'value_preview_file_' + this.dataset.index;",
-    " d.className = 'shiny-html-output tb-preview-file-body';",
-    " this.appendChild(d); Shiny.bindAll(this);",
-    " Shiny.setInputValue('value_preview_file_open', Number(this.dataset.index), {priority: 'event'}); }"
-  )
-  more <- paste0(
-    "const list = this.previousElementSibling;",
-    " list.querySelectorAll(':scope > details[hidden]').forEach((d, i) => { if (i < ", files_page, ") d.hidden = false; });",
-    " if (!list.querySelector(':scope > details[hidden]')) this.remove();"
-  )
   shiny::tagList(
     shiny::tags$p(class = "tb-table-caption", sprintf("%s files.", format(length(paths), big.mark = ","))),
     shiny::tags$div(
       class = "tb-preview-files",
       lapply(seq_along(paths), function(i) {
+        # Opened the first time, a section gets its output and asks for its
+        # view (srcjs/actions.js); the first one is open with it already.
         shiny::tags$details(
           class = "tb-preview-file", `data-index` = i,
           open = if (i == 1) NA, hidden = if (i > files_page) NA,
-          ontoggle = if (i > 1) ontoggle,
+          `data-tb-input` = if (i > 1) "value_preview_file_open",
+          `data-tb-value` = if (i > 1) i,
+          `data-tb-output` = if (i > 1) file_output_id(i),
           shiny::tags$summary(shiny::tags$code(basename(paths[[i]]))),
           if (i == 1) shiny::uiOutput(file_output_id(1), class = "tb-preview-file-body")
         )
@@ -74,7 +64,7 @@ files_sections <- function(view) {
     if (length(paths) > files_page) {
       shiny::tags$button(
         type = "button", class = "btn btn-sm btn-outline-secondary tb-preview-files-more",
-        onclick = more, sprintf("Show %d more", files_page)
+        `data-tb-more` = files_page, sprintf("Show %d more", files_page)
       )
     }
   )

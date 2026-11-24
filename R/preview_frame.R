@@ -193,9 +193,9 @@ preview_header <- function(target, facts = NULL, store = NULL) {
   )
 }
 
-# Sends the branch to show: 1 to n, or 0 for all of them.
-branch_js <- function(value) {
-  sprintf("Shiny.setInputValue('value_preview_branch', %s, {priority: 'event'})", value)
+# A button that asks for the branch to show: 1 to n, or 0 for all of them.
+branch_button <- function(value, ...) {
+  shiny::tags$button(type = "button", ...) |> send_on_click("value_preview_branch", value)
 }
 
 #' A pattern's branch picker: previous and next, a branch by number, and
@@ -206,33 +206,33 @@ branch_picker <- function(pattern, limit = preview_bytes_limit()) {
   i <- pattern$branch
   fits <- is.null(pattern$total_bytes) || isTRUE(pattern$total_bytes <= limit)
   all_link <- function(label) {
-    shiny::tags$button(type = "button", class = "btn btn-link btn-sm p-0 tb-branch-all", onclick = branch_js(0), label)
+    branch_button(0, class = "btn btn-link btn-sm p-0 tb-branch-all", label)
   }
   if (i == 0L) {
     return(shiny::tags$div(
       class = "tb-preview-branches",
       shiny::tags$span(sprintf("All %s branches", format(n, big.mark = ","))),
-      shiny::tags$button(type = "button", class = "btn btn-link btn-sm p-0", onclick = branch_js(1), "One branch")
+      branch_button(1, class = "btn btn-link btn-sm p-0", "One branch")
     ))
   }
   shiny::tags$div(
     class = "tb-preview-branches",
-    shiny::tags$button(
-      type = "button", class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Previous branch",
-      `aria-label` = "Previous branch", disabled = if (i <= 1) NA, onclick = branch_js(max(i - 1L, 1L)), shiny::icon("chevron-left")
+    branch_button(
+      max(i - 1L, 1L), class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Previous branch",
+      `aria-label` = "Previous branch", disabled = if (i <= 1) NA, shiny::icon("chevron-left")
     ),
     shiny::tags$label(
       class = "tb-branch-label", "Branch",
       shiny::tags$input(
         type = "number", class = "form-control form-control-sm tb-branch-number", min = 1, max = n, value = i,
-        `aria-label` = "Branch number",
-        onchange = sprintf("const v = Math.round(Number(this.value)); if (v >= 1 && v <= %d) %s", n, branch_js("v"))
+        # A change sends it, if it's a branch (srcjs/actions.js).
+        `aria-label` = "Branch number", `data-tb-input` = "value_preview_branch"
       ),
       sprintf("of %s", format(n, big.mark = ","))
     ),
-    shiny::tags$button(
-      type = "button", class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Next branch",
-      `aria-label` = "Next branch", disabled = if (i >= n) NA, onclick = branch_js(i + 1), shiny::icon("chevron-right")
+    branch_button(
+      i + 1L, class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Next branch",
+      `aria-label` = "Next branch", disabled = if (i >= n) NA, shiny::icon("chevron-right")
     ),
     shiny::tags$code(class = "tb-branch-name", pattern$branch_name),
     if (fits) {

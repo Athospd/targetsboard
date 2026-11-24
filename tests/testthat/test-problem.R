@@ -129,7 +129,9 @@ test_that("the pane shows the snippets to copy, but no debug run while running",
   expect_match(html, 'data-target="params"', fixed = TRUE)
   expect_match(html, "1 call in packages", fixed = TRUE)
   expect_equal(lengths(regmatches(html, gregexpr(">Copy<", html, fixed = TRUE))), 2)
-  expect_match(html, "say(&#39;Copied&#39;)", fixed = TRUE) # says it copied
+  # Copied by actions.js, which says so; its inputs' links show them.
+  expect_match(html, 'class="btn btn-sm btn-outline-secondary tb-copy" data-copy="targets::tar_workspace(model)', fixed = TRUE)
+  expect_match(html, 'data-target="params" data-tb-input="meta_row_clicked" data-tb-value="&quot;params&quot;"', fixed = TRUE)
 
   html <- as.character(problem_ui(problem, running = TRUE))
   expect_match(html, "Debug run: not while a run is going.", fixed = TRUE)
