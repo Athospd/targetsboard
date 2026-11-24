@@ -347,11 +347,11 @@ test_that("tar_meta() is re-read only when the metadata file changes", {
   )
 
   shiny::testServer(server, {
-    invisible(output$meta)
+    invisible(output[["meta-table"]])
     before <- reads
     for (i in 1:3) {
       session$elapse(1000)
-      invisible(output$meta)
+      invisible(output[["meta-table"]])
     }
     expect_equal(reads, before)
 
@@ -359,7 +359,7 @@ test_that("tar_meta() is re-read only when the metadata file changes", {
     targets::tar_invalidate(a)
     targets::tar_make(reporter = "silent")
     session$elapse(1000)
-    invisible(output$meta)
+    invisible(output[["meta-table"]])
     expect_equal(reads, before + 1)
   })
 })
@@ -457,7 +457,7 @@ test_that("the tar_visnetwork tab shows tar_visnetwork()'s own widget", {
     backend_of(server)$stop_poller()
     widget <- targets::tar_visnetwork(targets_only = TRUE)
     board(list(x = widget$x, widget = widget, progress_mtime = progress_mtime()))
-    expect_match(output$vis_network, "hierarchical", fixed = TRUE) # tar_visnetwork()'s layout
+    expect_match(output[["visnetwork-graph"]], "hierarchical", fixed = TRUE) # tar_visnetwork()'s layout
   })
 })
 
@@ -512,7 +512,7 @@ test_that("a row clicked in the tar_meta() table shows its target on the board",
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(meta_row_clicked = "b")
+    session$setInputs(`meta-row_clicked` = "b")
     expect_equal(calls, list(
       list("tab", list("view", "board")),
       list("focus", list("flow", "b")),
