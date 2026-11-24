@@ -90,6 +90,8 @@
 
 ## Bug fixes
 
+* Sorting a table in the value preview no longer moves the sorted column's
+  name and histogram aside: the sort arrow sits in the header's corner.
 * `update_targetsboard()` and the widget's other update and command
   functions find a widget inside a Shiny module: they address it by its
   namespaced id, as the widget knows itself.

@@ -262,6 +262,20 @@ body {
   fill: var(--bs-primary);
   opacity: 0.75;
 }
+/* reactable's sort arrow, in the header's top corner: in the flow, it took
+   room when it showed, and pushed the name and histogram aside. */
+.tb-table-header .rt-sort-left,
+.tb-table-header .rt-sort-right {
+  position: absolute;
+  top: 0.5rem;
+  margin: 0;
+}
+.tb-table-header .rt-sort-left {
+  left: 0.25rem;
+}
+.tb-table-header .rt-sort-right {
+  right: 0.25rem;
+}
 /* A vector: its facts, its statistics, its distribution, then its values. */
 .tb-scalar {
   font-size: 2rem;

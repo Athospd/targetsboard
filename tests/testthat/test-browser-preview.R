@@ -1,8 +1,8 @@
 # The value preview's buttons and links in headless Chrome: what they send
 # the server, and what they do in the page. Uses the installed targetsboard.
 
-# A pipeline with a pattern, a file target of 60 files, and a target that
-# errors, all built.
+# A pipeline with a pattern, a data frame, a file target of 60 files, and a
+# target that errors, all built.
 local_preview_pipeline <- function(.env = parent.frame()) {
   dir <- withr::local_tempdir(.local_envir = .env)
   writeLines(
@@ -13,6 +13,7 @@ local_preview_pipeline <- function(.env = parent.frame()) {
       "  tar_target(a, 1),",
       "  tar_target(x, 1:4),",
       "  tar_target(squares, x^2, pattern = map(x)),",
+      "  tar_target(frame, as.data.frame(setNames(lapply(1:10, function(i) sin(1:30 * i)), paste0('v', 1:10)))),",
       "  tar_target(many_files, {",
       "    dir.create('out', showWarnings = FALSE)",
       "    paths <- file.path('out', sprintf('f%02d.txt', 1:60))",
@@ -91,6 +92,18 @@ test_that("the preview's buttons and links work in the browser", {
   app$click(selector = ".tb-preview-files-more")
   app$wait_for_js(paste0(visible, " === 60"))
   expect_true(app$get_js("document.querySelector('.tb-preview-files-more') === null"))
+
+  # A table, with columns at their narrowest: sorting by a column shows its
+  # arrow without moving its name or histogram aside.
+  open_preview(app, "frame")
+  app$wait_for_js("document.querySelector('.tb-col-spark') !== null", timeout = preview_timeout)
+  header <- "Array.from(document.querySelectorAll('.rt-th')).find(t => t.querySelector('.tb-col-spark'))"
+  where <- paste0("['.tb-col-name', '.tb-col-spark'].map(s => ", header, ".querySelector(s).getBoundingClientRect().left)")
+  before <- unlist(app$get_js(where))
+  app$run_js(paste0(header, ".click()"))
+  app$wait_for_js(paste0(header, ".getAttribute('aria-sort') === 'ascending'"))
+  expect_gt(app$get_js(paste0(header, ".querySelector('.rt-sort-left').getBoundingClientRect().width")), 0)
+  expect_equal(unlist(app$get_js(where)), before, tolerance = 0.01)
 
   # A problem: its code copied, and its input's link shows that target.
   open_preview(app, "bad")
