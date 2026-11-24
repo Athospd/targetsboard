@@ -1,12 +1,8 @@
 #' The board's UI
 #'
-#' The top bar holds only the title, the dark mode switch and the power
-#' button, which turns the board off. The page is one card of tabs: Board, the board's own graph;
-#' Problems, what errored or warned, with a count in its title; Log, the
-#' output of the board's latest run; tar_visnetwork(), the graph as that
-#' function draws it; and tar_meta().
-#' With `options(targetsboard.dev = TRUE)`, an Internals tab shows the app's
-#' own inputs, to develop the board. Each tab's `value` is its snake_case id.
+#' The top bar (chrome_ui()) holds only the title, the dark mode switch and
+#' the power button, which turns the board off. The sidebar holds the board's
+#' controls, and the page its card of tabs (board_ui()).
 #'
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
@@ -18,70 +14,13 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
   shiny::tagList(
     add_external_resources(),
     page_sidebar(
-      title = tags$div(
-        class = "d-flex justify-content-between align-items-center w-100",
-        "Targets board",
-        tags$div(
-          class = "d-flex align-items-center gap-2",
-          input_dark_mode(id = "dark_mode", mode = "light"),
-          actionButton(
-            "turn_off", NULL,
-            icon = icon("power-off"), title = "Turn the board off", class = "btn-sm"
-          )
-        )
-      ),
+      title = chrome_ui("chrome"),
       fillable = TRUE,
       sidebar = sidebar(
         title = "Control Panel",
-        script_ui("script", script, scripts),
-        tags$hr(),
-        run_ui("run")
+        board_sidebar_ui("board", script, scripts)
       ),
-      navset_card_underline(
-        id = "view",
-        full_screen = TRUE,
-        nav_panel(
-          "Board", value = "board",
-          # The value preview belongs to the board's own graph: it follows
-          # the focused target. While Load loads another script, a spinner
-          # over both keeps the old graph from being used. One unpadded body
-          # holds them, so the board fills the card as before.
-          card_body(
-            class = "tb-board-pane", padding = 0, gap = 0,
-            script_loading_ui("script"),
-            layout_sidebar(
-              class = "p-0",
-              sidebar = preview_ui("preview"),
-              targetsboard(
-                "flow", metadata$nodes, metadata$edges,
-                options = board_options(), layout = layout
-              )
-            )
-          )
-        ),
-        nav_panel(
-          tags$span("Problems", problems_count_ui("problems")), value = "problems",
-          problems_ui("problems")
-        ),
-        nav_panel(
-          "Log", value = "log",
-          log_ui("log")
-        ),
-        nav_panel(
-          "tar_visnetwork()", value = "tar_visnetwork",
-          visnetwork_ui("visnetwork")
-        ),
-        nav_panel(
-          "tar_meta()", value = "tar_meta",
-          meta_ui("meta")
-        ),
-        if (board_dev_mode()) {
-          nav_panel(
-            "Internals", value = "internals",
-            internals_ui("internals")
-          )
-        }
-      )
+      board_ui("board", metadata, layout)
     )
   )
 }

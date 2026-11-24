@@ -152,7 +152,7 @@ test_that("the Internals tab is only there to develop the board", {
   withr::local_options(targetsboard.dev = TRUE)
   html <- as.character(app_ui(metadata, "_targets.R"))
   expect_match(html, 'data-value="internals"', fixed = TRUE)
-  expect_match(html, 'id="internals-text"', fixed = TRUE)
+  expect_match(html, 'id="board-internals-text"', fixed = TRUE)
 })
 
 test_that("tar_board() hands the dev, confirm_nodes and preview_bytes options to its background process", {
@@ -182,7 +182,7 @@ test_that("tar_board() hands the dev, confirm_nodes and preview_bytes options to
 test_that("the Script field offers the scripts, with the launch script first and chosen", {
   metadata <- list(nodes = fake_nodes(), edges = fake_edges())
   html <- as.character(app_ui(metadata, "b.R", scripts = c("a.R", "b.R", "c.R")))
-  expect_match(html, 'id="script-path"><option', fixed = TRUE)
+  expect_match(html, 'id="board-script-path"><option', fixed = TRUE)
   expect_match(html, '<option value="b.R" selected>b.R</option>', fixed = TRUE)
   options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
   expect_equal(options, paste0('<option value="', c("b.R", "a.R", "c.R"), '"'))

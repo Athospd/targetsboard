@@ -71,11 +71,17 @@
 
 ## Minor changes
 
+* The board's app is built of Shiny modules, one per part: the script,
+  runs, graph, value preview and each tab. Its input and output ids are
+  namespaced, under `board-` (`board-graph-flow`, `board-run-all`).
 * Run all keeps its plain label: it no longer names the run modes that are
   on ("Run all · keep going"). The switches below it show them.
 
 ## Bug fixes
 
+* `update_targetsboard()` and the widget's other update and command
+  functions find a widget inside a Shiny module: they address it by its
+  namespaced id, as the widget knows itself.
 * On a narrow window the Board pane keeps a usable height. It collapsed to a
   strip above the Control Panel.
 * The Load spinner no longer covers the Board pane for a moment when the

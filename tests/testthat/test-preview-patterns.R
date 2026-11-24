@@ -68,21 +68,21 @@ test_that("the board's preview of a pattern follows its picker, and opens on bra
   server <- local_app_server()
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_focused_node = "squares", flow_double_clicked_node = "squares")
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "squares", `board-graph-flow_double_clicked_node` = "squares")
+    html <- output[["board-preview-content"]]$html
     expect_match(html, 'max="4" value="1"', fixed = TRUE)
     expect_match(html, 'data-copy="targets::tar_read(squares, branches = 1)"', fixed = TRUE)
 
-    session$setInputs(`preview-branch` = 3)
-    expect_match(output[["preview-content"]]$html, 'data-copy="targets::tar_read(squares, branches = 3)"', fixed = TRUE)
-    session$setInputs(`preview-branch` = 0)
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-preview-branch` = 3)
+    expect_match(output[["board-preview-content"]]$html, 'data-copy="targets::tar_read(squares, branches = 3)"', fixed = TRUE)
+    session$setInputs(`board-preview-branch` = 0)
+    html <- output[["board-preview-content"]]$html
     expect_match(html, "All 4 branches", fixed = TRUE)
     expect_match(html, 'data-copy="targets::tar_read(squares)"', fixed = TRUE)
 
     # Another target, then back: branch 1 again.
-    session$setInputs(flow_focused_node = "plain")
-    session$setInputs(flow_focused_node = "squares")
-    expect_match(output[["preview-content"]]$html, 'max="4" value="1"', fixed = TRUE)
+    session$setInputs(`board-graph-flow_focused_node` = "plain")
+    session$setInputs(`board-graph-flow_focused_node` = "squares")
+    expect_match(output[["board-preview-content"]]$html, 'max="4" value="1"', fixed = TRUE)
   })
 })

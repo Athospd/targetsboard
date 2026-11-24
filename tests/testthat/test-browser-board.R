@@ -33,8 +33,8 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
 
   # Clicking a target focuses it; double-clicking previews its value.
   app$click(selector = ".react-flow__node[data-id='c']")
-  app$wait_for_value(input = "flow_focused_node")
-  expect_equal(app$get_value(input = "flow_focused_node"), "c")
+  app$wait_for_value(input = "board-graph-flow_focused_node")
+  expect_equal(app$get_value(input = "board-graph-flow_focused_node"), "c")
   mouse_event(app, "c", "dblclick")
   app$wait_for_js(preview_of("c"), timeout = preview_timeout)
   expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "4")
@@ -47,7 +47,7 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   # and the preview: only the board's own Escape clears them.
   app$run_js("document.querySelector('.tb-preview-name').setAttribute('tabindex', '-1'); document.querySelector('.tb-preview-name').focus();")
   press_key(app, "Escape")
-  expect_equal(app$get_value(input = "flow_focused_node"), "c")
+  expect_equal(app$get_value(input = "board-graph-flow_focused_node"), "c")
   expect_true(app$get_js("!!document.querySelector('.tb-preview-printed')"))
 
   # A status-only update retypes the node in place, without moving it, and
@@ -55,14 +55,14 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   before <- transform("a")
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
-       {id: 'flow', nodes: [{id: 'a', type: 'running', target_status: 'dispatched'}]}}))"
+       {id: 'board-graph-flow', nodes: [{id: 'a', type: 'running', target_status: 'dispatched'}]}}))"
   )
   app$wait_for_js(paste0(node("a"), ".classList.contains('react-flow__node-running')"))
   expect_equal(transform("a"), before)
 
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
-       {id: 'flow', nodes: [], warnings: ['b']}}))"
+       {id: 'board-graph-flow', nodes: [], warnings: ['b']}}))"
   )
   # Checked together: the board's own status updates may arrive later.
   app$wait_for_js(paste0(
@@ -71,7 +71,7 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   ))
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
-       {id: 'flow', nodes: [], warnings: []}}))"
+       {id: 'board-graph-flow', nodes: [], warnings: []}}))"
   )
   app$wait_for_js(paste0(node("b"), ".querySelector('.warning-mark') === null"))
 
@@ -82,13 +82,13 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
     "(() => { const p = ", node("b"), ".querySelector('.branch-progress');",
     " if (p && p.innerText === '3/6' && p.classList.contains('branch-progress-errored')) return true;",
     " window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:",
-    " {id: 'flow', nodes: [], branches: {b: {total: 6, done: 3, errored: 1}}}}));",
+    " {id: 'board-graph-flow', nodes: [], branches: {b: {total: 6, done: 3, errored: 1}}}}));",
     " return false; })()"
   ))
   expect_false(app$get_js(paste0(node("a"), ".querySelector('.branch-progress') !== null")))
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
-       {id: 'flow', nodes: [], branches: []}}))"
+       {id: 'board-graph-flow', nodes: [], branches: []}}))"
   )
   app$wait_for_js(paste0(node("b"), ".querySelector('.branch-progress') === null"))
 
@@ -134,16 +134,16 @@ test_that("the Load spinner covers the board only while Load loads, not at the s
   expect_true(app$get_js(hit))
   expect_equal(app$get_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display"), "none")
   # And still none once the server has answered.
-  app$wait_for_js("Shiny.shinyapp.$values['script-loading'] !== undefined")
+  app$wait_for_js("Shiny.shinyapp.$values['board-script-loading'] !== undefined")
   expect_true(app$get_js(hit))
 
   # Load a slow script: the spinner covers the pane, captioned, and takes the
   # click; then it goes once the new graph is drawn.
-  app$run_js("const s = $('#script-path')[0].selectize; s.setValue('slow.R'); s.blur();")
-  app$click(selector = "#script-load")
+  app$run_js("const s = $('#board-script-path')[0].selectize; s.setValue('slow.R'); s.blur();")
+  app$click(selector = "#board-script-load")
   app$wait_for_js(paste(
     "getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display !== 'none'",
-    "&& document.querySelector('#script-loading_caption').innerText === 'Loading pipeline\u2026'"
+    "&& document.querySelector('#board-script-loading_caption').innerText === 'Loading pipeline\u2026'"
   ), timeout = 10000)
   expect_false(app$get_js(hit))
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='slow_a']\") !== null", timeout = 30000)
@@ -190,7 +190,7 @@ test_that("the delete keys don't remove targets from the read-only board", {
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
 
   app$click(selector = ".react-flow__node[data-id='b']")
-  app$wait_for_value(input = "flow_selected_nodes")
+  app$wait_for_value(input = "board-graph-flow_selected_nodes")
   for (key in c("Backspace", "Delete")) press_key(app, key)
   Sys.sleep(1)
 
@@ -205,7 +205,7 @@ test_that("a click on a tar_meta() row shows its target on the board", {
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 8")
   # A group selected before: the row's target replaces it.
   send_widget_message(app, "targetsboard:command",
-                      list(id = "flow", command = "select", nodes = c("t1", "t2")))
+                      list(id = "board-graph-flow", command = "select", nodes = c("t1", "t2")))
   app$wait_for_js("document.querySelector('.tb-group-toolbar') !== null")
   # A group's toolbar has no Copy: that's for a single target.
   expect_equal(
@@ -214,19 +214,19 @@ test_that("a click on a tar_meta() row shows its target on the board", {
   )
 
   app$click(selector = "a[data-value='tar_meta']")
-  app$wait_for_js("document.querySelectorAll('#meta-table .rt-tbody .rt-tr').length === 8")
+  app$wait_for_js("document.querySelectorAll('#board-meta-table .rt-tbody .rt-tr').length === 8")
   app$run_js(
-    "Array.from(document.querySelectorAll('#meta-table .rt-tbody .rt-tr'))
+    "Array.from(document.querySelectorAll('#board-meta-table .rt-tbody .rt-tr'))
        .find(r => r.querySelector('.rt-td').innerText.trim() === 't6')
        .querySelector('.rt-td').click()"
   )
   app$wait_for_js("document.querySelector(\"a[data-value='board']\").classList.contains('active')")
   app$wait_for_js(paste0(node_js("t6"), ".classList.contains('tb-focused')"))
-  app$wait_for_value(input = "flow_focused_node")
-  expect_equal(app$get_value(input = "flow_focused_node"), "t6")
+  app$wait_for_value(input = "board-graph-flow_focused_node")
+  expect_equal(app$get_value(input = "board-graph-flow_focused_node"), "t6")
   # Alone: selected, ringed, with its own toolbar.
   app$wait_for_js("document.querySelector('.tb-group-toolbar') === null")
-  expect_equal(unlist(app$get_value(input = "flow_selected_nodes")), "t6")
+  expect_equal(unlist(app$get_value(input = "board-graph-flow_selected_nodes")), "t6")
   expect_equal(
     unlist(app$get_js("Array.from(document.querySelectorAll('.react-flow__node.tb-focused')).map(n => n.dataset.id)")),
     "t6"
@@ -310,10 +310,10 @@ test_that("the Script field filters the scripts as one types, and Load switches 
   app <- new_app_driver(dir, name = "scripts", load_timeout = 60 * 1000)
   withr::defer(app$stop())
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
-  expect_equal(app$get_value(input = "script-path"), "_targets.R")
+  expect_equal(app$get_value(input = "board-script-path"), "_targets.R")
 
   # Typing filters the dropdown to the matching scripts.
-  app$run_js("const s = $('#script-path')[0].selectize; s.focus(); s.setTextboxValue('oth'); s.refreshOptions(true);")
+  app$run_js("const s = $('#board-script-path')[0].selectize; s.focus(); s.setTextboxValue('oth'); s.refreshOptions(true);")
   app$wait_for_js("document.querySelector('.selectize-dropdown-content .option') !== null")
   shown <- app$get_js(
     "Array.from(document.querySelectorAll('.selectize-dropdown-content .option')).map(o => o.dataset.value)"
@@ -321,8 +321,8 @@ test_that("the Script field filters the scripts as one types, and Load switches 
   expect_equal(unlist(shown), "other.R")
 
   # Choosing it and pressing Load draws its pipeline.
-  app$run_js("const s = $('#script-path')[0].selectize; s.setValue('other.R'); s.blur();")
-  app$click("script-load")
+  app$run_js("const s = $('#board-script-path')[0].selectize; s.setValue('other.R'); s.blur();")
+  app$click("board-script-load")
   app$wait_for_js(
     "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
   )
@@ -334,6 +334,6 @@ test_that("the Script field filters the scripts as one types, and Load switches 
   second$wait_for_js(
     "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
   )
-  second$wait_for_value(input = "script-path", ignore = list(NULL, "_targets.R"), timeout = 10 * 1000)
-  expect_equal(second$get_value(input = "script-path"), "other.R")
+  second$wait_for_value(input = "board-script-path", ignore = list(NULL, "_targets.R"), timeout = 10 * 1000)
+  expect_equal(second$get_value(input = "board-script-path"), "other.R")
 })

@@ -269,6 +269,9 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL, n
     }
     bslib::nav_panel(title, shiny::tags$div(class = "tb-preview-view", view))
   })
+  # A card inside the board's card, against the usual advice: it sits in its
+  # own sidebar, not the board's body, and full_screen needs a card, to
+  # read a large value on the whole page.
   bslib::card(
     class = "tb-preview", full_screen = TRUE,
     preview_header(target, built$facts, store, ns),

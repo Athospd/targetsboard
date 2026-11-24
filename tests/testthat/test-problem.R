@@ -228,25 +228,25 @@ test_that("the value preview leads with the problem; an errored target shows not
   server <- local_app_server()
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_focused_node = "model", flow_double_clicked_node = "model")
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "model", `board-graph-flow_double_clicked_node` = "model")
+    html <- output[["board-preview-content"]]$html
     expect_match(html, 'class="tb-problem" data-target="model"', fixed = TRUE)
     expect_match(html, 'data-target="data"', fixed = TRUE) # its input, linked
     expect_no_match(html, "tb-preview-printed", fixed = TRUE)
 
-    session$setInputs(flow_focused_node = "warned")
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "warned")
+    html <- output[["board-preview-content"]]$html
     expect_match(html, 'data-target="warned"', fixed = TRUE)
     expect_match(html, "tb-preview-printed", fixed = TRUE) # and its value
 
     # A pattern whose branch errored: its problem says why there is no value.
-    session$setInputs(flow_focused_node = "branch")
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "branch")
+    html <- output[["board-preview-content"]]$html
     expect_match(html, 'data-target="branch"', fixed = TRUE)
     expect_no_match(html, "No value stored", fixed = TRUE)
 
-    session$setInputs(flow_focused_node = "data")
-    expect_no_match(output[["preview-content"]]$html, "tb-problem", fixed = TRUE)
+    session$setInputs(`board-graph-flow_focused_node` = "data")
+    expect_no_match(output[["board-preview-content"]]$html, "tb-problem", fixed = TRUE)
   })
 })
 
@@ -298,7 +298,8 @@ test_that("the run log shows the end of the log file", {
 test_that("the Problems tab lists the problems; a row or a notification shows one on the board", {
   skip_on_cran()
   local_problem_store()
-  server <- local_app_server()
+  args <- local_board_args()
+  backend <- args$backend
   notes <- list()
   local_mocked_bindings(
     showNotification = function(ui, ..., type = "default") {
@@ -312,8 +313,8 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     targetsboard_fit_view = function(...) NULL
   )
 
-  shiny::testServer(server, {
-    backend_of(server)$stop_poller()
+  shiny::testServer(board_server, args = args, {
+    backend$stop_poller()
     expect_match(output[["problems-table"]], "object 'y' not found", fixed = TRUE) # the table renders
     expect_match(output[["problems-count"]]$html, ">3<", fixed = TRUE)
     expect_match(output[["problems-count"]]$html, "text-bg-danger", fixed = TRUE)
@@ -328,7 +329,7 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     # A run that keeps going: it finishes, with errors, and says where.
     session$setInputs(`run-keep_going` = TRUE, `run-all` = 1)
     session$elapse(600)
-    backend_of(server)$runner$process$wait(120 * 1000)
+    backend$runner$process$wait(120 * 1000)
     session$elapse(1100)
     expect_length(notes, 1)
     expect_equal(notes[[1]]$type, "warning")
@@ -350,7 +351,7 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
 test_that("the page has the Problems and Log tabs", {
   html <- as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R"))
   expect_match(html, 'data-value="problems"', fixed = TRUE)
-  expect_match(html, 'id="problems-count"', fixed = TRUE)
+  expect_match(html, 'id="board-problems-count"', fixed = TRUE)
   expect_match(html, 'data-value="log"', fixed = TRUE)
-  expect_match(html, 'id="log-text"', fixed = TRUE)
+  expect_match(html, 'id="board-log-text"', fixed = TRUE)
 })

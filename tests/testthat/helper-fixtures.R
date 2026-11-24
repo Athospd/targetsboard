@@ -38,6 +38,18 @@ local_app_server <- function(.env = parent.frame()) {
   server
 }
 
+# board_server()'s arguments, for the pipeline in the working directory:
+# testServer(board_server, args = ...) reaches the board's own reactives,
+# board() or data$running(). Its backend is started, and its poller killed
+# when the calling test ends.
+local_board_args <- function(.env = parent.frame()) {
+  metadata <- targets::tar_visnetwork(targets_only = TRUE)$x
+  backend <- board_backend("_targets.R", targets_only = TRUE)
+  withr::defer(backend$stop_poller(), envir = .env)
+  backend$start_once()
+  list(backend = backend, metadata = metadata, script = "_targets.R", color_mode = shiny::reactive("light"))
+}
+
 # The backend (board_backend()) of a server from app_server(), and its poller.
 backend_of <- function(server) environment(server)$backend
 poller_of <- function(server) backend_of(server)$poller

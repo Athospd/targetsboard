@@ -196,8 +196,8 @@ test_that("the value preview shows a frame, asks before a large value, and cache
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "c", `board-graph-flow_double_clicked_node` = "c")
+    html <- output[["board-preview-content"]]$html
     expect_match(html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
     # _targetsboard.R's method, loaded at start.
     expect_match(html, '<b class="tb-test-view">number 4</b>', fixed = TRUE)
@@ -205,25 +205,25 @@ test_that("the value preview shows a frame, asks before a large value, and cache
     expect_equal(reads, 1)
 
     # Back and forth: c comes from the cache.
-    session$setInputs(flow_focused_node = "b")
-    session$setInputs(flow_focused_node = "c")
-    output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "b")
+    session$setInputs(`board-graph-flow_focused_node` = "c")
+    output[["board-preview-content"]]$html
     expect_equal(reads, 2)
 
     # A method edited, then Refresh: it takes the new one, built again.
     writeLines("tar_board_preview.numeric <- function(x, target, ...) htmltools::tags$i('edited')", "_targetsboard.R")
-    session$setInputs(`script-refresh` = 1)
-    expect_match(output[["preview-content"]]$html, "<i>edited</i>", fixed = TRUE)
+    session$setInputs(`board-script-refresh` = 1)
+    expect_match(output[["board-preview-content"]]$html, "<i>edited</i>", fixed = TRUE)
     expect_equal(reads, 3)
 
     # Over the size limit: not read until asked.
     options(targetsboard.preview_bytes = 1)
-    session$setInputs(flow_focused_node = "a")
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "a")
+    html <- output[["board-preview-content"]]$html
     expect_match(html, "Load the value", fixed = TRUE)
     expect_equal(reads, 3)
-    session$setInputs(`preview-read` = 1)
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-preview-read` = 1)
+    html <- output[["board-preview-content"]]$html
     expect_no_match(html, "Load the value", fixed = TRUE)
     expect_match(html, '<i>edited</i>', fixed = TRUE)
     expect_equal(reads, 4)
@@ -243,8 +243,8 @@ test_that("a _targetsboard.R that fails to load is notified, and the board carri
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     expect_equal(notes, "_targetsboard.R didn't load: typo in my methods")
-    session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
-    expect_match(output[["preview-content"]]$html, "tb-preview-printed", fixed = TRUE)
+    session$setInputs(`board-graph-flow_focused_node` = "c", `board-graph-flow_double_clicked_node` = "c")
+    expect_match(output[["board-preview-content"]]$html, "tb-preview-printed", fixed = TRUE)
   })
 })
 
@@ -392,26 +392,26 @@ test_that("the preview follows its target's records: invalidated, then built aga
   })
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
-    expect_match(output[["preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+    session$setInputs(`board-graph-flow_focused_node` = "c", `board-graph-flow_double_clicked_node` = "c")
+    expect_match(output[["board-preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
     before <- built
 
     # Another target's records change: c's preview stays as it is.
     Sys.sleep(1.1) # file times can have 1s resolution
     targets::tar_invalidate(a)
     session$elapse(1100)
-    output[["preview-content"]]
+    output[["board-preview-content"]]
     expect_equal(built, before)
 
     Sys.sleep(1.1)
     targets::tar_invalidate(c)
     session$elapse(1100)
-    html <- output[["preview-content"]]$html
+    html <- output[["board-preview-content"]]$html
     expect_match(html, "No value stored for this target yet.", fixed = TRUE)
 
     Sys.sleep(1.1)
     targets::tar_make(reporter = "silent")
     session$elapse(1100)
-    expect_match(output[["preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+    expect_match(output[["board-preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
   })
 })

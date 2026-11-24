@@ -1,23 +1,24 @@
 test_that("one background poller is shared by all sessions", {
   skip_on_cran()
   local_pipeline()
-  server <- local_app_server()
+  args <- local_board_args()
+  backend <- args$backend
 
-  shiny::testServer(server, {
-    rds_path <- backend_of(server)$rds_path()
+  shiny::testServer(board_server, args = args, {
+    rds_path <- backend$rds_path()
     wait_for(function() file.exists(rds_path))
 
     session$elapse(600)
     expect_setequal(board()$x$nodes$id, c("a", "b", "c"))
   })
 
-  pid <- poller_of(server)$process$get_pid()
-  shiny::testServer(server, {
-    expect_equal(poller_of(server)$process$get_pid(), pid)
+  pid <- backend$poller$process$get_pid()
+  shiny::testServer(board_server, args = args, {
+    expect_equal(backend$poller$process$get_pid(), pid)
   })
 
-  process <- poller_of(server)$process
-  backend_of(server)$stop_poller()
+  process <- backend$poller$process
+  backend$stop_poller()
   expect_false(process$is_alive())
 })
 
@@ -30,13 +31,13 @@ test_that("Load restarts the poller only for an existing, different script", {
   shiny::testServer(server, {
     pid <- poller_of(server)$process$get_pid()
 
-    session$setInputs(`script-path` = "missing.R", `script-load` = 1)
+    session$setInputs(`board-script-path` = "missing.R", `board-script-load` = 1)
     expect_equal(poller_of(server)$process$get_pid(), pid)
 
-    session$setInputs(`script-path` = "_targets.R", `script-load` = 2)
+    session$setInputs(`board-script-path` = "_targets.R", `board-script-load` = 2)
     expect_equal(poller_of(server)$process$get_pid(), pid)
 
-    session$setInputs(`script-path` = "other.R", `script-load` = 3)
+    session$setInputs(`board-script-path` = "other.R", `board-script-load` = 3)
     expect_false(poller_of(server)$process$get_pid() == pid)
     expect_equal(poller_of(server)$script, "other.R")
   })
@@ -60,7 +61,7 @@ test_that("Load with no script chosen asks for one, and keeps the board as it is
   shiny::testServer(server, {
     pid <- poller_of(server)$process$get_pid()
     # The field is empty once a typed text that matches no script is left.
-    session$setInputs(`script-path` = "", `script-load` = 1)
+    session$setInputs(`board-script-path` = "", `board-script-load` = 1)
     expect_equal(notes, "Choose a script to load.")
     expect_equal(states, "load ready")
     expect_equal(poller_of(server)$process$get_pid(), pid)
@@ -73,7 +74,8 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
   local_pipeline()
   writeLines(c("Sys.sleep(2)", "library(targets)", "list(tar_target(x, 1))"), "slow.R")
   writeLines("stop('broken pipeline')", "broken.R")
-  server <- local_app_server()
+  args <- local_board_args()
+  backend <- args$backend
   states <- character()
   local_mocked_bindings(
     update_task_button = function(id, ..., state = NULL) states[[length(states) + 1]] <<- paste(id, state),
@@ -86,7 +88,7 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     .package = "shinycssloaders"
   )
 
-  shiny::testServer(server, {
+  shiny::testServer(board_server, args = args, {
     # Nothing to load: the button is ready again at once.
     session$setInputs(`script-path` = "missing.R", `script-load` = 1)
     expect_equal(states, "load ready")
@@ -100,7 +102,7 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     # A spinner covers the board meanwhile, so the old graph can't be used.
     expect_equal(spinner, "show loading")
     expect_equal(output[["script-loading_caption"]], "Loading pipeline\u2026") # no script name
-    rds_path <- backend_of(server)$rds_path()
+    rds_path <- backend$rds_path()
     wait_for(function() file.exists(rds_path))
     session$elapse(600)
     expect_equal(states[[3]], "load ready")
@@ -112,7 +114,7 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     session$elapse(600)
     expect_length(states, 3)
     expect_equal(output[["script-loading_caption"]], "Loading pipeline\u2026")
-    wait_for(function() file.exists(poller_error_path(backend_of(server)$rds_path())))
+    wait_for(function() file.exists(poller_error_path(backend$rds_path())))
     session$elapse(600)
     expect_equal(states[[4]], "load ready")
     expect_equal(spinner, rep(c("show loading", "hide loading"), 2))
@@ -125,7 +127,8 @@ test_that("Load asks before drawing a graph over the size limit, and Cancel keep
   writeLines(c("library(targets)", "list(tar_target(w, 1), tar_target(x, w), tar_target(y, x), tar_target(z, y))"), "big.R")
   writeLines(c("library(targets)", "list(tar_target(v1, 1), tar_target(v2, v1), tar_target(v3, v2), tar_target(v4, v3))"), "bigger.R")
   withr::local_options(targetsboard.confirm_nodes = 3)
-  server <- local_app_server()
+  args <- local_board_args()
+  backend <- args$backend
   modals <- list()
   local_mocked_bindings(
     showModal = function(ui, ...) modals[[length(modals) + 1]] <<- ui,
@@ -140,9 +143,9 @@ test_that("Load asks before drawing a graph over the size limit, and Cancel keep
     .package = "shinycssloaders"
   )
 
-  shiny::testServer(server, {
+  shiny::testServer(board_server, args = args, {
     wait_new_graph <- function() {
-      rds_path <- backend_of(server)$rds_path()
+      rds_path <- backend$rds_path()
       wait_for(function() file.exists(rds_path))
       session$elapse(600)
     }
@@ -170,7 +173,7 @@ test_that("Load asks before drawing a graph over the size limit, and Cancel keep
     session$setInputs(`script-cancel_large` = 1)
     expect_true("w" %in% board()$x$nodes$id)
     expect_false("v1" %in% board()$x$nodes$id)
-    expect_equal(poller_of(server)$script, "big.R")
+    expect_equal(backend$poller$script, "big.R")
     expect_equal(spinner, c("show", "hide", "show", "hide"))
 
     # The cancelled script's graph never arrives later either.
@@ -185,28 +188,28 @@ test_that("a double-click previews a target's value, then the preview follows th
   server <- local_app_server()
 
   shiny::testServer(server, {
-    session$setInputs(flow_focused_node = "c")
-    expect_error(output[["preview-content"]]) # focusing alone reads no value
+    session$setInputs(`board-graph-flow_focused_node` = "c")
+    expect_error(output[["board-preview-content"]]) # focusing alone reads no value
 
-    session$setInputs(flow_double_clicked_node = "c")
-    expect_match(output[["preview-content"]]$html, '<pre class="tb-preview-printed">[1] 4</pre>', fixed = TRUE)
+    session$setInputs(`board-graph-flow_double_clicked_node` = "c")
+    expect_match(output[["board-preview-content"]]$html, '<pre class="tb-preview-printed">[1] 4</pre>', fixed = TRUE)
 
     # It follows the focus while open.
-    session$setInputs(flow_focused_node = "b")
-    expect_match(output[["preview-content"]]$html, '<pre class="tb-preview-printed">[1] 2</pre>', fixed = TRUE)
+    session$setInputs(`board-graph-flow_focused_node` = "b")
+    expect_match(output[["board-preview-content"]]$html, '<pre class="tb-preview-printed">[1] 2</pre>', fixed = TRUE)
 
     # Clearing the focus closes it, and focusing again doesn't reopen it.
-    session$setInputs(flow_focused_node = NULL)
-    session$setInputs(flow_focused_node = "c")
-    expect_error(output[["preview-content"]])
+    session$setInputs(`board-graph-flow_focused_node` = NULL)
+    session$setInputs(`board-graph-flow_focused_node` = "c")
+    expect_error(output[["board-preview-content"]])
 
     # Nor does its own toggle, once closed by it.
-    session$setInputs(flow_double_clicked_node = "c")
-    expect_match(output[["preview-content"]]$html, "[1] 4", fixed = TRUE)
-    session$setInputs(`preview-sidebar` = TRUE)
-    session$setInputs(`preview-sidebar` = FALSE)
-    session$setInputs(flow_focused_node = "b")
-    expect_error(output[["preview-content"]])
+    session$setInputs(`board-graph-flow_double_clicked_node` = "c")
+    expect_match(output[["board-preview-content"]]$html, "[1] 4", fixed = TRUE)
+    session$setInputs(`board-preview-sidebar` = TRUE)
+    session$setInputs(`board-preview-sidebar` = FALSE)
+    session$setInputs(`board-graph-flow_focused_node` = "b")
+    expect_error(output[["board-preview-content"]])
   })
 })
 
@@ -230,21 +233,21 @@ test_that("a target's menu runs it, invalidates it after confirmation, or previe
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_node_action = list(action = "run", node = "b"))
+    session$setInputs(`board-graph-flow_node_action` = list(action = "run", node = "b"))
     expect_equal(ran, list("b"))
 
     # Invalidates the target the menu was for, whatever is selected.
-    session$setInputs(flow_selected_nodes = c("a", "c"))
-    session$setInputs(flow_node_action = list(action = "invalidate", node = "b"))
+    session$setInputs(`board-graph-flow_selected_nodes` = c("a", "c"))
+    session$setInputs(`board-graph-flow_node_action` = list(action = "invalidate", node = "b"))
     expect_match(modal, "<code>b</code>", fixed = TRUE)
     expect_no_match(modal, "<code>a</code>", fixed = TRUE)
-    session$setInputs(`run-invalidate_confirm` = 1)
+    session$setInputs(`board-run-invalidate_confirm` = 1)
     meta <- targets::tar_meta(targets_only = TRUE)$name
     expect_false("b" %in% meta)
     expect_true(all(c("a", "c") %in% meta))
 
-    session$setInputs(flow_focused_node = "a", flow_node_action = list(action = "value", node = "a"))
-    expect_match(output[["preview-content"]]$html, '<pre class="tb-preview-printed">[1] 1</pre>', fixed = TRUE)
+    session$setInputs(`board-graph-flow_focused_node` = "a", `board-graph-flow_node_action` = list(action = "value", node = "a"))
+    expect_match(output[["board-preview-content"]]$html, '<pre class="tb-preview-printed">[1] 1</pre>', fixed = TRUE)
   })
 })
 
@@ -269,19 +272,19 @@ test_that("the actions of a selected group cover every target of it", {
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     # As the widget sends it: `nodes`, a JSON array, can arrive as a list.
-    session$setInputs(flow_node_action = list(action = "run", node = "a", nodes = list("a", "c")))
+    session$setInputs(`board-graph-flow_node_action` = list(action = "run", node = "a", nodes = list("a", "c")))
     expect_equal(ran, list(c("a", "c")))
 
-    session$setInputs(flow_node_action = list(action = "invalidate", node = "a", nodes = c("a", "c")))
+    session$setInputs(`board-graph-flow_node_action` = list(action = "invalidate", node = "a", nodes = c("a", "c")))
     expect_match(modal, "<code>a</code>", fixed = TRUE)
     expect_match(modal, "<code>c</code>", fixed = TRUE)
     expect_no_match(modal, "<code>b</code>", fixed = TRUE)
-    session$setInputs(`run-invalidate_confirm` = 1)
+    session$setInputs(`board-run-invalidate_confirm` = 1)
     expect_equal(targets::tar_meta(targets_only = TRUE)$name, "b")
 
     # A long list is cut short in the confirmation, but all are invalidated.
     many <- paste0("t", 1:12)
-    session$setInputs(flow_node_action = list(action = "invalidate", node = "t1", nodes = many))
+    session$setInputs(`board-graph-flow_node_action` = list(action = "invalidate", node = "t1", nodes = many))
     expect_match(modal, "<code>t10</code>", fixed = TRUE)
     expect_no_match(modal, "<code>t11</code>", fixed = TRUE)
     expect_match(modal, "and 2 more", fixed = TRUE)
@@ -303,10 +306,10 @@ test_that("Invalidate all asks for every target of the graph, then invalidates t
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(`run-invalidate_all` = 1)
+    session$setInputs(`board-run-invalidate_all` = 1)
     for (name in c("a", "b", "c")) expect_match(modal, sprintf("<code>%s</code>", name), fixed = TRUE)
     expect_equal(nrow(targets::tar_meta(targets_only = TRUE)), 3) # not yet
-    session$setInputs(`run-invalidate_confirm` = 1)
+    session$setInputs(`board-run-invalidate_confirm` = 1)
     expect_equal(nrow(targets::tar_meta(targets_only = TRUE)), 0)
   })
 })
@@ -321,7 +324,7 @@ test_that("board_targets() leaves out the functions and globals of the graph", {
 
 test_that("the board's sidebar has Invalidate all, not the selection's buttons", {
   html <- as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R"))
-  expect_match(html, 'id="run-invalidate_all"', fixed = TRUE)
+  expect_match(html, 'id="board-run-invalidate_all"', fixed = TRUE)
   expect_match(html, "Invalidate all", fixed = TRUE)
   expect_no_match(html, 'id="run_selected"', fixed = TRUE)
   expect_no_match(html, "Invalidate selected", fixed = TRUE)
@@ -345,11 +348,11 @@ test_that("tar_meta() is re-read only when the metadata file changes", {
   )
 
   shiny::testServer(server, {
-    invisible(output[["meta-table"]])
+    invisible(output[["board-meta-table"]])
     before <- reads
     for (i in 1:3) {
       session$elapse(1000)
-      invisible(output[["meta-table"]])
+      invisible(output[["board-meta-table"]])
     }
     expect_equal(reads, before)
 
@@ -357,7 +360,7 @@ test_that("tar_meta() is re-read only when the metadata file changes", {
     targets::tar_invalidate(a)
     targets::tar_make(reporter = "silent")
     session$elapse(1000)
-    invisible(output[["meta-table"]])
+    invisible(output[["board-meta-table"]])
     expect_equal(reads, before + 1)
   })
 })
@@ -421,7 +424,7 @@ test_that("Refresh asks the poller to recompute", {
   shiny::testServer(server, {
     path <- poller_of(server)$refresh_path
     expect_false(file.exists(path))
-    session$setInputs(`script-refresh` = 1)
+    session$setInputs(`board-script-refresh` = 1)
     expect_true(file.exists(path))
   })
 })
@@ -439,10 +442,11 @@ test_that("targets whose last build raised warnings get a warning mark", {
   # In this process, so the warning is ours to silence rather than printed by
   # the background process tar_make() would start.
   suppressWarnings(targets::tar_make(reporter = "silent", callr_function = NULL))
-  server <- local_app_server()
+  args <- local_board_args()
+  backend <- args$backend
 
-  shiny::testServer(server, {
-    expect_equal(warned_targets(), "a")
+  shiny::testServer(board_server, args = args, {
+    expect_equal(data$warned_targets(), "a")
   })
 })
 
@@ -466,7 +470,7 @@ test_that("the power button turns the board off", {
   local_mocked_bindings(stopApp = function(returnValue = NULL) stopped <<- returnValue, .package = "shiny")
 
   shiny::testServer(server, {
-    session$setInputs(turn_off = 1)
+    session$setInputs(`chrome-turn_off` = 1)
     expect_equal(stopped, "The board is turned off.")
   })
 })
@@ -483,9 +487,9 @@ test_that("the graph follows the page's dark mode switch", {
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(dark_mode = "dark")
+    session$setInputs(`chrome-dark_mode` = "dark")
     expect_equal(sent[[length(sent)]], list(inputId = "flow", color_mode = "dark"))
-    session$setInputs(dark_mode = "light")
+    session$setInputs(`chrome-dark_mode` = "light")
     expect_equal(sent[[length(sent)]]$color_mode, "light")
   })
 })
@@ -508,7 +512,7 @@ test_that("a row clicked in the tar_meta() table shows its target on the board",
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(`meta-row_clicked` = "b")
+    session$setInputs(`board-meta-row_clicked` = "b")
     expect_equal(calls, list(
       list("tab", list("view", "board")),
       list("focus", list("flow", "b")),
@@ -527,7 +531,7 @@ test_that("the board writes the widget's layout into the store's user folder", {
   )
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_layout = layout)
+    session$setInputs(`board-graph-flow_layout` = layout)
     expect_equal(read_board_layout(file.path("_targets", "user", "targetsboard_layout.json")), layout)
   })
 })
@@ -562,7 +566,7 @@ test_that("during a run, patterns show their branch counts; they go when it stop
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     session$flushReact()
-    session$setInputs(`run-all` = 1)
+    session$setInputs(`board-run-all` = 1)
     process <- backend_of(server)$runner$process
     seen <- FALSE
     while (process$is_alive()) {
