@@ -57,7 +57,7 @@
 #'   `tar_board_app()`: a [shiny::shinyApp()] object.
 #'
 #' @examples
-#' \dontrun{
+#' if (interactive()) {
 #' app <- tar_board()                 # opens the board in your browser
 #' targets::tar_make()                # the board follows along
 #' browseURL(attr(app, "url"))        # reopen it after closing the tab

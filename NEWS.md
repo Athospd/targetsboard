@@ -1,4 +1,4 @@
-# targetsboard (development version)
+# targetsboard 0.2.0
 
 ## New features
 
