@@ -327,6 +327,15 @@ update_targetsboard_options <- function(session, inputId, ...) {
 #' @param download_image Add a button to the zoom controls (shown with
 #'   `controls`) that downloads an image of the whole graph, as PNG.
 #' @return A list of options for [targetsboard()].
+#' @examples
+#' # Dark, with straight edges and no minimap:
+#' targetsboard_options(color_mode = "dark", edge_type = "straight", minimap = FALSE)
+#'
+#' # A right-click menu on each target, and a toolbar over the focused one:
+#' targetsboard_options(
+#'   node_actions = c(copy_name = "Copy its name", select_upstream = "Select upstream"),
+#'   toolbar_actions = c(run = "Run")
+#' )
 #' @export
 targetsboard_options <- function(color_mode = c("light", "dark", "system"),
                                  minimap = TRUE,

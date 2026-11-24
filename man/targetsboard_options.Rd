@@ -64,3 +64,13 @@ A list of options for \code{\link[=targetsboard]{targetsboard()}}.
 \description{
 Display options of the DAG widget
 }
+\examples{
+# Dark, with straight edges and no minimap:
+targetsboard_options(color_mode = "dark", edge_type = "straight", minimap = FALSE)
+
+# A right-click menu on each target, and a toolbar over the focused one:
+targetsboard_options(
+  node_actions = c(copy_name = "Copy its name", select_upstream = "Select upstream"),
+  toolbar_actions = c(run = "Run")
+)
+}
