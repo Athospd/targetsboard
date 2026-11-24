@@ -120,8 +120,9 @@ test_that("the frame shows the target's facts, its tar_read() to copy, and full-
   expect_length(button, 1)
   expect_match(button, '<code>targets::tar_read(fit, store = "my_store")</code>', fixed = TRUE)
   expect_match(button, 'aria-label="Copy targets::tar_read(fit', fixed = TRUE)
-  expect_match(button, 'class="tb-copy-icon"', fixed = TRUE)
-  expect_match(button, 'class="tb-copied-icon"', fixed = TRUE)
+  # Font Awesome's, from shiny::icon().
+  expect_match(button, '<i class="[^"]*fa-copy tb-copy-icon"')
+  expect_match(button, '<i class="[^"]*fa-check tb-copied-icon"')
   expect_no_match(button, ">Copy<", fixed = TRUE)
   expect_match(html, "bslib-full-screen-enter", fixed = TRUE)
   expect_match(html, ">Printed<", fixed = TRUE)

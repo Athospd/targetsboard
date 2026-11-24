@@ -185,7 +185,8 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tb-copy-code svg {
+.tb-copy-code .tb-copy-icon,
+.tb-copy-code .tb-copied-icon {
   flex: none;
   color: var(--bs-secondary-color);
 }
@@ -194,10 +195,10 @@ body {
   display: none;
 }
 .tb-copy-code.tb-copied .tb-copied-icon {
-  display: inline;
+  display: inline-block;
   color: var(--bs-success);
 }
-.tb-copy-code.tb-copy-failed svg {
+.tb-copy-code.tb-copy-failed .tb-copy-icon {
   color: var(--bs-danger);
 }
 .tb-preview-facts {

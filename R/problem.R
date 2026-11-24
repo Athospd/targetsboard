@@ -328,23 +328,12 @@ copy_button_js <- paste(
 #' @param code The code.
 #' @noRd
 copy_code_button <- function(code) {
-  icon <- function(class, ...) {
-    shiny::tags$svg(
-      class = class, width = 14, height = 14, viewBox = "0 0 16 16", `aria-hidden` = "true",
-      fill = "none", stroke = "currentColor", `stroke-width` = "1.5",
-      `stroke-linecap` = "round", `stroke-linejoin` = "round", ...
-    )
-  }
   shiny::tags$button(
     class = "tb-copy-code", type = "button", `data-copy` = code, title = code,
     `aria-label` = paste("Copy", code), onclick = copy_code_js,
     shiny::tags$code(code),
-    icon(
-      "tb-copy-icon",
-      shiny::tags$rect(x = "5.5", y = "5.5", width = "8", height = "8", rx = "1.5"),
-      shiny::tags$path(d = "M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5")
-    ),
-    icon("tb-copied-icon", shiny::tags$path(d = "M3 8.5l3.25 3.25L13 5"))
+    shiny::icon("copy", class = "tb-copy-icon"),
+    shiny::icon("check", class = "tb-copied-icon")
   )
 }
 
