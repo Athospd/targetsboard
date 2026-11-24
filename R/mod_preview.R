@@ -19,7 +19,7 @@ preview_ui <- function(id) {
       shinycssloaders::withSpinner(
         shiny::uiOutput(ns("content")),
         type = 8, custom.css = TRUE, hide.ui = FALSE, id = ns("spinner"),
-        caption = "Loading value…"
+        caption = "Loading value\u2026"
       )
     )
   )
