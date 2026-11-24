@@ -32,6 +32,12 @@
 #' `_targetsboard.R`. A value larger than 100 MB in the store is read only
 #' when asked; set the limit with `options(targetsboard.preview_bytes = )`.
 #'
+#' @section Themes:
+#' The board's look is the "Targets board" theme. A few Bootstrap themes
+#' from Bootswatch, checked for readable text in light and dark mode, can
+#' replace it: set `options(targetsboard.theme = )` to one of their names,
+#' e.g. `"Cosmo"`, before starting the board.
+#'
 #' @param script Path to the targets script. Defaults to the project's, as
 #'   `targets::tar_config_get("script")` gives it.
 #' @param port Port to serve the board on. Defaults to the `shiny.port` option
@@ -91,10 +97,10 @@ tar_board <- function(script = targets::tar_config_get("script"),
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, host, port, targets_only, dev, confirm_nodes, preview_bytes) {
+    \(metadata, script, scripts, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme) {
       options(
         targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes,
-        targetsboard.preview_bytes = preview_bytes
+        targetsboard.preview_bytes = preview_bytes, targetsboard.theme = theme
       )
       print(targetsboard::tar_board_app(
         script = script,
@@ -113,7 +119,8 @@ tar_board <- function(script = targets::tar_config_get("script"),
       targets_only = targets_only,
       dev = board_dev_mode(),
       confirm_nodes = confirm_nodes_limit(),
-      preview_bytes = preview_bytes_limit()
+      preview_bytes = preview_bytes_limit(),
+      theme = board_theme_option()
     ),
     supervise = TRUE,
     poll_connection = TRUE,

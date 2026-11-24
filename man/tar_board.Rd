@@ -99,6 +99,14 @@ with a \code{\link[=tar_board_preview]{tar_board_preview()}} method, from a pack
 when asked; set the limit with \code{options(targetsboard.preview_bytes = )}.
 }
 
+\section{Themes}{
+
+The board's look is the "Targets board" theme. A few Bootstrap themes
+from Bootswatch, checked for readable text in light and dark mode, can
+replace it: set \code{options(targetsboard.theme = )} to one of their names,
+e.g. \code{"Cosmo"}, before starting the board.
+}
+
 \examples{
 if (interactive()) {
 app <- tar_board()                 # opens the board in your browser
