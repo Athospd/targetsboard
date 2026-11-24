@@ -60,7 +60,10 @@ tar_board_preview(x, target, ...)
 
 \item{target}{What the board knows about the target, from the store: a
 list with \code{name}, \code{format}, \code{bytes} (its size in the store) and \code{time}
-(when it was built).}
+(when it was built). For a pattern, also \code{pattern}: \code{branches} (how
+many), \code{branch} (the one shown, or 0 for all of them combined),
+\code{branch_name} and \code{total_bytes}; \code{bytes}, \code{format} and \code{time} are then
+the branch's.}
 
 \item{...}{For future arguments.}
 }

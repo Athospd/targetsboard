@@ -11,25 +11,56 @@ preview_bytes_limit <- function() getOption("targetsboard.preview_bytes", 100e6)
 #' @return `list(name, format, bytes, time)`, or `NULL` when the store has no
 #'   record of it. A pattern's bytes are the sum of its branches'.
 #' @noRd
-preview_target <- function(name, store = targets::tar_config_get("store")) {
+preview_target <- function(name, store = targets::tar_config_get("store"), branch = 1L) {
   meta <- tryCatch(
-    targets::tar_meta(fields = c("format", "bytes", "time"), store = store),
+    targets::tar_meta(fields = c("type", "format", "bytes", "time", "children"), store = store),
     error = function(e) NULL
   )
   if (is.null(meta) || !name %in% meta$name) return(NULL)
+  field <- function(row, f) if (f %in% names(row)) na_null(row[[f]]) else NULL
   row <- meta[meta$name == name, ]
-  list(
-    name = name,
-    format = if ("format" %in% names(row)) na_null(row$format) else NULL,
-    bytes = if ("bytes" %in% names(row)) na_null(row$bytes) else NULL,
-    time = if ("time" %in% names(row)) na_null(row$time) else NULL
-  )
+  target <- list(name = name, format = field(row, "format"), bytes = field(row, "bytes"), time = field(row, "time"))
+  children <- if ("children" %in% names(row)) row$children[[1]] else NULL
+  children <- children[!is.na(children)]
+  if (!identical(field(row, "type"), "pattern") || !length(children)) return(target)
+
+  # A pattern shows one branch at a time, as tar_read(name, branches = i)
+  # reads it, or all of them combined (branch 0).
+  branch <- as.integer(branch)
+  if (is.na(branch) || branch < 0L || branch > length(children)) branch <- 1L
+  target$pattern <- list(branches = length(children), branch = branch, total_bytes = target$bytes)
+  rows <- meta[match(children, meta$name), ]
+  if (branch == 0L) {
+    times <- rows$time[!is.na(rows$time)]
+    target$time <- if (length(times)) max(times)
+    return(target)
+  }
+  child <- rows[branch, ]
+  target$pattern$branch_name <- children[[branch]]
+  target$format <- field(child, "format") %||% target$format
+  target$bytes <- field(child, "bytes")
+  target$time <- field(child, "time")
+  target
+}
+
+# The branches argument of tar_read() for a pattern's branch, if one.
+branch_arg <- function(target) {
+  branch <- target$pattern$branch
+  if (is.null(branch) || branch == 0L) NULL else paste("branches =", branch)
+}
+
+#' Reads the value the preview shows: a target's, or one branch of a pattern
+#' @noRd
+read_preview_value <- function(target, store = NULL) {
+  branch <- target$pattern$branch
+  if (is.null(branch) || branch == 0L) return(targets::tar_read_raw(target$name, store = store))
+  targets::tar_read_raw(target$name, branches = branch, store = store)
 }
 
 # Identifies one build of a target: a rebuilt target is a new key, so the
 # cache never shows it stale.
 preview_key <- function(target) {
-  paste(target$name, format(target$time %||% NA), target$bytes %||% NA, sep = "|")
+  paste(target$name, target$pattern$branch %||% "", format(target$time %||% NA), target$bytes %||% NA, sep = "|")
 }
 
 # Whether a value is too large to read without asking.
@@ -138,8 +169,8 @@ preview_cache <- function(size = 5) {
 }
 
 # R code that reads the value in the author's console.
-read_code <- function(name, store = NULL) {
-  paste0("targets::tar_read(", paste(c(name, store_arg(store)), collapse = ", "), ")")
+read_code <- function(name, store = NULL, branches = NULL) {
+  paste0("targets::tar_read(", paste(c(name, branches, store_arg(store)), collapse = ", "), ")")
 }
 
 preview_header <- function(target, facts = NULL, store = NULL) {
@@ -149,7 +180,7 @@ preview_header <- function(target, facts = NULL, store = NULL) {
     if (!is.null(target$format)) paste(target$format, "format"),
     if (!is.null(built)) paste("built", built)
   )
-  code <- read_code(target$name, store)
+  code <- read_code(target$name, store, branch_arg(target))
   bslib::card_header(
     class = "tb-preview-header",
     shiny::tags$div(
@@ -160,7 +191,62 @@ preview_header <- function(target, facts = NULL, store = NULL) {
         title = code, onclick = copy_button_js, "Copy"
       )
     ),
-    shiny::tags$div(class = "tb-preview-facts", lapply(items, shiny::tags$span))
+    shiny::tags$div(class = "tb-preview-facts", lapply(items, shiny::tags$span)),
+    if (!is.null(target$pattern)) branch_picker(target$pattern)
+  )
+}
+
+# Sends the branch to show: 1 to n, or 0 for all of them.
+branch_js <- function(value) {
+  sprintf("Shiny.setInputValue('value_preview_branch', %s, {priority: 'event'})", value)
+}
+
+#' A pattern's branch picker: previous and next, a branch by number, and
+#' all the branches combined while their size is under the preview's limit
+#' @noRd
+branch_picker <- function(pattern, limit = preview_bytes_limit()) {
+  n <- pattern$branches
+  i <- pattern$branch
+  fits <- is.null(pattern$total_bytes) || isTRUE(pattern$total_bytes <= limit)
+  all_link <- function(label) {
+    shiny::tags$button(type = "button", class = "btn btn-link btn-sm p-0 tb-branch-all", onclick = branch_js(0), label)
+  }
+  if (i == 0L) {
+    return(shiny::tags$div(
+      class = "tb-preview-branches",
+      shiny::tags$span(sprintf("All %s branches", format(n, big.mark = ","))),
+      shiny::tags$button(type = "button", class = "btn btn-link btn-sm p-0", onclick = branch_js(1), "One branch")
+    ))
+  }
+  shiny::tags$div(
+    class = "tb-preview-branches",
+    shiny::tags$button(
+      type = "button", class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Previous branch",
+      `aria-label` = "Previous branch", disabled = if (i <= 1) NA, onclick = branch_js(max(i - 1L, 1L)), "\u2039"
+    ),
+    shiny::tags$label(
+      class = "tb-branch-label", "Branch",
+      shiny::tags$input(
+        type = "number", class = "form-control form-control-sm tb-branch-number", min = 1, max = n, value = i,
+        `aria-label` = "Branch number",
+        onchange = sprintf("const v = Math.round(Number(this.value)); if (v >= 1 && v <= %d) %s", n, branch_js("v"))
+      ),
+      sprintf("of %s", format(n, big.mark = ","))
+    ),
+    shiny::tags$button(
+      type = "button", class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Next branch",
+      `aria-label` = "Next branch", disabled = if (i >= n) NA, onclick = branch_js(i + 1), "\u203a"
+    ),
+    shiny::tags$code(class = "tb-branch-name", pattern$branch_name),
+    if (fits) {
+      all_link("All branches")
+    } else {
+      shiny::tags$span(
+        class = "tb-branch-all-off",
+        title = sprintf("All branches are %s, more than the %s the preview reads", format_bytes(pattern$total_bytes), format_bytes(limit)),
+        "All branches: too large"
+      )
+    }
   )
 }
 

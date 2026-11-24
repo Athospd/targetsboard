@@ -41,6 +41,9 @@ test_that("an errored target's problem has its error, traceback, seed and comman
 
   expect_null(target_problem("data", "_targets.R")$error)
   expect_false(has_problem(target_problem("data", "_targets.R")))
+  # Without a problem, the pipeline's script isn't run for its command.
+  local_mocked_bindings(target_command = function(...) stop("ran the script"))
+  expect_false(has_problem(target_problem("data", "_targets.R")))
   expect_null(target_problem("absent", "_targets.R"))
 })
 
