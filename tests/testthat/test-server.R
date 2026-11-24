@@ -456,7 +456,7 @@ test_that("the tar_visnetwork tab shows tar_visnetwork()'s own widget", {
   widget <- targets::tar_visnetwork(targets_only = TRUE)
   board <- shiny::reactiveVal(list(x = widget$x, widget = widget, progress_mtime = progress_mtime()))
 
-  shiny::testServer(visnetwork_server, args = list(board = board), {
+  shiny::testServer(visnetwork_server, args = list(board = board, color_mode = shiny::reactive("light")), {
     expect_match(output$graph, "hierarchical", fixed = TRUE) # tar_visnetwork()'s layout
   })
 })
