@@ -3,7 +3,8 @@
 ## New features
 
 * The value preview shows a value in a frame: a header with its class, shape,
-  size in the store, format and build time, a Copy for `tar_read()`, and a
+  size in the store, format and build time, its `tar_read()` call on a button
+  that copies it, with a copy icon, and a
   tab per view of the value, the last one "Printed", with what `print()`
   shows. A preview that fails falls back to Printed with a note, and the
   frame opens full-screen.

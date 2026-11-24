@@ -186,10 +186,7 @@ preview_header <- function(target, facts = NULL, store = NULL) {
     shiny::tags$div(
       class = "d-flex justify-content-between align-items-start gap-2",
       shiny::tags$code(class = "tb-preview-name", target$name),
-      shiny::tags$button(
-        class = "btn btn-sm btn-outline-secondary tb-copy", `data-copy` = code,
-        title = code, onclick = copy_button_js, "Copy"
-      )
+      copy_code_button(code)
     ),
     shiny::tags$div(class = "tb-preview-facts", lapply(items, shiny::tags$span)),
     if (!is.null(target$pattern)) branch_picker(target$pattern)

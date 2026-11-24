@@ -321,6 +321,42 @@ copy_button_js <- paste(
   "navigator.clipboard.writeText(b.dataset.copy).then(() => say('Copied'), () => say('Copy failed'));"
 )
 
+#' A button that shows the code it copies, with a copy icon
+#'
+#' As GitHub's for a branch's name: once copied, a check takes the icon's
+#' place for a moment; if it couldn't be, its title says so.
+#' @param code The code.
+#' @noRd
+copy_code_button <- function(code) {
+  icon <- function(class, ...) {
+    shiny::tags$svg(
+      class = class, width = 14, height = 14, viewBox = "0 0 16 16", `aria-hidden` = "true",
+      fill = "none", stroke = "currentColor", `stroke-width` = "1.5",
+      `stroke-linecap` = "round", `stroke-linejoin` = "round", ...
+    )
+  }
+  shiny::tags$button(
+    class = "tb-copy-code", type = "button", `data-copy` = code, title = code,
+    `aria-label` = paste("Copy", code), onclick = copy_code_js,
+    shiny::tags$code(code),
+    icon(
+      "tb-copy-icon",
+      shiny::tags$rect(x = "5.5", y = "5.5", width = "8", height = "8", rx = "1.5"),
+      shiny::tags$path(d = "M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5")
+    ),
+    icon("tb-copied-icon", shiny::tags$path(d = "M3 8.5l3.25 3.25L13 5"))
+  )
+}
+
+copy_code_js <- paste(
+  "const b = this;",
+  "const done = c => { b.classList.remove('tb-copied', 'tb-copy-failed'); b.classList.add(c);",
+  " b.title = c === 'tb-copied' ? 'Copied' : 'Copy failed';",
+  " clearTimeout(b._tb); b._tb = setTimeout(() => { b.classList.remove(c); b.title = b.dataset.copy; }, 1500); };",
+  "if (!navigator.clipboard) { done('tb-copy-failed'); return; }",
+  "navigator.clipboard.writeText(b.dataset.copy).then(() => done('tb-copied'), () => done('tb-copy-failed'));"
+)
+
 # R code to copy into the console, shown in full.
 code_block <- function(title, kind, code) {
   shiny::tags$div(
