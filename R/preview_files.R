@@ -161,6 +161,61 @@ serve_file <- function(path, session = shiny::getDefaultReactiveDomain()) {
   )
 }
 
+#' A PDF, in the browser's PDF viewer
+#'
+#' Some browsers have none: RStudio's and Positron's viewers are Electron
+#' views with Chromium's PDF viewer turned off. There, the board's preview.js
+#' puts the PDF's first pages in the frame's place, drawn as PNG images by
+#' pdftools: so the frame carries its page count and the URL of its pages.
+#' Without pdftools, a link to open it in a browser takes its place.
+#' @param path The PDF.
+#' @noRd
+pdf_view <- function(path) {
+  session <- shiny::getDefaultReactiveDomain()
+  pages <- if (!is.null(session) && has_pdftools()) {
+    tryCatch(pdftools::pdf_info(path)$pages, error = function(e) NULL)
+  }
+  # No src: preview.js sets it where the browser can show it. Loaded where
+  # it can't, a PDF could start a download.
+  shiny::tags$iframe(
+    class = "tb-preview-document tb-preview-pdf", title = basename(path), `data-pdf-src` = serve_file(path),
+    `data-pdf-pages` = pages,
+    `data-pdf-page-url` = if (!is.null(pages)) serve_pdf_pages(path, session)
+  )
+}
+
+has_pdftools <- function() requireNamespace("pdftools", quietly = TRUE)
+
+#' A URL for a PDF's pages as PNG images: add "&page=" and a page number
+#' @noRd
+serve_pdf_pages <- function(path, session) {
+  session$registerDataObj(
+    name = paste0("tb_pdf_", substr(digest::digest(path), 1, 12)),
+    data = normalizePath(path, winslash = "/"),
+    filterFunc = function(data, req) {
+      query <- shiny::parseQueryString(req$QUERY_STRING %||% "")
+      page <- suppressWarnings(as.integer(query$page))
+      if (length(page) != 1 || is.na(page) || page < 1) page <- 1L
+      shiny::httpResponse(200, "image/png", pdf_page_png(data, page))
+    }
+  )
+}
+
+#' A PDF's page as PNG bytes, drawn by pdftools; past its last page, the last
+#' @noRd
+pdf_page_png <- function(path, page) {
+  page <- min(page, pdftools::pdf_info(path)$pages)
+  dir <- tempfile("tb_pdf_")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE))
+  # A single file name is a sprintf() format, of the page and the format.
+  file <- pdftools::pdf_convert(
+    path, format = "png", pages = page, dpi = 110, verbose = FALSE,
+    filenames = file.path(gsub("%", "%%", dir, fixed = TRUE), "page_%d.%s")
+  )
+  readBin(file, "raw", file.size(file))
+}
+
 # The first lines of a text file, and whether there are more.
 first_lines <- function(path, n) {
   lines <- readLines(path, n = n + 1, warn = FALSE, encoding = "UTF-8")
@@ -180,6 +235,82 @@ text_file_view <- function(path, language = NULL) {
   )
 }
 
+#' Markdown, rendered, with its R code blocks coloured
+#'
+#' highlight.js colours the board's `<pre class="language-r">`; Markdown puts
+#' a block's language on its `<code>`, so it moves to the `<pre>`.
+#' @param lines The Markdown's lines.
+#' @noRd
+markdown_view <- function(lines) {
+  html <- as.character(shiny::markdown(lines))
+  html <- gsub('<pre><code class="language-r">', '<pre class="language-r"><code>', html, fixed = TRUE)
+  shiny::tags$div(class = "tb-preview-markdown", shiny::HTML(html))
+}
+
+#' A Quarto or R Markdown document: what it was rendered to, or its source
+#'
+#' The rendered document is what the target made, with its chunks' output:
+#' the board doesn't render it again. It's the file next to the source with
+#' its name, HTML or else PDF. tar_quarto() and tar_render() return it too,
+#' first: it has its own section then, and the source's shows the source.
+#' @param path The source.
+#' @param target The target, with `files`, its paths, in a file section.
+#' @noRd
+document_view <- function(path, target) {
+  stem <- tools::file_path_sans_ext(path)
+  candidates <- paste0(stem, c(".html", ".pdf"))
+  rendered <- candidates[file.exists(candidates)][1]
+  note <- function(...) shiny::tags$p(class = "tb-table-caption", ...)
+  same_file <- function(a, b) normalizePath(a, winslash = "/", mustWork = FALSE) %in% normalizePath(b, winslash = "/", mustWork = FALSE)
+  if (!is.na(rendered) && !same_file(rendered, target$files %||% character())) {
+    older <- file.mtime(rendered) < file.mtime(path)
+    return(shiny::tagList(
+      note(sprintf("Rendered as %s%s.", basename(rendered), if (older) ", older than its source" else "")),
+      tar_board_preview(board_file(rendered), target)
+    ))
+  }
+  source <- if (file.size(path) < 1e6) {
+    markdown_view(document_markdown(readLines(path, warn = FALSE, encoding = "UTF-8")))
+  } else {
+    text_file_view(path, "r")
+  }
+  shiny::tagList(
+    if (!is.na(rendered)) {
+      note(sprintf("Its source: %s has its own section.", basename(rendered)))
+    } else {
+      note("Not rendered: its source, with its chunks as code.")
+    },
+    source
+  )
+}
+
+#' A Quarto or R Markdown document's lines as plain Markdown
+#'
+#' As the rendered document reads, without running it: the front matter
+#' gives its title as a heading and is otherwise left out, and each chunk
+#' (```` ```{r label, echo=FALSE} ````) becomes a code block in its
+#' language. Chunks show their code, not their output.
+#' @param lines The document's lines.
+#' @noRd
+document_markdown <- function(lines) {
+  title <- NULL
+  if (length(lines) > 1 && grepl("^---\\s*$", lines[[1]])) {
+    end <- which(grepl("^(---|\\.\\.\\.)\\s*$", lines[-1]))[1] + 1
+    if (!is.na(end)) {
+      front <- lines[seq_len(end - 2) + 1]
+      field <- grep("^title:", front, value = TRUE)[1]
+      if (!is.na(field)) {
+        title <- trimws(sub("^title:", "", field))
+        title <- sub("^([\"'])(.*)\\1$", "\\2", title)
+      }
+      lines <- lines[-seq_len(end)]
+    }
+  }
+  lines <- sub("^(\\s*`{3,})\\s*\\{([A-Za-z0-9_]+)[^}]*\\}\\s*$", "\\1\\2", lines)
+  if (!is.null(title) && nzchar(title)) lines <- c(paste("#", title), "", lines)
+  lines
+}
+
 #' @rdname tar_board_preview
 #' @export
 tar_board_preview.tar_board_file <- function(x, target, ...) {
@@ -196,9 +327,7 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
       shiny::tags$img(class = "tb-preview-image", src = url, alt = basename(path))
     ))
   }
-  if (ext == "pdf") {
-    return(shiny::tags$iframe(class = "tb-preview-document", src = serve_file(path), title = basename(path)))
-  }
+  if (ext == "pdf") return(pdf_view(path))
   if (ext %in% c("html", "htm")) {
     return(shiny::tags$iframe(class = "tb-preview-document", src = serve_html_report(path), title = basename(path)))
   }
@@ -210,8 +339,9 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
       rows_view(data)
     ))
   }
+  if (ext %in% c("qmd", "rmd")) return(document_view(path, target))
   if (ext %in% c("md", "markdown") && file.size(path) < 1e6) {
-    return(shiny::tags$div(class = "tb-preview-markdown", shiny::markdown(readLines(path, warn = FALSE, encoding = "UTF-8"))))
+    return(markdown_view(readLines(path, warn = FALSE, encoding = "UTF-8")))
   }
   if (ext %in% c("r", "rmd", "qmd")) return(text_file_view(path, "r"))
   if (ext %in% c("txt", "log", "json", "yaml", "yml", "md", "markdown", "toml", "sql", "py", "sh")) {

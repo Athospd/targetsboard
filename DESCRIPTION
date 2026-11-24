@@ -38,6 +38,7 @@ Suggests:
     broom,
     chromote,
     ggplot2,
+    pdftools,
     plotly,
     ragg,
     shinytest2,

@@ -78,15 +78,20 @@ spark_histogram <- function(x, width = 96, height = 22) {
   counts <- graphics::hist(x - min(x), breaks = 16, plot = FALSE)$counts
   bar <- width / length(counts)
   heights <- counts / max(counts) * (height - 1)
-  bars <- vapply(seq_along(counts), function(i) {
-    sprintf(
-      '<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f"/>',
-      (i - 1) * bar + 0.5, height - heights[i], max(bar - 1, 0.5), heights[i]
-    )
-  }, character(1))
-  htmltools::HTML(sprintf(
-    '<svg class="tb-spark" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="distribution">%s</svg>',
-    width, height, width, height, paste(bars, collapse = "")
+  # Tags, not an HTML string: reactable draws a header's tags as React
+  # elements, and would show an HTML string as text.
+  bars <- lapply(seq_along(counts), function(i) {
+    htmltools::tag("rect", list(
+      x = sprintf("%.1f", (i - 1) * bar + 0.5), y = sprintf("%.1f", height - heights[i]),
+      width = sprintf("%.1f", max(bar - 1, 0.5)), height = sprintf("%.1f", heights[i])
+    ))
+  })
+  htmltools::tag("svg", c(
+    list(
+      class = "tb-spark", width = width, height = height,
+      viewBox = sprintf("0 0 %d %d", width, height), role = "img", `aria-label` = "distribution"
+    ),
+    bars
   ))
 }
 
@@ -130,10 +135,17 @@ column_summary <- function(x) {
 }
 
 # A column's header: its name over its type.
-column_header <- function(name, type) {
+column_header <- function(name, type, spark = NULL, rows = NULL) {
   htmltools::tagList(
     htmltools::tags$span(class = "tb-col-name", name),
-    htmltools::tags$span(class = "tb-col-type", type)
+    htmltools::tags$span(class = "tb-col-type", type),
+    if (!is.null(spark)) {
+      htmltools::tags$span(
+        class = "tb-col-spark",
+        title = sprintf("The distribution of all %s rows", format(rows, big.mark = ",")),
+        spark
+      )
+    }
   )
 }
 
@@ -147,9 +159,12 @@ rows_view <- function(x, limit = preview_rows) {
       shown[[column]] <- vapply(shown[[column]], function(v) paste(format(v), collapse = ", "), character(1))
     }
   }
+  # A number or date column is headed by its distribution, of every row:
+  # the table shows only the first ones.
   columns <- stats::setNames(lapply(names(shown), function(column) {
     type <- type_abbr(x[[column]])
-    reactable::colDef(header = function(value) column_header(column, type), html = FALSE)
+    spark <- if (is_continuous(x[[column]])) spark_histogram(x[[column]], width = 64, height = 16)
+    reactable::colDef(header = function(value) column_header(column, type, spark, nrow(x)), html = FALSE)
   }), names(shown))
   htmltools::tagList(
     if (nrow(x) > limit) {
@@ -157,7 +172,10 @@ rows_view <- function(x, limit = preview_rows) {
         "The first %s of %s rows.", format(limit, big.mark = ","), format(nrow(x), big.mark = ",")
       ))
     },
-    preview_table(shown, columns = columns, searchable = TRUE, sortable = TRUE)
+    preview_table(
+      shown, columns = columns, searchable = TRUE, filterable = TRUE, sortable = TRUE,
+      defaultPageSize = 10
+    )
   )
 }
 
@@ -193,7 +211,8 @@ columns_view <- function(x) {
   )
 }
 
-#' A vector's preview: its summary, its distribution and its values
+#' A vector's preview: its summary, its distribution, and its names or its
+#' values' counts
 #' @noRd
 vector_view <- function(x) {
   if (length(x) == 1 && is.null(names(x))) {
@@ -224,13 +243,8 @@ vector_view <- function(x) {
       ),
       sortable = TRUE
     )
-  } else {
-    first <- utils::head(x, 100)
-    htmltools::tagList(
-      htmltools::tags$p(class = "tb-table-caption", if (length(x) > 100) "The first 100 values." else "The values."),
-      htmltools::tags$pre(class = "tb-vector-values", paste(format(first), collapse = "  "))
-    )
   }
+  # Numbers, dates and date-times: their values are what Printed shows.
   htmltools::tagList(
     htmltools::tags$div(class = "tb-vector-facts", lapply(facts, htmltools::tags$span)),
     if (nzchar(summary$stats)) htmltools::tags$p(class = "tb-vector-stats", summary$stats),

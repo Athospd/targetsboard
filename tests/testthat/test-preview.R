@@ -105,7 +105,7 @@ test_that("the preview cache keeps the last few builds, by target and build", {
   expect_false(identical(preview_key(t1), preview_key(t2)))
 })
 
-test_that("the frame shows the target's facts, a Copy for tar_read(), and full-screen", {
+test_that("the frame shows the target's facts, its tar_read() to copy, and full-screen", {
   target <- list(name = "fit", format = "rds", bytes = 2500000, time = as.POSIXct("2026-11-23 14:05", tz = ""))
   built <- build_preview(1:3, target)
   html <- as.character(preview_frame(target, built, store = "my_store"))
@@ -114,6 +114,16 @@ test_that("the frame shows the target's facts, a Copy for tar_read(), and full-s
     expect_match(html, paste0("<span>", fact, "</span>"), fixed = TRUE)
   }
   expect_match(html, 'data-copy="targets::tar_read(fit, store = &quot;my_store&quot;)"', fixed = TRUE)
+  # The button shows the code it copies, with a copy icon, as GitHub's for
+  # a branch's name: a check takes the icon's place once it's copied.
+  button <- regmatches(html, regexpr('<button class="tb-copy-code"[^>]*>.*?</button>', html))
+  expect_length(button, 1)
+  expect_match(button, '<code>targets::tar_read(fit, store = "my_store")</code>', fixed = TRUE)
+  expect_match(button, 'aria-label="Copy targets::tar_read(fit', fixed = TRUE)
+  # Font Awesome's, from shiny::icon().
+  expect_match(button, '<i class="[^"]*fa-copy tb-copy-icon"')
+  expect_match(button, '<i class="[^"]*fa-check tb-copied-icon"')
+  expect_no_match(button, ">Copy<", fixed = TRUE)
   expect_match(html, "bslib-full-screen-enter", fixed = TRUE)
   expect_match(html, ">Printed<", fixed = TRUE)
 })
@@ -289,7 +299,7 @@ test_that("a long data frame sends only its first rows, and says so", {
   expect_s3_class(rows_view(listy), "shiny.tag.list")
 })
 
-test_that("vectors preview as a summary, a distribution and their values", {
+test_that("vectors preview as a summary and a distribution, and names or counts", {
   target <- list(name = "x")
   expect_match(as.character(tar_board_preview(42.195, target)), '<div class="tb-scalar">42.195</div>', fixed = TRUE)
 
@@ -301,6 +311,16 @@ test_that("vectors preview as a summary, a distribution and their values", {
   expect_match(as.character(tar_board_preview(factor(c("a", "b", "a")), target)), "<span>fct</span>", fixed = TRUE)
   expect_s3_class(tar_board_preview(c(alpha = 1, beta = 2), target), "shiny.tag.list") # a name and value table
   expect_match(as.character(tar_board_preview(as.Date("2026-01-01") + 0:9, target)), "2026-01-01 to 2026-01-10", fixed = TRUE)
+  # Numbers, dates and date-times: no list of their values, which Printed
+  # shows already.
+  stamps <- as.POSIXct("2026-01-01", tz = "UTC") + c(10, 2000, 86400)
+  for (x in list(c(1:10, NA), as.Date("2026-01-01") + 0:9, stamps)) {
+    expect_no_match(as.character(tar_board_preview(x, target)), "values.</p>", fixed = TRUE)
+    expect_no_match(as.character(tar_board_preview(x, target)), "<pre", fixed = TRUE)
+  }
+  # Names and counts, which Printed doesn't make as easy to read, stay.
+  expect_match(as.character(tar_board_preview(c(alpha = 1, beta = 2), target)), "alpha", fixed = TRUE)
+  expect_match(as.character(tar_board_preview(c("a", "b", "a"), target)), "Count", fixed = TRUE)
   # Matrices aren't vectors: no view of their own yet.
   expect_null(tar_board_preview(matrix(1:4, 2), target))
   expect_null(tar_board_preview(numeric(), target))
@@ -333,4 +353,65 @@ test_that("date-times get a histogram without overflowing hist()", {
   stamps <- as.POSIXct("2026-01-01", tz = "UTC") + seq(0, 86400 * 30, length.out = 40)
   expect_no_warning(spark <- spark_histogram(stamps))
   expect_match(as.character(spark), "<rect", fixed = TRUE)
+})
+
+test_that("the Rows table heads each number and date column with its distribution", {
+  frame <- data.frame(
+    n = c(seq(1, 50, length.out = 1999), 1000), # the last row past the first 1,000
+    word = rep(c("a", "b"), 1000),
+    day = as.Date("2026-01-01") + 0:1999
+  )
+  table <- rows_view(frame)
+  html <- as.character(table)
+  # Two histograms, one each for n and day: none for the text column.
+  expect_equal(lengths(regmatches(html, gregexpr("tb-col-spark", html, fixed = TRUE))), 2)
+  # As an element, which reactable draws, not an HTML string it would escape.
+  expect_match(html, '"name":"svg","attribs":[{][^}]*"className":"tb-spark"')
+  # Of every row, not only the first 1,000 the table shows.
+  expect_match(html, "distribution of all 2,000 rows", fixed = TRUE)
+
+  # Filters per column, a search, and 10 rows a page to begin with.
+  widget <- Find(function(x) inherits(x, "htmlwidget"), table)
+  expect_true(widget$x$tag$attribs$filterable)
+  expect_true(widget$x$tag$attribs$searchable)
+  expect_equal(widget$x$tag$attribs$defaultPageSize, 10)
+
+  # Too few values for a distribution: no histogram.
+  expect_no_match(as.character(rows_view(data.frame(n = 1:3))), "tb-col-spark", fixed = TRUE)
+})
+
+test_that("the preview follows its target's records: invalidated, then built again", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+  built <- 0
+  real_preview_target <- preview_target
+  local_mocked_bindings(preview_target = function(...) {
+    built <<- built + 1
+    real_preview_target(...)
+  })
+  shiny::testServer(server, {
+    backend_of(server)$stop_poller()
+    session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
+    expect_match(output$value_preview$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+    before <- built
+
+    # Another target's records change: c's preview stays as it is.
+    Sys.sleep(1.1) # file times can have 1s resolution
+    targets::tar_invalidate(a)
+    session$elapse(1100)
+    output$value_preview
+    expect_equal(built, before)
+
+    Sys.sleep(1.1)
+    targets::tar_invalidate(c)
+    session$elapse(1100)
+    html <- output$value_preview$html
+    expect_match(html, "No value stored for this target yet.", fixed = TRUE)
+
+    Sys.sleep(1.1)
+    targets::tar_make(reporter = "silent")
+    session$elapse(1100)
+    expect_match(output$value_preview$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+  })
 })

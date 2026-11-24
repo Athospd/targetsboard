@@ -158,6 +158,49 @@ body {
   background: none;
   overflow-wrap: anywhere;
 }
+/* The code a button copies, with a copy icon, as GitHub's for a branch's
+   name; a check once it's copied. */
+.tb-copy-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  max-width: 60%;
+  padding: 0.125rem 0.375rem 0.125rem 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.tb-copy-code:hover {
+  border-color: var(--bs-secondary-color);
+}
+.tb-copy-code code {
+  overflow: hidden;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tb-copy-code .tb-copy-icon,
+.tb-copy-code .tb-copied-icon {
+  flex: none;
+  color: var(--bs-secondary-color);
+}
+.tb-copy-code .tb-copied-icon,
+.tb-copy-code.tb-copied .tb-copy-icon {
+  display: none;
+}
+.tb-copy-code.tb-copied .tb-copied-icon {
+  display: inline-block;
+  color: var(--bs-success);
+}
+.tb-copy-code.tb-copy-failed .tb-copy-icon {
+  color: var(--bs-danger);
+}
 .tb-preview-facts {
   display: flex;
   flex-wrap: wrap;
@@ -210,6 +253,11 @@ body {
   font-size: 0.8125rem;
   color: var(--bs-secondary-color);
 }
+.tb-col-spark {
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 0;
+}
 .tb-spark rect {
   fill: var(--bs-primary);
   opacity: 0.75;
@@ -234,10 +282,6 @@ body {
 }
 .tb-vector-spark {
   margin-bottom: 0.75rem;
-}
-.tb-vector-values {
-  font-size: 0.8rem;
-  white-space: pre-wrap;
 }
 
 /* Plots and widgets in the value preview: a plot is 0.65 of the card's
@@ -300,6 +344,15 @@ body {
   height: 32rem;
   border: 1px solid var(--bs-border-color-translucent);
   border-radius: var(--bs-border-radius);
+  background: #fff;
+}
+/* A PDF's pages as images, where the browser has no PDF viewer
+   (srcjs/preview.js). */
+.tb-preview-pdf-page {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--bs-border-color-translucent);
   background: #fff;
 }
 .tb-preview[data-full-screen="true"] .tb-preview-document {

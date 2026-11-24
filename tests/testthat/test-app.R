@@ -152,7 +152,7 @@ test_that("the Internals tab is only there to develop the board", {
   withr::local_options(targetsboard.dev = TRUE)
   html <- as.character(app_ui(metadata, "_targets.R"))
   expect_match(html, 'data-value="internals"', fixed = TRUE)
-  expect_match(html, 'id="internals"', fixed = TRUE)
+  expect_match(html, 'id="internals-text"', fixed = TRUE)
 })
 
 test_that("tar_board() hands the dev, confirm_nodes and preview_bytes options to its background process", {

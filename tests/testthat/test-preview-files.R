@@ -120,3 +120,132 @@ test_that("a CSV or TSV file's line gives its rows and columns, not its size and
   writeLines("done", log)
   expect_match(as.character(file_section_view(log, target)), "modified ", fixed = TRUE)
 })
+
+# A session that only serves data objects, keeping each one's filter.
+stub_session <- function() {
+  session <- new.env()
+  session$served <- list()
+  session$registerDataObj <- function(name, data, filterFunc) {
+    session$served[[length(session$served) + 1]] <- filterFunc
+    paste0("url/", name, "?w=")
+  }
+  session
+}
+
+# A PDF of `pages` pages, each with its number in large type.
+local_pdf <- function(pages = 3, .env = parent.frame()) {
+  path <- withr::local_tempfile(fileext = ".pdf", .local_envir = .env)
+  grDevices::pdf(path, width = 4, height = 3)
+  for (i in seq_len(pages)) {
+    graphics::plot.new()
+    graphics::text(0.5, 0.5, i, cex = 6)
+  }
+  grDevices::dev.off()
+  path
+}
+
+test_that("a PDF shows in the browser's viewer, with its pages as images for a page that has none", {
+  skip_if_not_installed("pdftools")
+  path <- local_pdf(3)
+  session <- stub_session()
+  html <- shiny::withReactiveDomain(session, {
+    as.character(tar_board_preview(board_file(path), list(name = "f", format = "file")))
+  })
+  expect_match(html, '<iframe class="tb-preview-document tb-preview-pdf"', fixed = TRUE)
+  expect_no_match(html, " src=", fixed = TRUE) # preview.js sets it, if the browser can show it
+  expect_match(html, 'data-pdf-src="url/tb_file_', fixed = TRUE)
+  expect_match(html, 'data-pdf-pages="3"', fixed = TRUE)
+  expect_match(html, 'data-pdf-page-url="url/tb_pdf_', fixed = TRUE)
+
+  # The URL gives each page as a PNG; past the last page, the last one.
+  page <- function(query) session$served[[2]](normalizePath(path, winslash = "/"), list(QUERY_STRING = query))
+  png <- page("w=&page=2")
+  expect_equal(png$status, 200)
+  expect_equal(png$content_type, "image/png")
+  expect_identical(png$content[1:4], as.raw(c(0x89, 0x50, 0x4e, 0x47)))
+  expect_identical(page("page=9")$content, page("page=3")$content)
+  expect_false(identical(page("page=1")$content, page("page=3")$content))
+  expect_identical(page("page=x")$content, page("")$content) # not a page: the first
+})
+
+test_that("without pdftools, a PDF has no pages to show in its place", {
+  path <- local_pdf(1)
+  local_mocked_bindings(has_pdftools = function() FALSE)
+  session <- stub_session()
+  html <- shiny::withReactiveDomain(session, {
+    as.character(tar_board_preview(board_file(path), list(name = "f", format = "file")))
+  })
+  expect_match(html, "tb-preview-pdf", fixed = TRUE)
+  expect_no_match(html, "data-pdf-pages", fixed = TRUE)
+})
+
+test_that("Quarto and R Markdown files show rendered, with their title and their R chunks", {
+  dir <- withr::local_tempdir()
+  qmd <- file.path(dir, "report.qmd")
+  writeLines(c(
+    "---", "title: \"Fuel economy\"", "format: html", "---", "",
+    "Some **bold** text.", "",
+    "```{r fit, echo=FALSE}", "#| label: fit", "fit <- lm(mpg ~ wt, data = mtcars)", "```"
+  ), qmd)
+  rmd <- file.path(dir, "analysis.Rmd")
+  writeLines(c("Untitled, with a `code` span.", "", "```{r}", "x <- 1", "```"), rmd)
+  target <- list(name = "f", format = "file")
+
+  html <- as.character(tar_board_preview(board_file(qmd), target))
+  expect_match(html, "tb-preview-markdown", fixed = TRUE)
+  expect_match(html, "<h1>Fuel economy</h1>", fixed = TRUE) # the front matter's title
+  expect_no_match(html, "format: html", fixed = TRUE) # the rest of it left out
+  expect_match(html, "<strong>bold</strong>", fixed = TRUE)
+  # The chunk as R code, coloured like the board's other R code.
+  expect_match(html, '<pre class="language-r"><code>#| label: fit', fixed = TRUE)
+  expect_no_match(html, "{r", fixed = TRUE)
+
+  html <- as.character(tar_board_preview(board_file(rmd), target))
+  expect_no_match(html, "<h1>", fixed = TRUE)
+  expect_match(html, "<code>code</code>", fixed = TRUE)
+  expect_match(html, '<pre class="language-r"><code>x &lt;- 1', fixed = TRUE)
+})
+
+test_that("a Markdown file's R blocks are coloured too", {
+  path <- withr::local_tempfile(fileext = ".md")
+  writeLines(c("```r", "x <- 1", "```", "", "```", "plain", "```"), path)
+  html <- as.character(tar_board_preview(board_file(path), list(name = "f", format = "file")))
+  expect_match(html, '<pre class="language-r"><code>x &lt;- 1', fixed = TRUE)
+  expect_match(html, "<pre><code>plain", fixed = TRUE)
+})
+
+test_that("a Quarto or R Markdown file shows the document it was rendered to, when there is one", {
+  dir <- withr::local_tempdir()
+  qmd <- file.path(dir, "report.qmd")
+  writeLines(c("---", "title: \"Fuel economy\"", "---", "", "```{r}", "1 + 1", "```"), qmd)
+  html <- file.path(dir, "report.html")
+  view <- function(files = qmd) {
+    as.character(tar_board_preview(board_file(qmd), list(name = "f", format = "file", files = files)))
+  }
+
+  # Not rendered: its source, saying so.
+  out <- view()
+  expect_match(out, "Not rendered", fixed = TRUE)
+  expect_match(out, "<h1>Fuel economy</h1>", fixed = TRUE)
+
+  # Rendered next to it: the rendered document, as the target made it.
+  writeLines("<html><body><p>[1] 2</p></body></html>", html)
+  Sys.setFileTime(html, Sys.time() + 60)
+  out <- view()
+  expect_match(out, "Rendered as report.html", fixed = TRUE)
+  expect_match(out, '<iframe class="tb-preview-document" src="report_', fixed = TRUE)
+  expect_no_match(out, "<h1>Fuel economy</h1>", fixed = TRUE)
+  expect_no_match(out, "older than", fixed = TRUE)
+
+  # Rendered before the source last changed: said so.
+  Sys.setFileTime(html, Sys.time() - 3600)
+  expect_match(view(), "older than its source", fixed = TRUE)
+
+  # tar_quarto() and tar_render() return the rendered file too, which has
+  # its own section: the source's section shows the source.
+  # Its paths are relative to the project, the working directory.
+  withr::local_dir(dir)
+  out <- view(files = c("report.html", "report.qmd"))
+  expect_match(out, "<h1>Fuel economy</h1>", fixed = TRUE)
+  expect_match(out, "report.html has its own section", fixed = TRUE)
+})

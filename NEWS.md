@@ -2,8 +2,12 @@
 
 ## New features
 
+* The focused target's toolbar has a Copy button, which copies its name,
+  quoted as an R string, as "Copy its name" in its right-click menu. A
+  selected group's toolbar has none.
 * The value preview shows a value in a frame: a header with its class, shape,
-  size in the store, format and build time, a Copy for `tar_read()`, and a
+  size in the store, format and build time, its `tar_read()` call on a button
+  that copies it, with a copy icon, and a
   tab per view of the value, the last one "Printed", with what `print()`
   shows. A preview that fails falls back to Printed with a note, and the
   frame opens full-screen.
@@ -11,18 +15,25 @@
   views of its values, and `tar_board_preview_plot()` makes a plot one of
   them. Methods come from packages, or from a project's `_targetsboard.R`,
   which the board reads at start and on Refresh.
-* A data frame previews as two tables: Rows, its first 1,000 rows with each
-  column's type, searchable and sortable; and Columns, one line per column
+* A data frame previews as two tables: Rows, its first 1,000 rows, 10 a
+  page, with each column's type and, for numbers and dates, a histogram of
+  all its rows in the header, searchable, filterable by column and sortable;
+  and Columns, one line per column
   with its type, missing and unique counts, a summary and a small histogram.
-  A vector previews as its summary, its distribution and its values, or its
-  counts; a single value shows in full. Tables follow dark mode. skimr is no
+  A vector previews as its summary and its distribution, with its names or
+  its values' counts (its values are in Printed); a single value shows in
+  full. Tables follow dark mode. skimr is no
   longer suggested.
 * A plot in the value preview is drawn at the preview's width, 0.65 of it
   high, at twice the pixels, with ragg if installed; its text reads at the
   size its theme gives. A plot or an htmlwidget fills the frame in
   full-screen, and Escape leaves full-screen without closing the preview.
 * A file target previews its files by type: images, PDF and HTML files in
-  place, CSV and TSV files as tables, with their rows and columns counted, Markdown rendered, and the first 200
+  place (a PDF as images of its first 20 pages, with pdftools, in viewers
+  without a PDF viewer, such as RStudio's and Positron's), CSV and TSV files
+  as tables, with their rows and columns counted, Markdown rendered, a Quarto
+  or R Markdown file as the document it was rendered to (or its source, with
+  its chunks as code, if it wasn't), and the first 200
   lines of text files. Several files show as sections, 50 at a time, each
   read only when opened. Each path is dispatched as
   `tar_board_file_<extension>`, so a method adds a type.

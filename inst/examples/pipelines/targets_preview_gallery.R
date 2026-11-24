@@ -9,7 +9,7 @@
 # The tabs each target should show, before Printed, which is always last:
 #
 #   Data frames   Rows, Columns
-#   Vectors       Preview: a summary, a histogram, the values or counts;
+#   Vectors       Preview: a summary, a histogram, the names or counts;
 #                 a single value in large type
 #   Plots, HTML   Preview: a plot, a widget, or the HTML
 #   Lists         Preview: a tree
@@ -48,7 +48,7 @@ Filter(Negate(is.null), list(
     frame
   }),
 
-  # Vectors: a summary, a distribution and the values; a single value alone.
+  # Vectors: a summary, a distribution, the names or counts; a single value alone.
   tar_target(one_number, 42.195),
   tar_target(one_word, "hello"),
   tar_target(draws, rnorm(10000, mean = 5, sd = 2)),
