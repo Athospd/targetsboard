@@ -1,8 +1,8 @@
 #' The script the board draws: a bar as a browser's address bar
 #'
 #' Refresh, the script's path, and Load, above the board's tabs. The path is
-#' free text, with the known scripts as suggestions the browser filters as
-#' one types; Enter loads it. While Load loads another script,
+#' free text, with the known scripts as suggestions under it: all of them
+#' when it gets the focus, filtered as one types; Enter or a pick loads it. While Load loads another script,
 #' script_loading_ui() covers the Board pane.
 #' @param id The module's id.
 #' @param script Path to the targets script.

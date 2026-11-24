@@ -312,20 +312,48 @@ test_that("the script bar takes a typed path, Enter or Load loads it, and other 
   expect_equal(app$get_value(input = "board-script-path"), "_targets.R")
   suggestions <- "Array.from(document.querySelectorAll('#board-script-suggestions option')).map(o => o.value)"
   expect_equal(unlist(app$get_js(suggestions)), c("_targets.R", "other.R"))
+  shown <- "Array.from(document.querySelectorAll('.tb-suggestion')).map(i => i.textContent)"
+  chrome <- app$get_chromote_session()
+  press <- function(key, code) {
+    for (type in c("rawKeyDown", "keyUp")) {
+      chrome$Input$dispatchKeyEvent(type = type, key = key, code = key, windowsVirtualKeyCode = code)
+    }
+  }
+
+  # Focused, the field lists every script, whatever is in it already.
+  app$click(selector = "#board-script-path")
+  app$wait_for_js("document.querySelectorAll('.tb-suggestion').length === 2")
+  expect_equal(unlist(app$get_js(shown)), c("_targets.R", "other.R"))
+  # Typing filters them; Escape closes the list.
+  app$run_js("document.getElementById('board-script-path').select()")
+  chrome$Input$insertText(text = "oth")
+  app$wait_for_js("document.querySelectorAll('.tb-suggestion').length === 1")
+  expect_equal(unlist(app$get_js(shown)), "other.R")
+  press("Escape", 27)
+  app$wait_for_js("document.querySelector('.tb-suggestions') === null")
 
   # A path typed as a person would, not among the suggestions, and Enter.
-  chrome <- app$get_chromote_session()
   app$run_js("const i = document.getElementById('board-script-path'); i.focus(); i.select();")
   chrome$Input$insertText(text = "pipelines/not_suggested.R")
-  for (type in c("rawKeyDown", "keyUp")) {
-    chrome$Input$dispatchKeyEvent(type = type, key = "Enter", code = "Enter", windowsVirtualKeyCode = 13)
-  }
+  press("Enter", 13)
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='y']\") !== null", timeout = 30 * 1000)
   expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 1)
   # Loaded, it joins the suggestions.
   app$wait_for_js(paste0(suggestions, ".includes('pipelines/not_suggested.R')"))
 
-  # A suggestion, and the Load button.
+  # A suggestion picked with the arrow keys and Enter loads it.
+  app$run_js("document.getElementById('board-script-path').select()")
+  chrome$Input$insertText(text = "other")
+  app$wait_for_js("document.querySelectorAll('.tb-suggestion').length === 1")
+  press("ArrowDown", 40)
+  press("Enter", 13)
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000)
+  expect_equal(app$get_value(input = "board-script-path"), "other.R")
+  # One clicked loads it too; so does the Load button.
+  app$click(selector = "#board-script-path")
+  app$wait_for_js("document.querySelector(\".tb-suggestion[data-value='_targets.R']\") !== null")
+  app$click(selector = ".tb-suggestion[data-value='_targets.R']")
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='a']\") !== null", timeout = 30 * 1000)
   app$set_inputs(`board-script-path` = "other.R")
   app$click("board-script-load")
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000)

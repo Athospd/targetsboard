@@ -499,6 +499,41 @@ pre.hljs {
   /* In line with the first tab, below the page's header. */
   margin: 0.5rem var(--bs-card-cap-padding-x, 1rem) 0;
 }
+.tb-address {
+  position: relative;
+}
+/* Its suggestions, under the path (data-tb-suggest, srcjs/actions.js). */
+.tb-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  margin: 2px 0 0;
+  padding: 0.25rem 0;
+  max-height: 50vh;
+  overflow-y: auto;
+  background: var(--bs-body-bg);
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  box-shadow: var(--bs-box-shadow);
+}
+.tb-suggestion {
+  padding: 0.25rem 0.75rem;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.tb-suggestion:hover,
+.tb-suggestion.tb-active {
+  background: var(--bs-tertiary-bg);
+}
+.tb-suggestion.tb-current {
+  font-weight: 600;
+}
 .tb-address .tb-address-path {
   font-family: var(--bs-font-monospace);
   text-overflow: ellipsis;

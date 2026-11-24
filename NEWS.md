@@ -4,8 +4,8 @@
 
 * The script the board draws is chosen in a bar above the board's tabs, as
   a browser's address bar: Refresh, the script's path, and Load. The path is
-  free text, with the known scripts as suggestions filtered as one types;
-  Enter loads it. The sidebar keeps the run controls.
+  free text. Focused, it lists the known scripts, filtered as one types;
+  Enter, or a pick from the list, loads it. The sidebar keeps the run controls.
 * The focused target's toolbar has a Copy button, which copies its name,
   quoted as an R string, as "Copy its name" in its right-click menu. A
   selected group's toolbar has none.

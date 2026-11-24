@@ -66,10 +66,11 @@ run_mode_switches <- function(supported = run_modes_supported(), ns = identity) 
   )
 }
 
-#' The script bar's path: free text, as a browser's address bar. `list`
-#' names the datalist of suggestions, which the browser filters as one
-#' types; Enter clicks `load` (data-tb-enter, srcjs/actions.js). A text
-#' input Shiny binds by its class.
+#' The script bar's path: free text, as a browser's address bar.
+#' `suggestions` names the datalist of suggestions, which a list under the
+#' field shows, all of them when it gets the focus, filtered as one types
+#' (data-tb-suggest); Enter clicks `load` (data-tb-enter, srcjs/actions.js).
+#' A text input Shiny binds by its class.
 #' @noRd
 script_input <- function(script, id = "script", suggestions = NULL, load = NULL) {
   shiny::tags$input(
@@ -77,7 +78,8 @@ script_input <- function(script, id = "script", suggestions = NULL, load = NULL)
     class = "form-control shiny-input-text tb-address-path",
     placeholder = "Path to a targets script", `aria-label` = "Script",
     spellcheck = "false", autocomplete = "off",
-    list = suggestions, `data-tb-enter` = load
+    `data-tb-suggest` = suggestions, `data-tb-enter` = load,
+    role = "combobox", `aria-autocomplete` = "list", `aria-expanded` = "false"
   )
 }
 
