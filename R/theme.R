@@ -6,6 +6,10 @@
 # - The graph widget: the `--tb-*` colour tokens at the top of
 #   srcjs/targetsboardCustomCSS.css, with light and dark values. The widget
 #   must look right outside the app too, so it keeps its own.
+#
+# Text sizes: Bootstrap's body size and the --tb-font-size-* scale at the top
+# of index.css. Buttons: one style, bslib's default (`btn-default`), in two
+# sizes, the sidebar's and `btn-sm`; on the canvas, the toolbar's button.
 
 #' The app's Bootstrap theme
 #'

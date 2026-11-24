@@ -63,7 +63,7 @@ files_sections <- function(view, ns = identity) {
     ),
     if (length(paths) > files_page) {
       shiny::tags$button(
-        type = "button", class = "btn btn-sm btn-outline-secondary tb-preview-files-more",
+        type = "button", class = "btn btn-sm btn-default tb-preview-files-more",
         `data-tb-more` = files_page, sprintf("Show %d more", files_page)
       )
     }

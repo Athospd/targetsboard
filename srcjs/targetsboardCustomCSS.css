@@ -26,22 +26,28 @@
   --tb-danger: #c62828;
   --tb-danger-text: #fff;
   --tb-focus-ring: #2f223d;
-  /* Menus, toolbars and badges over the canvas. */
-  --tb-surface: #fff;
-  --tb-surface-text: #222;
-  --tb-surface-hover: #f0e5d7;
-  --tb-surface-border: #ccc;
+  /* Menus, toolbars, buttons and badges over the canvas: in the app, the
+     page's Bootstrap surfaces, as its dropdowns; alone, their values. */
+  --tb-surface: var(--bs-body-bg, #fff);
+  --tb-surface-text: var(--bs-body-color, #212529);
+  --tb-surface-hover: var(--bs-tertiary-bg, #f8f9fa);
+  --tb-surface-border: var(--bs-border-color, #dee2e6);
   --tb-surface-shadow: rgba(0, 0, 0, 0.15);
+  /* Sizes: the page's type scale, and Bootstrap's radii. */
+  --tb-font-size-xs: 0.8125rem;
+  --tb-font-size-xxs: 0.75rem;
+  --tb-radius: var(--bs-border-radius, 0.375rem);
+  --tb-radius-sm: var(--bs-border-radius-sm, 0.25rem);
+  --tb-radius-pill: var(--bs-border-radius-pill, 50rem);
 }
 
 .reactflow-wrapper.tb-dark {
   --tb-canvas-bg: #141414;
   --tb-canvas-marks: #777;
   --tb-focus-ring: #d6c7ea;
-  /* In the app, the page's own dark surfaces; alone, their values. */
-  --tb-surface: var(--bs-tertiary-bg, #2b3035);
+  --tb-surface: var(--bs-body-bg, #212529);
   --tb-surface-text: var(--bs-body-color, #dee2e6);
-  --tb-surface-hover: var(--bs-secondary-bg, #343a40);
+  --tb-surface-hover: var(--bs-tertiary-bg, #2b3035);
   --tb-surface-border: var(--bs-border-color, #495057);
   --tb-surface-shadow: rgba(0, 0, 0, 0.5);
 }
@@ -59,10 +65,10 @@
 .base-node.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); }
 
 .base-node {
-  padding: 10px;
+  padding: 0.625rem;
   border-radius: var(--xy-node-border-radius, var(--xy-node-border-radius-default));
-  width: 150px;
-  font-size: 12px;
+  width: 150px; /* the same for every target: layout.js relies on it */
+  font-size: var(--tb-font-size-xxs);
   color: var(--xy-node-color, var(--xy-node-color-default));
   text-align: center;
   border: var(--xy-node-border, var(--xy-node-border-default));
@@ -76,48 +82,10 @@
   height: 100%;
 }
  
-.providerflow aside {
-  border-left: 1px solid #eee;
-  padding: 15px 10px;
-  font-size: 12px;
-  background: #fff;
-}
- 
-.providerflow aside .description {
-  margin-bottom: 10px;
-}
- 
-.providerflow aside .title {
-  font-weight: 700;
-  margin-bottom: 5px;
-}
- 
-.providerflow aside .transform {
-  margin-bottom: 20px;
-}
- 
 .providerflow .reactflow-wrapper {
   flex-grow: 1;
 }
  
-.providerflow .selectall {
-  margin-top: 10px;
-}
- 
-@media screen and (min-width: 768px) {
-  .providerflow {
-    flex-direction: column;
-  }
- 
-  .providerflow aside {
-    width: 20%;
-    max-width: 250px;
-    height: 200px;
-  }
-}
-
-
-
 /* Spinner styles */
 .spinner {
   border: 4px solid rgba(255, 255, 255, 0.3);
@@ -128,8 +96,8 @@
   -webkit-animation: spin 2s linear infinite; /* Chrome, Safari, Opera */
   animation: spin 2s linear infinite;
   position: absolute;
-  top: 10px; /* Adjust as needed */
-  right: 10px; /* Adjust as needed */
+  top: 10px;
+  right: 10px;
 }
 
 /* Animation for spinning effect */
@@ -160,7 +128,7 @@
   background: var(--tb-warning);
   color: var(--tb-warning-text);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--tb-font-size-xxs);
   text-align: center;
   box-shadow: 0 0 0 2px var(--tb-canvas-bg);
 }
@@ -183,16 +151,16 @@
   display: flex;
   flex-direction: column;
   min-width: 170px;
-  padding: 4px 0;
+  padding: 0.25rem 0;
   background: var(--tb-surface);
   border: 1px solid var(--tb-surface-border);
-  border-radius: 6px;
+  border-radius: var(--tb-radius);
   box-shadow: 0 4px 12px var(--tb-surface-shadow);
-  font-size: 13px;
+  font-size: var(--tb-font-size-xs);
 }
 
 .tb-node-menu button {
-  padding: 6px 12px;
+  padding: 0.375rem 0.75rem;
   border: 0;
   background: none;
   text-align: left;
@@ -207,21 +175,24 @@
 /* The focused target's toolbar. */
 .tb-node-toolbar {
   display: flex;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
-.tb-node-toolbar button {
-  padding: 2px 8px;
+/* The canvas's one button: the toolbar's, and Tidy's (buttonStyles.css). */
+.tb-node-toolbar button,
+.tb-layout-buttons button {
+  padding: 0.125rem 0.5rem;
   border: 1px solid var(--tb-surface-border);
-  border-radius: 4px;
+  border-radius: var(--tb-radius-sm);
   background: var(--tb-surface);
   color: var(--tb-surface-text);
-  font-size: 12px;
+  font-size: var(--tb-font-size-xxs);
   cursor: pointer;
   box-shadow: 0 2px 6px var(--tb-surface-shadow);
 }
 
-.tb-node-toolbar button:hover {
+.tb-node-toolbar button:hover,
+.tb-layout-buttons button:hover {
   background: var(--tb-surface-hover);
 }
 
@@ -230,12 +201,12 @@
   position: absolute;
   top: -9px;
   right: -8px;
-  padding: 0 6px;
-  border-radius: 9px;
+  padding: 0 0.375rem;
+  border-radius: var(--tb-radius-pill);
   background: var(--tb-surface);
   color: var(--tb-surface-text);
   border: 1px solid var(--tb-surface-border);
-  font-size: 11px;
+  font-size: var(--tb-font-size-xxs);
   line-height: 16px;
   font-variant-numeric: tabular-nums;
 }

@@ -14,14 +14,14 @@ script_ui <- function(id, script, scripts = NULL) {
     class = "input-group input-group-sm tb-address",
     shiny::actionButton(
       ns("refresh"), NULL, icon = shiny::icon("rotate"),
-      class = "btn-outline-secondary", title = "Refresh: read the script again"
+      class = "btn-default", title = "Refresh: read the script again"
     ),
     script_input(script, id = ns("path"), suggestions = ns("suggestions"), load = ns("load")),
     # Busy, with a spinner, until the script's graph arrives: loading a
     # pipeline can take a while.
     bslib::input_task_button(
       ns("load"), "Load", icon = shiny::icon("folder-open"), label_busy = "Loading...",
-      type = "outline-secondary", auto_reset = FALSE
+      type = "default", auto_reset = FALSE
     ),
     # The suggestions: in the page from the start, then as the server
     # updates them.
