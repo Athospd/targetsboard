@@ -103,7 +103,8 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
     file.path(dir, "_targets.R")
   )
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 5", timeout = 30 * 1000)
-  app$wait_for_js(paste0(node("d"), ".style.transform !== 'translate(0px, 0px)'"))
+  # Placed once the layout has run: slow under coverage's instrumentation.
+  app$wait_for_js(paste0(node("d"), ".style.transform !== 'translate(0px, 0px)'"), timeout = 30 * 1000)
   expect_equal(list(a = transform("a"), b = transform("b"), c = transform("c")), placed)
   expect_false(transform("d") %in% unlist(placed))
   expect_false(has_class("d", "tb-dimmed")) # downstream of the focused c
