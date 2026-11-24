@@ -27,6 +27,9 @@ pipeline, meant to replace targets::tar_watch() for the pipeline's author.
   (`if (interactive())`).
 * Tests that start a Shiny app in a browser, or a pipeline in a background
   R process, are skipped on CRAN.
+* There are no references describing the methods in the package: it is an
+  interactive tool for 'targets' pipelines, not an implementation of a
+  published method.
 
 ## Downstream dependencies
 
