@@ -1,5 +1,5 @@
 Package: targetsboard
-Title: Targets Board
+Title: Watch and Run 'targets' Pipelines with More Control
 Version: 0.2.0
 Authors@R: c(
     person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre", "cph")),
@@ -20,10 +20,12 @@ Authors@R: c(
     person("Robert", "Penner", role = "cph",
            comment = "easing equations in d3-ease, in inst/htmlwidgets/targetsboard.js")
   )
-Description: A board for a 'targets' pipeline, to understand
-    it while working on it: its structure, what is outdated, what each target
-    produced, and what a run is doing. Meant to replace targets::tar_watch()
-    for the author.
+Description: A board for a 'targets' pipeline, to understand it while
+    working on it: its structure, what is outdated, what each target
+    produced, and what a run is doing. An alternative to
+    targets::tar_watch() with more control: from the board, the author can
+    start and stop runs, invalidate targets, preview their values, and see
+    where errors and warnings came from, with the code to debug them.
 License: MIT + file LICENSE
 Copyright: See the file inst/COPYRIGHTS for the bundled JavaScript
     libraries and their licences.
