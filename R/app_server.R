@@ -330,6 +330,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         if (!is.null(problem$error)) return(problem_part)
       }
       preview_methods()
+      focused_records_changed()
       # The problem says why there is no value: a pattern whose branches
       # errored. Without one, say it plainly.
       no_value <- function() problem_part %||% shiny::p("No value stored for this target yet.")
@@ -379,6 +380,26 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     shiny::observeEvent(input$flow_focused_node, branch_choice(1L), priority = 10, ignoreNULL = FALSE)
     shiny::observeEvent(input$value_preview_branch, branch_choice(as.integer(input$value_preview_branch)))
     read_anyway <- shiny::reactiveVal(character())
+    # The preview follows the focused target's records in tar_meta(), its
+    # branches' too: it changes when the target is invalidated or built
+    # again. Only its own: a run writes new metadata for each target it
+    # builds, which shouldn't redraw a preview whose target didn't change.
+    focused_records <- function(meta, name) {
+      if (is.null(meta) || is.null(name)) return(NULL)
+      parent <- if ("parent" %in% names(meta)) meta$parent else NA_character_
+      meta[meta$name %in% name | parent %in% name, ]
+    }
+    seen_records <- NULL
+    shiny::observeEvent(input$flow_focused_node, {
+      seen_records <<- focused_records(shiny::isolate(tar_meta_data()), input$flow_focused_node)
+    }, ignoreNULL = FALSE)
+    focused_records_changed <- shiny::reactiveVal(0)
+    shiny::observeEvent(tar_meta_data(), {
+      records <- focused_records(tar_meta_data(), shiny::isolate(input$flow_focused_node))
+      if (identical(records, seen_records)) return()
+      seen_records <<- records
+      focused_records_changed(shiny::isolate(focused_records_changed()) + 1)
+    }, ignoreNULL = FALSE, ignoreInit = TRUE)
     shiny::observeEvent(input$value_preview_read, {
       target <- preview_target(input$flow_focused_node, targets::tar_config_get("store"), branch = branch_choice())
       if (!is.null(target)) read_anyway(union(read_anyway(), preview_key(target)))
