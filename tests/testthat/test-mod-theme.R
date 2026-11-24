@@ -18,13 +18,14 @@ test_that("a theme set by the option starts the picker, which then doesn't remem
 test_that("the top bar holds the picker, before its switch, and hides the switch for a dark theme", {
   withr::local_options(targetsboard.theme = NULL)
   html <- as.character(chrome_ui("chrome", theme_ui("theme")))
-  expect_match(html, 'id="theme-pick".*<bslib-input-dark-mode')
-  expect_no_match(html, "hidden", fixed = TRUE)
+  expect_match(html, 'id="theme-pick".*class="btn btn-default btn-sm tb-mode-button"')
+  expect_no_match(html, "<button[^>]*tb-mode-button[^>]*hidden") # the dark mode button shows
   expect_no_match(as.character(chrome_ui("chrome")), "theme-pick", fixed = TRUE) # placed by app_ui()
   expect_match(as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R")),
                'id="theme-pick"', fixed = TRUE)
 
   dark <- as.character(chrome_ui("chrome", theme = "Darkly"))
+  expect_match(dark, '<button[^>]*tb-mode-button[^>]*hidden')
   expect_match(dark, '<bslib-input-dark-mode[^>]*mode="dark"[^>]*hidden')
 })
 
@@ -55,4 +56,14 @@ test_that("set_page_theme() sends the theme and whether it's dark-only", {
   set_page_theme(session, "Targets board")
   expect_null(bslib::theme_bootswatch(calls$theme))
   expect_equal(calls$message[[2]]$dark_only, FALSE)
+})
+
+test_that("the dark mode button is a button as the power button, over bslib's switch", {
+  html <- as.character(chrome_ui("chrome", theme = "Targets board"))
+  power <- regmatches(html, regexpr('<button[^>]*id="chrome-turn_off"[^>]*>', html))
+  expect_match(power, "btn-sm", fixed = TRUE)
+  expect_match(html, '<button type="button" class="btn btn-default btn-sm tb-mode-button"[^>]*data-tb-mode-toggle="chrome-dark_mode"')
+  expect_match(html, '<bslib-input-dark-mode id="chrome-dark_mode"[^>]*hidden') # its state, not its looks
+  expect_match(html, "fa-sun", fixed = TRUE)
+  expect_match(html, "fa-moon", fixed = TRUE)
 })

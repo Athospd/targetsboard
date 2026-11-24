@@ -46,19 +46,29 @@ test_that("a pick restyles the board, and dark-only themes take the switch", {
   pick_theme(app, "Pulse")
   app$wait_for_js(sprintf("%s !== '%s'", canvas_js, beige), timeout = 20000)
   expect_equal(app$get_js("localStorage.getItem('targetsboard.theme')"), "Pulse")
-  expect_false(app$get_js("document.querySelector('bslib-input-dark-mode').hidden"))
+  expect_false(app$get_js("document.querySelector('.tb-mode-button').hidden"))
 
   pick_theme(app, "Darkly")
-  app$wait_for_js("document.querySelector('bslib-input-dark-mode').hidden", timeout = 20000)
+  app$wait_for_js("document.querySelector('.tb-mode-button').hidden", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'")
   wait_for_widget_mode(app, "dark")
 
   pick_theme(app, "Targets board")
-  app$wait_for_js("!document.querySelector('bslib-input-dark-mode').hidden", timeout = 20000)
+  app$wait_for_js("!document.querySelector('.tb-mode-button').hidden", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'light'") # the mode before Darkly
   wait_for_widget_mode(app, "light")
   wait_or_show(app, sprintf("%s === '%s'", canvas_js, beige))
   expect_equal(app$get_js(layout_js), layout) # as on load
+
+  # Quick picks: only the last theme's CSS stays (no preset's canvas left).
+  pick_theme(app, "Pulse")
+  pick_theme(app, "Vapor")
+  pick_theme(app, "Targets board")
+  wait_or_show(app, "!document.querySelector('.tb-mode-button').hidden")
+  wait_or_show(app, sprintf("%s === '%s'", canvas_js, beige))
+  wait_or_show(app, paste(
+    "[...document.head.querySelectorAll('link[href*=\"bootstrap.min.css\"]')].length === 1"
+  ))
 })
 
 test_that("the browser remembers the pick, unless the option chose the theme", {
@@ -68,7 +78,7 @@ test_that("the browser remembers the pick, unless the option chose the theme", {
   app$run_js("localStorage.setItem('targetsboard.theme', 'Vapor')")
   app$run_js("location.reload()")
   app$wait_for_js("document.querySelector('#theme-pick')?.value === 'Vapor'", timeout = 20000)
-  app$wait_for_js("document.querySelector('bslib-input-dark-mode').hidden", timeout = 20000)
+  app$wait_for_js("document.querySelector('.tb-mode-button').hidden", timeout = 20000)
   app$run_js("localStorage.removeItem('targetsboard.theme')")
 
   dir2 <- local_pipeline(make = TRUE)
@@ -80,6 +90,6 @@ test_that("the browser remembers the pick, unless the option chose the theme", {
   app2$run_js("location.reload()")
   Sys.sleep(3)
   app2$wait_for_js("document.querySelector('#theme-pick')?.value === 'Cosmo'", timeout = 20000)
-  expect_false(app2$get_js("document.querySelector('bslib-input-dark-mode').hidden"))
+  expect_false(app2$get_js("document.querySelector('.tb-mode-button').hidden"))
   app2$run_js("localStorage.removeItem('targetsboard.theme')")
 })

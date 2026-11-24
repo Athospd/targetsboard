@@ -584,3 +584,16 @@ pre.hljs {
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
 }
+
+/* The dark mode button (mod_chrome.R): the sun in light mode, the moon in
+   dark. */
+[data-bs-theme="dark"] .tb-mode-button .tb-mode-light,
+:root:not([data-bs-theme="dark"]) .tb-mode-button .tb-mode-dark {
+  display: none;
+}
+
+/* Both glyphs 1em wide, as the power icon: the button keeps its size. */
+.tb-mode-button > i {
+  width: 1em;
+  text-align: center;
+}

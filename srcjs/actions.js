@@ -207,21 +207,36 @@ document.addEventListener('keydown', (event) => {
 // the page had before.
 const THEME_KEY = 'targetsboard.theme';
 
-function darkSwitch() {
-  return document.querySelector('bslib-input-dark-mode');
+// The dark mode button (R/mod_chrome.R) and bslib's switch, hidden, that it
+// flips: the switch sets the page's mode and sends it to the server.
+function modeButton() {
+  return document.querySelector('[data-tb-mode-toggle]');
 }
 
+function darkSwitch() {
+  const button = modeButton();
+  return button && document.getElementById(button.dataset.tbModeToggle);
+}
+
+document.addEventListener('click', (event) => {
+  const button = event.target.closest?.('[data-tb-mode-toggle]');
+  const dark = button && darkSwitch();
+  if (!dark) return;
+  dark.setAttribute('mode', dark.getAttribute('mode') === 'dark' ? 'light' : 'dark');
+});
+
 function themeMode(darkOnly) {
+  const button = modeButton();
   const dark = darkSwitch();
   if (!dark) return;
   if (darkOnly) {
-    if (!dark.hidden) dark.dataset.tbMode = dark.getAttribute('mode') || 'light';
+    if (!button.hidden) button.dataset.tbMode = dark.getAttribute('mode') || 'light';
     dark.setAttribute('mode', 'dark');
-    dark.hidden = true;
-  } else if (dark.hidden) {
-    dark.hidden = false;
-    dark.setAttribute('mode', dark.dataset.tbMode || 'light');
-    delete dark.dataset.tbMode;
+    button.hidden = true;
+  } else if (button.hidden) {
+    button.hidden = false;
+    dark.setAttribute('mode', button.dataset.tbMode || 'light');
+    delete button.dataset.tbMode;
   }
 }
 
@@ -248,11 +263,32 @@ function oursLast() {
     .forEach((el) => document.head.appendChild(el));
 }
 
+// Shiny removes a theme's old CSS once the new has loaded, but two picks
+// close together can leave the older one: its rules (a preset's canvas)
+// would still apply. Once a theme's file loads, any older one of the same
+// dependency (its folder) goes.
+function restyleStamp(link) {
+  return Number(new URL(link.href).searchParams.get('restyle')) || 0;
+}
+
+function folder(link) {
+  const path = new URL(link.href).pathname;
+  return path.slice(0, path.lastIndexOf('/'));
+}
+
+function dropStale(link) {
+  document.head.querySelectorAll('link[rel="stylesheet"]').forEach((el) => {
+    if (el !== link && folder(el) === folder(link) && restyleStamp(el) < restyleStamp(link)) el.remove();
+  });
+}
+
 new MutationObserver((records) => {
-  const restyled = records.some((r) => [...r.addedNodes].some(
+  const added = records.flatMap((r) => [...r.addedNodes]).filter(
     (n) => n.tagName === 'LINK' && n.href.includes('restyle=')
-  ));
-  if (restyled) oursLast();
+  );
+  if (!added.length) return;
+  added.forEach((link) => link.addEventListener('load', () => dropStale(link), { once: true }));
+  oursLast();
 }).observe(document.head, { childList: true });
 
 window.jQuery(document).on('shiny:connected', () => {

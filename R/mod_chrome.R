@@ -17,10 +17,7 @@ chrome_ui <- function(id, ..., theme = board_theme_option()) {
     shiny::tags$div(
       class = "d-flex align-items-center gap-2",
       ...,
-      htmltools::tagAppendAttributes(
-        bslib::input_dark_mode(id = ns("dark_mode"), mode = if (dark_only) "dark" else "light"),
-        hidden = if (dark_only) NA
-      ),
+      mode_button(ns("dark_mode"), dark_only),
       shiny::actionButton(
         ns("turn_off"), NULL,
         icon = shiny::icon("power-off"), title = "Turn the board off", class = "btn-sm"
@@ -39,4 +36,27 @@ chrome_server <- function(id) {
 
     list(color_mode = shiny::reactive(input$dark_mode))
   })
+}
+
+# The dark mode button: a button as the power button beside it (the same
+# classes, a Font Awesome icon), so a theme's button colours, which fit its
+# navbar, are its colours too: the sun in light mode, the moon in dark
+# (index.css). A click flips bslib's switch, hidden beside it, which sets the
+# page's mode and sends it as the `dark_mode` input (srcjs/actions.js). A
+# dark-only theme hides the button.
+mode_button <- function(id, dark_only = FALSE) {
+  shiny::tagList(
+    shiny::tags$button(
+      type = "button", class = "btn btn-default btn-sm tb-mode-button",
+      title = "Light or dark mode", `aria-label` = "Light or dark mode",
+      `data-tb-mode-toggle` = id,
+      hidden = if (dark_only) NA,
+      shiny::icon("sun", class = "tb-mode-light"),
+      shiny::icon("moon", class = "tb-mode-dark")
+    ),
+    htmltools::tagAppendAttributes(
+      bslib::input_dark_mode(id = id, mode = if (dark_only) "dark" else "light"),
+      hidden = NA
+    )
+  )
 }
