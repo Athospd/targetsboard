@@ -1,5 +1,5 @@
 # From the tests: "dense layers stay compact, in the columns of
-# tar_visnetwork()'s levels" in tests/testthat/test-browser.R. Three layers of
+# tar_visnetwork()'s levels" in tests/testthat/test-browser-layout.R. Three layers of
 # three targets, each feeding all of the next: the shape that used to spread
 # into a widening diamond.
 #
