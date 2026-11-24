@@ -71,6 +71,9 @@
 
 ## Minor changes
 
+* The JavaScript libraries the package bundles, React, React Flow and
+  others, are credited in Authors@R and listed with their licences in
+  `inst/COPYRIGHTS`. The page pins Bootstrap 5.
 * The board's app is built of Shiny modules, one per part: the script,
   runs, graph, value preview and each tab. Its input and output ids are
   namespaced, under `board-` (`board-graph-flow`, `board-run-all`).

@@ -15,6 +15,9 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
     add_external_resources(),
     page_sidebar(
       title = chrome_ui("chrome"),
+      # Pinned: the board's CSS is written for Bootstrap 5, whatever bslib's
+      # default becomes.
+      theme = bslib::bs_theme(version = 5),
       fillable = TRUE,
       sidebar = sidebar(
         title = "Control Panel",

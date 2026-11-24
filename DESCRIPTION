@@ -4,13 +4,31 @@ Version: 0.1.0.9000
 Authors@R: c(
     person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre")),
     person("Ivan", "Sagalaev", role = "cph",
-           comment = "highlight.js library, in inst/app/www/highlight.js")
+           comment = "highlight.js library, in inst/app/www/highlight.js"),
+    person("Meta Platforms, Inc. and affiliates", role = "cph",
+           comment = "React library, in inst/htmlwidgets/targetsboard.js"),
+    person("webkid GmbH", role = "cph",
+           comment = "React Flow library, in inst/htmlwidgets/targetsboard.js"),
+    person("Paul", "Henschel", role = "cph",
+           comment = "zustand library, in inst/htmlwidgets/targetsboard.js"),
+    person("Jorge", "Bucaran", role = "cph",
+           comment = "classcat library, in inst/htmlwidgets/targetsboard.js"),
+    person("W.Y.", role = "cph",
+           comment = "html-to-image library, in inst/htmlwidgets/targetsboard.js"),
+    person("Mike", "Bostock", role = "cph",
+           comment = "d3 libraries, in inst/htmlwidgets/targetsboard.js"),
+    person("Robert", "Penner", role = "cph",
+           comment = "easing equations in d3-ease, in inst/htmlwidgets/targetsboard.js")
   )
-Description: A board for the author of a 'targets' pipeline, to understand
+Description: A board for a 'targets' pipeline, to understand
     it while working on it: its structure, what is outdated, what each target
-    produced and what a run is doing. Meant to replace targets::tar_watch()
+    produced, and what a run is doing. Meant to replace targets::tar_watch()
     for the author.
 License: MIT + file LICENSE
+Copyright: See the file inst/COPYRIGHTS for the bundled JavaScript
+    libraries and their licences.
+URL: https://github.com/Athospd/targetsboard
+BugReports: https://github.com/Athospd/targetsboard/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends:
