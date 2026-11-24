@@ -100,3 +100,38 @@ test_that("the board builds a file's view when its section opens", {
     expect_match(output$value_preview_file_3$html, "x &lt;- 3", fixed = TRUE)
   })
 })
+
+test_that("Quarto and R Markdown files show rendered, with their title and their R chunks", {
+  dir <- withr::local_tempdir()
+  qmd <- file.path(dir, "report.qmd")
+  writeLines(c(
+    "---", "title: \"Fuel economy\"", "format: html", "---", "",
+    "Some **bold** text.", "",
+    "```{r fit, echo=FALSE}", "#| label: fit", "fit <- lm(mpg ~ wt, data = mtcars)", "```"
+  ), qmd)
+  rmd <- file.path(dir, "analysis.Rmd")
+  writeLines(c("Untitled, with a `code` span.", "", "```{r}", "x <- 1", "```"), rmd)
+  target <- list(name = "f", format = "file")
+
+  html <- as.character(tar_board_preview(board_file(qmd), target))
+  expect_match(html, "tb-preview-markdown", fixed = TRUE)
+  expect_match(html, "<h1>Fuel economy</h1>", fixed = TRUE) # the front matter's title
+  expect_no_match(html, "format: html", fixed = TRUE) # the rest of it left out
+  expect_match(html, "<strong>bold</strong>", fixed = TRUE)
+  # The chunk as R code, coloured like the board's other R code.
+  expect_match(html, '<pre class="language-r"><code>#| label: fit', fixed = TRUE)
+  expect_no_match(html, "{r", fixed = TRUE)
+
+  html <- as.character(tar_board_preview(board_file(rmd), target))
+  expect_no_match(html, "<h1>", fixed = TRUE)
+  expect_match(html, "<code>code</code>", fixed = TRUE)
+  expect_match(html, '<pre class="language-r"><code>x &lt;- 1', fixed = TRUE)
+})
+
+test_that("a Markdown file's R blocks are coloured too", {
+  path <- withr::local_tempfile(fileext = ".md")
+  writeLines(c("```r", "x <- 1", "```", "", "```", "plain", "```"), path)
+  html <- as.character(tar_board_preview(board_file(path), list(name = "f", format = "file")))
+  expect_match(html, '<pre class="language-r"><code>x &lt;- 1', fixed = TRUE)
+  expect_match(html, "<pre><code>plain", fixed = TRUE)
+})
