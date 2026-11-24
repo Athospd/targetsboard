@@ -210,6 +210,11 @@ body {
   font-size: 0.8125rem;
   color: var(--bs-secondary-color);
 }
+.tb-col-spark {
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 0;
+}
 .tb-spark rect {
   fill: var(--bs-primary);
   opacity: 0.75;

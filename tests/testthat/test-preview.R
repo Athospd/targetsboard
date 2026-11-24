@@ -345,6 +345,31 @@ test_that("date-times get a histogram without overflowing hist()", {
   expect_match(as.character(spark), "<rect", fixed = TRUE)
 })
 
+test_that("the Rows table heads each number and date column with its distribution", {
+  frame <- data.frame(
+    n = c(seq(1, 50, length.out = 1999), 1000), # the last row past the first 1,000
+    word = rep(c("a", "b"), 1000),
+    day = as.Date("2026-01-01") + 0:1999
+  )
+  table <- rows_view(frame)
+  html <- as.character(table)
+  # Two histograms, one each for n and day: none for the text column.
+  expect_equal(lengths(regmatches(html, gregexpr("tb-col-spark", html, fixed = TRUE))), 2)
+  # As an element, which reactable draws, not an HTML string it would escape.
+  expect_match(html, '"name":"svg","attribs":[{][^}]*"className":"tb-spark"')
+  # Of every row, not only the first 1,000 the table shows.
+  expect_match(html, "distribution of all 2,000 rows", fixed = TRUE)
+
+  # Filters per column, a search, and 10 rows a page to begin with.
+  widget <- Find(function(x) inherits(x, "htmlwidget"), table)
+  expect_true(widget$x$tag$attribs$filterable)
+  expect_true(widget$x$tag$attribs$searchable)
+  expect_equal(widget$x$tag$attribs$defaultPageSize, 10)
+
+  # Too few values for a distribution: no histogram.
+  expect_no_match(as.character(rows_view(data.frame(n = 1:3))), "tb-col-spark", fixed = TRUE)
+})
+
 test_that("the preview follows its target's records: invalidated, then built again", {
   skip_on_cran()
   local_pipeline(make = TRUE)
