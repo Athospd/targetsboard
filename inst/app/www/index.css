@@ -240,10 +240,6 @@ body {
 .tb-vector-spark {
   margin-bottom: 0.75rem;
 }
-.tb-vector-values {
-  font-size: 0.8rem;
-  white-space: pre-wrap;
-}
 
 /* Plots and widgets in the value preview: a plot is 0.65 of the card's
    width in height, a widget sets its own; in full-screen both fill the frame

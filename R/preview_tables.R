@@ -211,7 +211,8 @@ columns_view <- function(x) {
   )
 }
 
-#' A vector's preview: its summary, its distribution and its values
+#' A vector's preview: its summary, its distribution, and its names or its
+#' values' counts
 #' @noRd
 vector_view <- function(x) {
   if (length(x) == 1 && is.null(names(x))) {
@@ -242,13 +243,8 @@ vector_view <- function(x) {
       ),
       sortable = TRUE
     )
-  } else {
-    first <- utils::head(x, 100)
-    htmltools::tagList(
-      htmltools::tags$p(class = "tb-table-caption", if (length(x) > 100) "The first 100 values." else "The values."),
-      htmltools::tags$pre(class = "tb-vector-values", paste(format(first), collapse = "  "))
-    )
   }
+  # Numbers, dates and date-times: their values are what Printed shows.
   htmltools::tagList(
     htmltools::tags$div(class = "tb-vector-facts", lapply(facts, htmltools::tags$span)),
     if (nzchar(summary$stats)) htmltools::tags$p(class = "tb-vector-stats", summary$stats),
