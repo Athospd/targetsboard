@@ -4,10 +4,52 @@
   height: 100vh;
 }
  
-:root {
-  --xy-node-color: #dbdbdb;
-  --xy-node-color-default: #e4e4e4;
+/* The board's colour tokens. Every colour of the graph is read from these, so
+   a new look, or a better dark mode, is a change here only. Light values on
+   the wrapper; the widget adds tb-dark to it in dark mode. */
+.reactflow-wrapper {
+  /* The canvas and the marks drawn on it. */
+  --tb-canvas-bg: #f0e5d7;
+  --tb-canvas-marks: #2f223d;
+  /* A target, by status: its fill and its label. */
+  --tb-status-uptodate: #354823;
+  --tb-status-uptodate-text: #d3f0b7;
+  --tb-status-outdated: #78b7c5;
+  --tb-status-outdated-text: #10363f;
+  --tb-status-errored: #c93312;
+  --tb-status-errored-text: #ffb6a6;
+  --tb-status-running: #d49536;
+  --tb-status-running-text: #3f2f11;
+  /* Marks on a target: warnings, branches that errored, the focus ring. */
+  --tb-warning: #f2c94c;
+  --tb-warning-text: #3f2f11;
+  --tb-danger: #c62828;
+  --tb-danger-text: #fff;
+  --tb-focus-ring: #2f223d;
+  /* Menus, toolbars and badges over the canvas. */
+  --tb-surface: #fff;
+  --tb-surface-text: #222;
+  --tb-surface-hover: #f0e5d7;
+  --tb-surface-border: #ccc;
+  --tb-surface-shadow: rgba(0, 0, 0, 0.15);
 }
+
+.reactflow-wrapper.tb-dark {
+  --tb-canvas-bg: #141414;
+  --tb-canvas-marks: #777;
+}
+
+/* React Flow draws the canvas from its own variables. */
+.reactflow-wrapper .react-flow {
+  --xy-background-color: var(--tb-canvas-bg);
+  --xy-background-pattern-color: var(--tb-canvas-marks);
+}
+
+/* A target's colours, by status. */
+.base-node.tb-status-uptodate { background-color: var(--tb-status-uptodate); color: var(--tb-status-uptodate-text); }
+.base-node.tb-status-outdated { background-color: var(--tb-status-outdated); color: var(--tb-status-outdated-text); }
+.base-node.tb-status-errored { background-color: var(--tb-status-errored); color: var(--tb-status-errored-text); }
+.base-node.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); }
 
 .base-node {
   padding: 10px;
@@ -108,12 +150,12 @@
   height: 18px;
   line-height: 18px;
   border-radius: 50%;
-  background: #f2c94c;
-  color: #3f2f11;
+  background: var(--tb-warning);
+  color: var(--tb-warning-text);
   font-weight: 700;
   font-size: 12px;
   text-align: center;
-  box-shadow: 0 0 0 2px #f0e5d7;
+  box-shadow: 0 0 0 2px var(--tb-canvas-bg);
 }
 
 /* Focus: the focused target, what it depends on and what depends on it stay
@@ -124,7 +166,7 @@
 }
 
 .react-flow__node.tb-focused .base-node {
-  box-shadow: 0 0 0 3px #2f223d;
+  box-shadow: 0 0 0 3px var(--tb-focus-ring);
 }
 
 /* The right-click menu of a target. */
@@ -135,10 +177,10 @@
   flex-direction: column;
   min-width: 170px;
   padding: 4px 0;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-surface-border);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--tb-surface-shadow);
   font-size: 13px;
 }
 
@@ -147,12 +189,12 @@
   border: 0;
   background: none;
   text-align: left;
-  color: #222;
+  color: var(--tb-surface-text);
   cursor: pointer;
 }
 
 .tb-node-menu button:hover {
-  background: #f0e5d7;
+  background: var(--tb-surface-hover);
 }
 
 /* The focused target's toolbar. */
@@ -163,17 +205,17 @@
 
 .tb-node-toolbar button {
   padding: 2px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--tb-surface-border);
   border-radius: 4px;
-  background: #fff;
-  color: #222;
+  background: var(--tb-surface);
+  color: var(--tb-surface-text);
   font-size: 12px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 6px var(--tb-surface-shadow);
 }
 
 .tb-node-toolbar button:hover {
-  background: #f0e5d7;
+  background: var(--tb-surface-hover);
 }
 
 /* A pattern's branches done so far, during a run: "3/6". */
@@ -183,16 +225,16 @@
   right: -8px;
   padding: 0 6px;
   border-radius: 9px;
-  background: #fff;
-  color: #222;
-  border: 1px solid #ccc;
+  background: var(--tb-surface);
+  color: var(--tb-surface-text);
+  border: 1px solid var(--tb-surface-border);
   font-size: 11px;
   line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
 
 .branch-progress-errored {
-  background: #c62828;
-  border-color: #c62828;
-  color: #fff;
+  background: var(--tb-danger);
+  border-color: var(--tb-danger);
+  color: var(--tb-danger-text);
 }
