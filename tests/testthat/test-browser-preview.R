@@ -103,7 +103,7 @@ test_that("the preview's buttons and links work in the browser", {
   app$wait_for_js(paste0(node_js("a"), ".classList.contains('tb-focused')"))
 
   # A run that errors: its notification's link shows the problem.
-  app$click(input = "run-all")
+  app$click(input = "board-run-all")
   app$wait_for_js("document.querySelector('.shiny-notification .tb-show-problem') !== null", timeout = 120000)
   app$click(selector = ".shiny-notification .tb-show-problem")
   app$wait_for_js(paste0(node_js("bad"), ".classList.contains('tb-focused')"))

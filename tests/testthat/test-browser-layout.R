@@ -98,11 +98,11 @@ test_that("the board saves where targets were left, and opens with them there", 
   app <- local_board_app(dir, "layout_save")
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
   # The first layout is saved once drawn.
-  app$wait_for_js("Shiny.shinyapp.$inputValues['flow_layout'] !== undefined")
+  app$wait_for_js("Shiny.shinyapp.$inputValues['board-graph-flow_layout'] !== undefined")
   before <- node_position(app, "b")
   drag_node(app, "b", 0, 120)
   app$wait_for_js(paste0(
-    "Shiny.shinyapp.$inputValues['flow_layout'].positions.b.y > ", before[["y"]] + 50
+    "Shiny.shinyapp.$inputValues['board-graph-flow_layout'].positions.b.y > ", before[["y"]] + 50
   ))
   moved <- node_position(app, "b")
   app$click(selector = ".react-flow__controls-zoomout")
@@ -134,9 +134,9 @@ test_that("the board saves where targets were left, and opens with them there", 
 
   # Tidy lays the graph out again, and that is saved too.
   app$click(selector = ".tb-layout-buttons button:first-child") # Tidy vertically
-  app$wait_for_js("Shiny.shinyapp.$inputValues['flow_layout'].direction === 'TB'")
+  app$wait_for_js("Shiny.shinyapp.$inputValues['board-graph-flow_layout'].direction === 'TB'")
   app$wait_for_js(paste(
-    "(() => { const p = Shiny.shinyapp.$inputValues['flow_layout'].positions;",
+    "(() => { const p = Shiny.shinyapp.$inputValues['board-graph-flow_layout'].positions;",
     "return Math.abs(p.a.x - p.b.x) < 1 && p.b.y > p.a.y; })()"
   ))
   # On Windows, a read can hit the file while the board writes it: try again.

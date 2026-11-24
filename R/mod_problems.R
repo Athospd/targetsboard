@@ -53,7 +53,7 @@ problems_server <- function(id, board, tar_meta) {
         wrap = FALSE,
         defaultPageSize = 50,
         language = reactable::reactableLang(noData = "No problems: no target errored or warned in its latest build."),
-        onClick = row_click_js(shiny::NS(id, "row_clicked")),
+        onClick = row_click_js(session$ns("row_clicked")),
         rowStyle = list(cursor = "pointer")
       )
     })

@@ -96,3 +96,13 @@ test_that("the tabs' modules take reactives where they change, and constants whe
   expect_error(visnetwork_server("visnetwork", fake_board()), "is.reactive")
   expect_error(internals_server("internals", shiny::reactive(NULL), list()), "is.reactive")
 })
+
+test_that("the tables' row clicks send their input with the full namespace", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  meta <- shiny::reactiveVal(targets::tar_meta())
+  shiny::testServer(meta_server, args = list(tar_meta = meta), {
+    expect_match(output$table, session$ns("row_clicked"), fixed = TRUE)
+    expect_match(session$ns("row_clicked"), "-row_clicked$")
+  })
+})

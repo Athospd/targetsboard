@@ -1,5 +1,7 @@
 #' The board's server
 #'
+#' A few module calls: the top bar (chrome_server()) and the board
+#' (board_server()), which wires the board's own modules together.
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
 #' @param targets_only Show only targets, without functions and globals.
@@ -13,118 +15,11 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
 
   function(input, output, session) {
     backend$start_once()
-
-    # What changes on the graph, polled from the store and the poller's
-    # files (graph_data_server()).
-    data <- graph_data_server("graph_data", backend)
-    poller_board <- data$poller_board
-    script_error <- data$script_error
-    progress <- data$progress
-    running <- data$running
-    tar_meta_data <- data$tar_meta
-    warned_targets <- data$warned_targets
-
-    # The script the board draws, Load and Refresh (script_server()): the
-    # accepted graph, and when the preview methods load again.
-    loaded <- script_server(
-      "script", backend, metadata, script, scripts, targets_only,
-      poller_board = poller_board, script_error = script_error
+    chrome <- chrome_server("chrome")
+    board_server(
+      "board", backend, metadata, script, scripts, targets_only,
+      color_mode = chrome$color_mode
     )
-    board <- loaded$board
-
-    # The tabs beside the board: each a module. The tables' clicks show a
-    # target on the board (show_on_board()).
-    problem_clicked <- problems_server("problems", board, tar_meta_data)
-    log_server("log", backend)
-    visnetwork_server("visnetwork", board)
-    meta_clicked <- meta_server("meta", tar_meta_data)
-    internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
-
-    # A new graph: send it whole, with the live statuses on top.
-    shiny::observeEvent(board(), {
-      current <- board()
-      is_running <- shiny::isolate(running())
-      nodes <- clear_invalidated_errors(current$x$nodes, recorded_errors())
-      nodes$status <- settle_statuses(nodes$status, is_running)
-      statuses <- live_statuses(shiny::isolate(progress()), current$progress_mtime)
-      update_targetsboard(
-        session,
-        "flow",
-        nodes = overlay_statuses(nodes, settle_statuses(statuses, is_running)),
-        edges = current$x$edges,
-        warnings = shiny::isolate(warned_targets())
-      )
-    })
-
-    # New metadata can add or clear warning marks: send just those.
-    shiny::observeEvent(warned_targets(), {
-      update_targetsboard_status(session, "flow", warnings = warned_targets())
-    }, ignoreInit = TRUE)
-
-    # New progress, or a run that stopped: send just the statuses.
-    # Patterns show how many of their branches are done while a run goes;
-    # the counts go once it stops.
-    shiny::observeEvent(list(progress(), running()), {
-      statuses <- live_statuses(progress(), shiny::isolate(board())$progress_mtime)
-      statuses <- settle_statuses(statuses, running())
-      branches <- if (running()) {
-        tryCatch(targets::tar_progress_branches(), error = function(e) NULL)
-      }
-      update_targetsboard_status(session, "flow", statuses, branches = branches %||% data.frame())
-    }, ignoreInit = TRUE)
-
-    # The value preview (preview_server()): opened by a double-click on a
-    # target, its Value, or a link to its problem, on the focused target.
-    preview_request <- shiny::reactiveVal(0)
-    request_preview <- function() preview_request(shiny::isolate(preview_request()) + 1)
-    shiny::observeEvent(input$flow_double_clicked_node, request_preview())
-    preview <- preview_server(
-      "preview", backend,
-      focused = shiny::reactive(input$flow_focused_node),
-      open_request = shiny::reactive(if (preview_request() > 0) preview_request()),
-      board = board, running = running, tar_meta = tar_meta_data,
-      methods = loaded$methods
-    )
-
-    # The actions of the right-click menus and the toolbars (board_options()):
-    # Run and Invalidate go to the run module, Value opens the preview.
-    node_action <- shiny::reactive(input$flow_node_action)
-    shiny::observeEvent(node_action(), {
-      if (identical(node_action()$action, "value")) request_preview()
-    })
-    # Run all, Stop, Invalidate all, and the graph's runs (run_server()).
-    run <- run_server("run", backend, board, running, action = node_action)
-
-    # A target picked in the tar_meta() table: show it on the board, focused,
-    # with what it depends on and what depends on it directly in view.
-    show_on_board <- function(name, preview = FALSE) {
-      edges <- board()$x$edges
-      neighbours <- unique(c(name, edges$from[edges$to == name], edges$to[edges$from == name]))
-      bslib::nav_select("view", "board")
-      if (preview) request_preview()
-      update_targetsboard_focus(session, "flow", name)
-      targetsboard_fit_view(session, "flow", neighbours)
-    }
-    shiny::observeEvent(meta_clicked(), show_on_board(meta_clicked()))
-    # The problem pane's links to its inputs.
-    shiny::observeEvent(preview$target_link(), show_on_board(preview$target_link()))
-    # A problem picked in the Problems tab, or a run's notification: on the
-    # board, with its Problem in the value preview.
-    shiny::observeEvent(problem_clicked(), show_on_board(problem_clicked(), preview = TRUE))
-    shiny::observeEvent(run$show_problem(), show_on_board(run$show_problem(), preview = TRUE))
-
-    # The graph follows the page's dark mode switch.
-    shiny::observeEvent(input$dark_mode, {
-      update_targetsboard_options(session, "flow", color_mode = input$dark_mode)
-    })
-
-    # Keep where the author left the targets, for the next time the board
-    # opens: in the store's user folder, `_targets/user/`.
-    shiny::observeEvent(input$flow_layout, write_board_layout(input$flow_layout))
-
-    # The power button: stop the board. In tar_board()'s background process,
-    # that ends the process too.
-    shiny::observeEvent(input$turn_off, shiny::stopApp("The board is turned off."))
   }
 }
 

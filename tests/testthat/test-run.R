@@ -114,7 +114,8 @@ test_that("stop_run() kills a run", {
 test_that("the board runs, refuses a second run, stops and tells how it went", {
   skip_on_cran()
   local_slow_pipeline()
-  server <- local_app_server()
+  args <- local_board_args()
+  backend <- args$backend
 
   notes <- character()
   local_mocked_bindings(
@@ -124,27 +125,27 @@ test_that("the board runs, refuses a second run, stops and tells how it went", {
     .package = "shiny"
   )
 
-  shiny::testServer(server, {
-    backend_of(server)$stop_poller()
+  shiny::testServer(board_server, args = args, {
+    backend$stop_poller()
     session$flushReact()
 
     session$setInputs(`run-all` = 1)
-    runner <- backend_of(server)$runner
+    runner <- backend$runner
     withr::defer(if (runner$process$is_alive()) runner$process$kill_tree())
     wait_for(function() {
       progress <- targets::tar_progress()
       any(progress$name == "b" & progress$progress == "dispatched")
     })
     session$elapse(600)
-    expect_true(running())
+    expect_true(data$running())
 
-    session$setInputs(flow_node_action = list(action = "run", node = "c", nodes = "c"))
+    session$setInputs(`graph-flow_node_action` = list(action = "run", node = "c", nodes = "c"))
     expect_match(notes, "already going", all = FALSE)
 
     session$setInputs(`run-stop` = 1)
     wait_for(function() !runner$process$is_alive())
     session$elapse(600)
-    expect_false(running())
+    expect_false(data$running())
     expect_match(notes, "warning Run stopped", all = FALSE)
   })
 })
@@ -153,7 +154,8 @@ test_that("a failed run is reported with its error", {
   skip_on_cran()
   local_pipeline()
   writeLines(c("library(targets)", "list(tar_target(a, stop('boom')))"), "_targets.R")
-  server <- local_app_server()
+  args <- local_board_args()
+  backend <- args$backend
 
   notes <- character()
   local_mocked_bindings(
@@ -163,13 +165,13 @@ test_that("a failed run is reported with its error", {
     .package = "shiny"
   )
 
-  shiny::testServer(server, {
-    backend_of(server)$stop_poller()
+  shiny::testServer(board_server, args = args, {
+    backend$stop_poller()
     session$flushReact()
     session$setInputs(`run-all` = 1)
     session$elapse(600) # the board sees the run start
-    expect_true(running())
-    wait_for(function() !backend_of(server)$runner$process$is_alive(), timeout = 60)
+    expect_true(data$running())
+    wait_for(function() !backend$runner$process$is_alive(), timeout = 60)
     session$elapse(600)
     expect_match(notes, "error Run failed in a:[[:space:]]*<code>boom</code>", all = FALSE)
     expect_match(notes, "Show problem", fixed = TRUE, all = FALSE)
@@ -205,12 +207,12 @@ test_that("the board invalidates targets once confirmed", {
   )
 
   shiny::testServer(server, {
-    session$setInputs(flow_node_action = list(action = "invalidate", node = "b", nodes = c("b", "c")))
+    session$setInputs(`board-graph-flow_node_action` = list(action = "invalidate", node = "b", nodes = c("b", "c")))
     expect_match(modal, "Invalidate targets?", fixed = TRUE)
     expect_match(modal, "<code>b</code>", fixed = TRUE)
     expect_true(all(c("b", "c") %in% targets::tar_meta(targets_only = TRUE)$name)) # not yet
 
-    session$setInputs(`run-invalidate_confirm` = 1)
+    session$setInputs(`board-run-invalidate_confirm` = 1)
     expect_false(any(c("b", "c") %in% targets::tar_meta(targets_only = TRUE)$name))
     expect_true(file.exists(poller_of(server)$refresh_path)) # the graph is recomputed
     expect_match(notes, "Invalidated 2 targets", all = FALSE)
@@ -236,7 +238,7 @@ test_that("the board refuses to invalidate while a run is going", {
   process <- local_console_run()
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_selected_nodes = "b", `run-invalidate_confirm` = 1)
+    session$setInputs(`board-graph-flow_selected_nodes` = "b", `board-run-invalidate_confirm` = 1)
     expect_null(invalidated)
     expect_match(notes, "stop it before invalidating", all = FALSE)
   })

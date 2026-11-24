@@ -270,3 +270,18 @@ test_that("update_targetsboard_status() sends pattern branch counts, and clears 
   update_targetsboard_status(session, "dag", c(raw = "completed"))
   expect_null(sent$branches) # left as they are
 })
+
+test_that("the widget's updates find it inside a module, by its namespaced id", {
+  sent <- list()
+  session <- list(
+    ns = shiny::NS("board"),
+    sendCustomMessage = function(type, message) sent[[length(sent) + 1]] <<- message,
+    sendInputMessage = function(inputId, message) sent[[length(sent) + 1]] <<- message
+  )
+  update_targetsboard_status(session, "flow", c(a = "completed"))
+  update_targetsboard_focus(session, "flow", "a")
+  update_targetsboard_options(session, "flow", minimap = FALSE)
+  update_targetsboard(session, "flow", nodes = fake_nodes(), edges = fake_edges())
+  expect_equal(vapply(sent[1:3], `[[`, "", "id"), rep("board-flow", 3))
+  expect_equal(sent[[4]]$configuration$id, "board-flow")
+})

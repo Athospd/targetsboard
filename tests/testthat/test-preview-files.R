@@ -91,13 +91,13 @@ test_that("the board builds a file's view when its section opens", {
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(flow_focused_node = "files", flow_double_clicked_node = "files")
-    html <- output[["preview-content"]]$html
+    session$setInputs(`board-graph-flow_focused_node` = "files", `board-graph-flow_double_clicked_node` = "files")
+    html <- output[["board-preview-content"]]$html
     expect_match(html, "3 files.", fixed = TRUE)
-    expect_match(output[["preview-file_1"]]$html, "x &lt;- 1", fixed = TRUE)
-    expect_error(output[["preview-file_3"]]) # not opened yet
-    session$setInputs(`preview-file_open` = 3)
-    expect_match(output[["preview-file_3"]]$html, "x &lt;- 3", fixed = TRUE)
+    expect_match(output[["board-preview-file_1"]]$html, "x &lt;- 1", fixed = TRUE)
+    expect_error(output[["board-preview-file_3"]]) # not opened yet
+    session$setInputs(`board-preview-file_open` = 3)
+    expect_match(output[["board-preview-file_3"]]$html, "x &lt;- 3", fixed = TRUE)
   })
 })
 

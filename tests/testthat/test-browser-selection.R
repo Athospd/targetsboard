@@ -11,7 +11,7 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
     "new Set(Array.from(document.querySelectorAll('.react-flow__node'))",
     ".map(n => n.style.transform)).size === 6"
   ))
-  selected <- function() sort(unlist(app$get_value(input = "flow_selected_nodes")))
+  selected <- function() sort(unlist(app$get_value(input = "board-graph-flow_selected_nodes")))
   has_class <- function(id, class) app$get_js(sprintf("%s.classList.contains('%s')", node_js(id), class))
   buttons <- function(selector, what = "dataset.action") {
     unlist(app$get_js(sprintf(
@@ -28,7 +28,7 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
     # A Cmd-click sent through Chrome's DevTools doesn't reach React Flow's
     # key handling on macOS runners: the group is selected by command there,
     # and the Ctrl-click is tested on Linux and Windows.
-    send_widget_message(app, "targetsboard:command", list(id = "flow", command = "select", nodes = c("b", "d")))
+    send_widget_message(app, "targetsboard:command", list(id = "board-graph-flow", command = "select", nodes = c("b", "d")))
     app$wait_for_js(paste(group_toolbar, "!== null"))
   } else {
     ctrl_click(app, "d")
@@ -52,7 +52,7 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   modal <- app$get_js("document.querySelector('.modal-dialog').innerHTML")
   expect_match(modal, "<code>b</code>", fixed = TRUE)
   expect_match(modal, "<code>d</code>", fixed = TRUE)
-  expect_equal(sort(unlist(app$get_value(input = "flow_node_action")$nodes)), c("b", "d"))
+  expect_equal(sort(unlist(app$get_value(input = "board-graph-flow_node_action")$nodes)), c("b", "d"))
   dismiss_modal(app)
 
   # Right-click on one of the group: the group's menu, for all of it.
@@ -95,15 +95,15 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   expect_equal(selected(), "f")
   press_key(app, "Escape")
   app$wait_for_js("document.querySelectorAll('.react-flow__node.selected, .react-flow__node.tb-focused').length === 0")
-  app$wait_for_value(input = "flow_focused_node", ignore = list("f"))
-  expect_null(app$get_value(input = "flow_selected_nodes"))
+  app$wait_for_value(input = "board-graph-flow_focused_node", ignore = list("f"))
+  expect_null(app$get_value(input = "board-graph-flow_selected_nodes"))
 })
 
 test_that("the menu selects what a target depends on, what depends on it, or both", {
   dir <- local_group_pipeline()
   app <- local_board_app(dir, "select")
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 6")
-  selected <- function() sort(unlist(app$get_value(input = "flow_selected_nodes")))
+  selected <- function() sort(unlist(app$get_value(input = "board-graph-flow_selected_nodes")))
   choose <- function(id, action, n) {
     mouse_event(app, id, "contextmenu")
     app$wait_for_js("document.querySelector('.tb-node-menu') !== null")
@@ -130,8 +130,8 @@ test_that("a Shift-drag box selects a group, and its box opens the group's menu"
   ))
   Sys.sleep(1) # the first fit
   shift_drag_around(app, c("d", "e"))
-  app$wait_for_value(input = "flow_selected_nodes")
-  chosen <- unlist(app$get_value(input = "flow_selected_nodes"))
+  app$wait_for_value(input = "board-graph-flow_selected_nodes")
+  chosen <- unlist(app$get_value(input = "board-graph-flow_selected_nodes"))
   expect_true(all(c("d", "e") %in% chosen))
   app$wait_for_js("document.querySelector('.tb-group-toolbar') !== null")
 

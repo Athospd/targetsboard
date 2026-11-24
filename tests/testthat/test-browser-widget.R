@@ -61,8 +61,8 @@ test_that("double-click, right-click menu and viewport reach the server", {
   menu_open <- "document.querySelector('.tb-node-menu') !== null"
 
   mouse_event(app, "a", "dblclick")
-  app$wait_for_value(input = "flow_double_clicked_node")
-  expect_equal(app$get_value(input = "flow_double_clicked_node"), "a")
+  app$wait_for_value(input = "board-graph-flow_double_clicked_node")
+  expect_equal(app$get_value(input = "board-graph-flow_double_clicked_node"), "a")
   # It opens the value preview: let its sidebar finish sliding in, which
   # narrows the graph.
   app$wait_for_js(preview_of("a"), timeout = preview_timeout)
@@ -75,8 +75,8 @@ test_that("double-click, right-click menu and viewport reach the server", {
     "run", "invalidate", "value", "copy_name",
     "select_upstream", "select_downstream", "select_lineage"
   ))
-  app$wait_for_value(input = "flow_context_node")
-  expect_equal(app$get_value(input = "flow_context_node"), "b")
+  app$wait_for_value(input = "board-graph-flow_context_node")
+  expect_equal(app$get_value(input = "board-graph-flow_context_node"), "b")
   expect_true(app$get_js(paste0(node_js("b"), ".classList.contains('tb-focused')")))
 
   # Inside the widget, however far right the click.
@@ -112,11 +112,11 @@ test_that("double-click, right-click menu and viewport reach the server", {
   dismiss_modal(app)
 
   # The viewport, after a zoom.
-  app$wait_for_value(input = "flow_viewport")
-  zoom <- app$get_value(input = "flow_viewport")$zoom
+  app$wait_for_value(input = "board-graph-flow_viewport")
+  zoom <- app$get_value(input = "board-graph-flow_viewport")$zoom
   app$click(selector = ".react-flow__controls-zoomin")
-  app$wait_for_js(sprintf("Shiny.shinyapp.$inputValues['flow_viewport'].zoom > %f", zoom))
-  expect_gt(app$get_value(input = "flow_viewport")$zoom, zoom)
+  app$wait_for_js(sprintf("Shiny.shinyapp.$inputValues['board-graph-flow_viewport'].zoom > %f", zoom))
+  expect_gt(app$get_value(input = "board-graph-flow_viewport")$zoom, zoom)
 })
 
 test_that("a widget without node actions has no menu, but reports right-clicks", {
@@ -204,19 +204,19 @@ test_that("the widget draws the whole graph as an image, for R and for download"
   Sys.sleep(0.5)
 
   # From R: PNG, at twice the resolution, wider than tall like the chain.
-  send_widget_message(app, "targetsboard:command", list(id = "flow", command = "export_image", format = "png"))
-  app$wait_for_value(input = "flow_image")
-  image <- app$get_value(input = "flow_image")
+  send_widget_message(app, "targetsboard:command", list(id = "board-graph-flow", command = "export_image", format = "png"))
+  app$wait_for_value(input = "board-graph-flow_image")
+  image <- app$get_value(input = "board-graph-flow_image")
   expect_null(image$error)
   png <- withr::local_tempfile(fileext = ".png")
   size <- png_size(save_targetsboard_image(image, png))
   expect_gt(size[["width"]], 4 * size[["height"]])
   expect_gt(size[["width"]], 8 * 150 * 2) # eight targets, at twice the size
 
-  send_widget_message(app, "targetsboard:command", list(id = "flow", command = "export_image", format = "svg"))
+  send_widget_message(app, "targetsboard:command", list(id = "board-graph-flow", command = "export_image", format = "svg"))
   # Read from the server once it has the SVG, not the PNG before it.
-  app$wait_for_value(input = "flow_image", ignore = list(NULL, image))
-  image <- app$get_value(input = "flow_image")
+  app$wait_for_value(input = "board-graph-flow_image", ignore = list(NULL, image))
+  image <- app$get_value(input = "board-graph-flow_image")
   expect_equal(image$format, "svg")
   svg <- withr::local_tempfile(fileext = ".svg")
   save_targetsboard_image(image, svg)

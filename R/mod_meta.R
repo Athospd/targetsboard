@@ -22,7 +22,7 @@ meta_server <- function(id, tar_meta) {
       reactable::reactable(
         tar_meta(),
         wrap = FALSE,
-        onClick = row_click_js(shiny::NS(id, "row_clicked")),
+        onClick = row_click_js(session$ns("row_clicked")),
         rowStyle = list(cursor = "pointer")
       )
     })
