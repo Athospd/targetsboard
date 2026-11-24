@@ -380,7 +380,9 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       files <- shiny::isolate(preview_files())
       if (is.null(files) || i > length(files$paths)) return()
       path <- files$paths[[i]]
-      output[[file_output_id(i)]] <- shiny::renderUI(file_section_view(path, files$target))
+      # With the target's paths: a document's rendered file may be one.
+      target <- c(files$target, list(files = files$paths))
+      output[[file_output_id(i)]] <- shiny::renderUI(file_section_view(path, target))
     }
     shiny::observeEvent(input$value_preview_file_open, render_file_section(input$value_preview_file_open))
     # A pattern's preview opens on its first branch; the picker changes it.
