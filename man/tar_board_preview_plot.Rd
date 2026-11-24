@@ -17,3 +17,14 @@ A view for \code{\link[=tar_board_preview]{tar_board_preview()}}.
 For \code{\link[=tar_board_preview]{tar_board_preview()}} methods: the board draws \code{plot} at the size of
 the preview, again when it is resized or made full-screen.
 }
+\examples{
+# A function that draws, with base graphics: the board calls it to draw.
+view <- tar_board_preview_plot(function() hist(rnorm(100)))
+class(view)
+
+# A ggplot: the board prints it to draw.
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  plot <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+  view <- tar_board_preview_plot(plot)
+}
+}

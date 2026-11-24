@@ -43,6 +43,14 @@ shaping the DAG, value previews, and an error found, fixed and rebuilt.
 
 ## Installation
 
+Install targetsboard from CRAN:
+
+```r
+install.packages("targetsboard")
+```
+
+Or the development version from GitHub:
+
 ```r
 remotes::install_github("Athospd/targetsboard")
 ```

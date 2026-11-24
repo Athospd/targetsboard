@@ -46,6 +46,14 @@ rebuilt](man/figures/README-demo.jpg)](https://youtu.be/pEsTN9rke2U)
 
 ## Installation
 
+Install targetsboard from CRAN:
+
+``` r
+install.packages("targetsboard")
+```
+
+Or the development version from GitHub:
+
 ``` r
 remotes::install_github("Athospd/targetsboard")
 ```
