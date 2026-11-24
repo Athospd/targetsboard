@@ -23,10 +23,13 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
   function(input, output, session) {
     backend$start_once()
 
-    # The graph and what changes on it, polled from the store and the
-    # poller's files (graph_data()).
-    data <- graph_data(backend, metadata, session)
-    board <- data$board
+    # The graph the board draws: the first render's, then each the poller
+    # recomputes, once Load accepts it.
+    board <- shiny::reactiveVal(list(x = metadata, progress_mtime = progress_mtime()))
+
+    # What changes on the graph, polled from the store and the poller's
+    # files (graph_data_server()).
+    data <- graph_data_server("graph_data", backend)
     poller_board <- data$poller_board
     script_error <- data$script_error
     progress <- data$progress
