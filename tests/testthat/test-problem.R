@@ -312,13 +312,12 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    expect_equal(problems()$name, c("branch", "model", "warned"))
-    expect_match(output$problems, "object 'y' not found", fixed = TRUE) # the table renders
-    expect_match(output$problems_count$html, ">3<", fixed = TRUE)
-    expect_match(output$problems_count$html, "text-bg-danger", fixed = TRUE)
-    expect_match(output$run_log, "No run started from the board yet", fixed = TRUE)
+    expect_match(output[["problems-table"]], "object 'y' not found", fixed = TRUE) # the table renders
+    expect_match(output[["problems-count"]]$html, ">3<", fixed = TRUE)
+    expect_match(output[["problems-count"]]$html, "text-bg-danger", fixed = TRUE)
+    expect_match(output[["log-text"]], "No run started from the board yet", fixed = TRUE)
 
-    session$setInputs(problem_row_clicked = "model")
+    session$setInputs(`problems-row_clicked` = "model")
     expect_equal(focused, "model")
     expect_true(preview_open())
 
@@ -333,9 +332,9 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     expect_match(notes[[1]]$html, "Run finished, with errors in branch and model.", fixed = TRUE)
     expect_match(notes[[1]]$html, "Show problem", fixed = TRUE)
     expect_match(notes[[1]]$html, "show_problem", fixed = TRUE)
-    expect_match(output$run_log, "errored pipeline", fixed = TRUE)
+    expect_match(output[["log-text"]], "errored pipeline", fixed = TRUE)
     # Headed by what the run was.
-    expect_match(output$run_log, "^Run started [0-9-]+ [0-9:]+: all targets, keep going after errors
+    expect_match(output[["log-text"]], "^Run started [0-9-]+ [0-9:]+: all targets, keep going after errors
 ")
 
     session$setInputs(show_problem = "branch")
@@ -347,7 +346,7 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
 test_that("the page has the Problems and Log tabs", {
   html <- as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R"))
   expect_match(html, 'data-value="problems"', fixed = TRUE)
-  expect_match(html, 'id="problems_count"', fixed = TRUE)
+  expect_match(html, 'id="problems-count"', fixed = TRUE)
   expect_match(html, 'data-value="log"', fixed = TRUE)
-  expect_match(html, 'id="run_log"', fixed = TRUE)
+  expect_match(html, 'id="log-text"', fixed = TRUE)
 })
