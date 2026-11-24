@@ -367,3 +367,47 @@ test_that("the script bar takes a typed path, Enter or Load loads it, and other 
   second$wait_for_value(input = "board-script-path", ignore = list(NULL, "_targets.R"), timeout = 10 * 1000)
   expect_equal(second$get_value(input = "board-script-path"), "other.R")
 })
+
+test_that("in dark mode, the tables, the toolbar and the buttons stay readable", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "dark")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  # WCAG's contrast ratio of an element's text on the background it shows on.
+  app$run_js(paste(
+    "const rgba = c => { const v = c.match(/[0-9.]+/g).map(Number); return v.length < 4 ? [...v, 1] : v; };",
+    "const lum = c => { const [r, g, b] = c.slice(0, 3).map(v => { v /= 255;",
+    "  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });",
+    "  return 0.2126 * r + 0.7152 * g + 0.0722 * b; };",
+    "const bg = el => { for (; el; el = el.parentElement) { const c = rgba(getComputedStyle(el).backgroundColor);",
+    "  if (c[3] > 0.5) return c; } return [255, 255, 255, 1]; };",
+    "window.tbContrast = sel => { const el = document.querySelector(sel); const b = bg(el);",
+    "  const f = rgba(getComputedStyle(el).color); const t = f.slice(0, 3).map((v, i) => v * f[3] + b[i] * (1 - f[3]));",
+    "  const [x, y] = [lum(t), lum(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };"
+  ))
+  contrast <- function(selector) app$get_js(sprintf("tbContrast(\"%s\")", selector))
+  tab <- function(value) {
+    app$click(selector = sprintf("#board-view .nav-link[data-value='%s']", value))
+    Sys.sleep(0.5)
+  }
+
+  app$run_js("document.querySelector('bslib-input-dark-mode').setAttribute('mode', 'dark')")
+  app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'")
+  app$wait_for_js("document.querySelector('.reactflow-wrapper').classList.contains('tb-dark')")
+
+  app$click(selector = ".react-flow__node[data-id='b']")
+  app$wait_for_js("document.querySelector('.tb-node-toolbar button') !== null")
+  expect_gte(contrast(".tb-node-toolbar button"), 4.5)
+  expect_false(identical( # dark, as the page around it
+    app$get_js("getComputedStyle(document.querySelector('.tb-node-toolbar button')).backgroundColor"),
+    "rgb(255, 255, 255)"
+  ))
+  expect_gte(contrast("#board-script-refresh"), 4.5)
+
+  tab("problems")
+  app$wait_for_js("document.querySelector('#board-problems-table .rt-no-data') !== null")
+  expect_gte(contrast("#board-problems-table .rt-no-data"), 4.5)
+  tab("tar_meta")
+  app$wait_for_js("document.querySelector('#board-meta-table .rt-td') !== null")
+  expect_gte(contrast("#board-meta-table .rt-td"), 4.5)
+  expect_gte(contrast("#board-meta-table .rt-th"), 4.5)
+})

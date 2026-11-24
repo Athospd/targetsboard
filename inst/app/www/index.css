@@ -19,7 +19,7 @@ body {
 .tb-problem { padding: 0.75rem; font-size: 0.875rem; }
 .tb-problem-title { color: var(--bs-danger); margin-bottom: 0.5rem; }
 .tb-problem pre { white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; margin-bottom: 0.5rem; }
-.tb-problem-error { color: var(--bs-danger); background: var(--bs-danger-bg-subtle); padding: 0.5rem; border-radius: 0.25rem; }
+.tb-problem-error { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); padding: 0.5rem; border-radius: 0.25rem; }
 .tb-problem-warnings { color: var(--bs-warning-text-emphasis); padding-left: 1.2rem; }
 .tb-traceback-own pre { border-left: 3px solid var(--bs-primary); padding-left: 0.5rem; }
 .tb-traceback-packages summary { color: var(--bs-secondary-color); cursor: pointer; font-size: 0.8rem; }
@@ -554,4 +554,10 @@ pre.hljs {
 }
 .tb-address .btn {
   white-space: nowrap;
+}
+
+/* Bootstrap's outline-secondary text is its grey, #6c757d, too faint on the
+   dark page: the address bar's buttons and Copy looked disabled. */
+[data-bs-theme="dark"] .btn-outline-secondary {
+  --bs-btn-color: var(--bs-secondary-color);
 }
