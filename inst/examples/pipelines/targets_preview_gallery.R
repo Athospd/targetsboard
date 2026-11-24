@@ -37,6 +37,42 @@ write_lines <- function(name, lines) {
 
 optional <- function(package, target) if (requireNamespace(package, quietly = TRUE)) target
 
+# A Quarto report, rendered by tar_quarto(): the board shows the HTML Quarto
+# made, with its theme and the files in report_files/. tar_quarto() reads the
+# source when this script is read, so the source is written now, into the
+# store with the other files (only when it changes, so the report stays up
+# to date). Left out without tarchetypes, quarto or the Quarto CLI.
+quarto_report <- function() {
+  if (!requireNamespace("tarchetypes", quietly = TRUE) || !requireNamespace("quarto", quietly = TRUE) ||
+      is.null(quarto::quarto_path())) {
+    return(NULL)
+  }
+  source <- c(
+    "---",
+    "title: \"A Quarto report\"",
+    "format: html",
+    "---",
+    "",
+    "Rendered by `tarchetypes::tar_quarto()`, with **Quarto's** own look:",
+    "",
+    "::: {.callout-note}",
+    "The board shows the HTML Quarto made, with its files.",
+    ":::",
+    "",
+    "```{r}",
+    "summary(mtcars$mpg)",
+    "```",
+    "",
+    "```{r}",
+    "#| fig-cap: \"Weight and mileage\"",
+    "plot(mtcars$wt, mtcars$mpg, xlab = \"Weight\", ylab = \"Miles per gallon\")",
+    "```"
+  )
+  path <- gallery_file("report.qmd")
+  if (!file.exists(path) || !identical(readLines(path, warn = FALSE), source)) writeLines(source, path)
+  tarchetypes::tar_quarto(report_qmd, path)
+}
+
 Filter(Negate(is.null), list(
   # Data frames: Rows and Columns.
   tar_target(cars_frame, transform(mtcars, model = rownames(mtcars), cyl = factor(cyl))),
@@ -150,10 +186,7 @@ Filter(Negate(is.null), list(
     "model.R",
     c("# An R file", "fit_model <- function(data, formula = mpg ~ wt) {", "  lm(formula, data = data) # a comment", "}")
   ), format = "file"),
-  tar_target(report_qmd, write_lines(
-    "report.qmd",
-    c("---", "title: \"A Quarto file\"", "---", "", "```{r}", "summary(mtcars$mpg)", "```")
-  ), format = "file"),
+  quarto_report(),
   tar_target(config_json, write_lines("config.json", c("{", '  "alpha": 0.1,', '  "tags": ["demo", "gallery"]', "}")), format = "file"),
   tar_target(config_yaml, write_lines("config.yaml", c("alpha: 0.1", "tags:", "  - demo", "  - gallery")), format = "file"),
   tar_target(run_log, write_lines("run.log", sprintf("[%03d] step done", 1:250)), format = "file"),
