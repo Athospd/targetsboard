@@ -34,7 +34,8 @@ test_that("every board theme keeps the board readable, in both modes", {
     for (mode in modes) {
       app$run_js(sprintf("document.querySelector('bslib-input-dark-mode').setAttribute('mode', '%s')", mode))
       app$wait_for_js(sprintf("document.documentElement.dataset.bsTheme === '%s'", mode))
-      Sys.sleep(0.5)
+      wait_for_widget_mode(app, mode)
+      wait_for_settled(app)
       got <- app$get_js(contrast_js)
       label <- sprintf("%s, %s mode", name, mode)
       for (part in c("heading", "run_all", "refresh", "toolbar", "picker")) {

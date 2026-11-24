@@ -51,11 +51,12 @@ test_that("a pick restyles the board, and dark-only themes take the switch", {
   pick_theme(app, "Darkly")
   app$wait_for_js("document.querySelector('bslib-input-dark-mode').hidden", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'")
-  app$wait_for_js("document.querySelector('.reactflow-wrapper').classList.contains('tb-dark')")
+  wait_for_widget_mode(app, "dark")
 
   pick_theme(app, "Targets board")
   app$wait_for_js("!document.querySelector('bslib-input-dark-mode').hidden", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'light'") # the mode before Darkly
+  wait_for_widget_mode(app, "light")
   wait_or_show(app, sprintf("%s === '%s'", canvas_js, beige))
   expect_equal(app$get_js(layout_js), layout) # as on load
 })

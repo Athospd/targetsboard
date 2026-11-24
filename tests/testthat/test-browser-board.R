@@ -396,6 +396,7 @@ test_that("in dark mode, the tables, the toolbar and the buttons stay readable",
 
   app$click(selector = ".react-flow__node[data-id='b']")
   app$wait_for_js("document.querySelector('.tb-node-toolbar button') !== null")
+  wait_for_settled(app)
   expect_gte(contrast(".tb-node-toolbar button"), 4.5)
   expect_false(identical( # dark, as the page around it
     app$get_js("getComputedStyle(document.querySelector('.tb-node-toolbar button')).backgroundColor"),
