@@ -125,8 +125,15 @@ update_targetsboard <- function(session, inputId, nodes, edges, height = "100%",
                                 warnings = character(), options = NULL) {
   session$sendInputMessage(inputId, list(
     value = 0,
-    configuration = board_configuration(inputId, nodes, edges, height, width, warnings, options)
+    configuration = board_configuration(full_id(session, inputId), nodes, edges, height, width, warnings, options)
   ))
+}
+
+# The widget's id in the page: in a module, with the module's namespace.
+# The widget knows itself by it, in its inputs and in the messages it
+# listens to; sendInputMessage() adds the namespace on its own.
+full_id <- function(session, inputId) {
+  if (is.function(session$ns)) session$ns(inputId) else inputId
 }
 
 #' @rdname targetsboard
@@ -145,7 +152,7 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
                                        branches = NULL) {
   stopifnot(is.character(statuses), !is.null(names(statuses)) || length(statuses) == 0)
   message <- list(
-    id = inputId,
+    id = full_id(session, inputId),
     nodes = unname(Map(
       function(id, status) list(id = id, type = status_to_node_type(status), target_status = status),
       names(statuses), unname(statuses)
@@ -269,7 +276,7 @@ send_command <- function(session, inputId, command, ...) {
   args <- Filter(Negate(is.null), list(...))
   session$sendCustomMessage(
     "targetsboard:command",
-    c(list(id = inputId, command = command), args)
+    c(list(id = full_id(session, inputId), command = command), args)
   )
 }
 
@@ -284,7 +291,7 @@ update_targetsboard_options <- function(session, inputId, ...) {
   options <- do.call(targetsboard_options, changed) # validates them
   session$sendCustomMessage(
     "targetsboard:options",
-    list(id = inputId, options = unclass(options)[names(changed)])
+    list(id = full_id(session, inputId), options = unclass(options)[names(changed)])
   )
 }
 
