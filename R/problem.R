@@ -353,7 +353,7 @@ code_block <- function(title, kind, code) {
 #' @param script Your targets script.
 #' @return The path of the script, for `targets::tar_make(script = )`.
 #' @examples
-#' \dontrun{
+#' if (interactive()) {
 #' # Restart R first, then:
 #' targets::tar_make(
 #'   names = "model",

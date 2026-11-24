@@ -21,7 +21,7 @@ loads yours and changes its targets for this run only; yours is not
 changed. The board's Problem pane gives the code to use it.
 }
 \examples{
-\dontrun{
+if (interactive()) {
 # Restart R first, then:
 targets::tar_make(
   names = "model",

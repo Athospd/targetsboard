@@ -171,7 +171,7 @@ The event inputs (double-click, right-click, action) fire again for the
 same target, so \code{observeEvent()} sees every one.
 }
 \examples{
-\dontrun{
+if (interactive()) {
 library(shiny)
 net <- targets::tar_visnetwork(targets_only = TRUE)$x
 

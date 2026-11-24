@@ -76,7 +76,7 @@
 #'   side effect.
 #'
 #' @examples
-#' \dontrun{
+#' if (interactive()) {
 #' library(shiny)
 #' net <- targets::tar_visnetwork(targets_only = TRUE)$x
 #'
@@ -223,7 +223,7 @@ update_targetsboard_selection <- function(session, inputId, nodes = NULL) {
 #' @return `targetsboard_export_image()` is called for its side effect.
 #'   `save_targetsboard_image()` returns `path`, invisibly.
 #' @examples
-#' \dontrun{
+#' if (interactive()) {
 #' server <- function(input, output, session) {
 #'   observeEvent(input$snapshot, targetsboard_export_image(session, "dag"))
 #'   observeEvent(input$dag_image, save_targetsboard_image(input$dag_image, "dag.png"))

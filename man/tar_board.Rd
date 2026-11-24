@@ -100,7 +100,7 @@ when asked; set the limit with \code{options(targetsboard.preview_bytes = )}.
 }
 
 \examples{
-\dontrun{
+if (interactive()) {
 app <- tar_board()                 # opens the board in your browser
 targets::tar_make()                # the board follows along
 browseURL(attr(app, "url"))        # reopen it after closing the tab

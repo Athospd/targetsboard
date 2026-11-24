@@ -1,6 +1,6 @@
 Package: targetsboard
 Title: Targets Board
-Version: 0.1.0.9000
+Version: 0.2.0
 Authors@R: c(
     person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre")),
     person("Ivan", "Sagalaev", role = "cph",
@@ -30,6 +30,7 @@ Copyright: See the file inst/COPYRIGHTS for the bundled JavaScript
 URL: https://github.com/Athospd/targetsboard
 BugReports: https://github.com/Athospd/targetsboard/issues
 Encoding: UTF-8
+Language: en-GB
 Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.1.0)

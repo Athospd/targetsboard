@@ -32,7 +32,7 @@ if it could not draw it. \code{save_targetsboard_image()} writes that image to a
 file.
 }
 \examples{
-\dontrun{
+if (interactive()) {
 server <- function(input, output, session) {
   observeEvent(input$snapshot, targetsboard_export_image(session, "dag"))
   observeEvent(input$dag_image, save_targetsboard_image(input$dag_image, "dag.png"))
