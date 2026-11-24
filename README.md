@@ -11,7 +11,7 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 [![Codecov test
 coverage](https://codecov.io/gh/Athospd/targetsboard/graph/badge.svg)](https://app.codecov.io/gh/Athospd/targetsboard)
 [![CRAN
-status](https://www.r-pkg.org/badges/version/targetsboard)](https://CRAN.R-project.org/package=targetsboard)
+status](https://img.shields.io/cran/v/targetsboard)](https://CRAN.R-project.org/package=targetsboard)
 <!-- badges: end -->
 
 A board for the author of a
