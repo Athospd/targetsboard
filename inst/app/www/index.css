@@ -487,14 +487,17 @@ pre.hljs {
   color: var(--bs-secondary-color);
 }
 
-/* The script bar, as a browser's address bar: in the top bar, between the
-   title and the switches, as wide as there is room for, as paths can be
-   long. */
+/* The script bar, as a browser's address bar: above the board's tabs, its
+   own height, not filling the page. Room for a long path, but not the whole
+   width: at most 40rem or 40% of the board, at least 22rem. */
 .tb-address {
-  flex: 1 1 auto;
-  min-width: 12rem;
-  max-width: 56rem;
+  flex: none;
+  width: 100%;
+  min-width: 22rem;
+  max-width: min(40rem, 40%);
   flex-wrap: nowrap;
+  /* In line with the first tab, below the page's header. */
+  margin: 0.5rem var(--bs-card-cap-padding-x, 1rem) 0;
 }
 .tb-address .tb-address-path {
   font-family: var(--bs-font-monospace);

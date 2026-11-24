@@ -1,6 +1,6 @@
 #' The script the board draws: a bar as a browser's address bar
 #'
-#' Refresh, the script's path, and Load, in the page's top bar. The path is
+#' Refresh, the script's path, and Load, above the board's tabs. The path is
 #' free text, with the known scripts as suggestions the browser filters as
 #' one types; Enter loads it. While Load loads another script,
 #' script_loading_ui() covers the Board pane.

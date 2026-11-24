@@ -2,7 +2,8 @@
 #'
 #' The top bar (chrome_ui()) holds only the title, the dark mode switch and
 #' the power button, which turns the board off. The sidebar holds the board's
-#' controls, and the page its card of tabs (board_ui()).
+#' run controls, and the page the board: its script bar above its card of
+#' tabs (board_ui()).
 #'
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
@@ -14,7 +15,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
   shiny::tagList(
     add_external_resources(),
     page_sidebar(
-      title = chrome_ui("chrome", board_address_ui("board", script, scripts)),
+      title = chrome_ui("chrome"),
       # Pinned: the board's CSS is written for Bootstrap 5, whatever bslib's
       # default becomes.
       theme = bslib::bs_theme(version = 5),
@@ -23,7 +24,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
         title = "Control Panel",
         board_sidebar_ui("board")
       ),
-      board_ui("board", metadata, layout)
+      board_ui("board", metadata, script, scripts, layout)
     )
   )
 }

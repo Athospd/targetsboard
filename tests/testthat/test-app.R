@@ -182,10 +182,12 @@ test_that("tar_board() hands the dev, confirm_nodes and preview_bytes options to
 test_that("the script bar suggests the scripts, with the launch script first and in the field", {
   metadata <- list(nodes = fake_nodes(), edges = fake_edges())
   html <- as.character(app_ui(metadata, "b.R", scripts = c("a.R", "b.R", "c.R")))
-  # A free text field, in the top bar, as a browser's address bar: Enter loads.
+  # A free text field, as a browser's address bar: Enter loads. The board's
+  # own, above its tabs; not in the page's top bar.
   expect_match(html, '<input id="board-script-path" type="text" value="b.R"', fixed = TRUE)
   expect_match(html, 'list="board-script-suggestions" data-tb-enter="board-script-load"', fixed = TRUE)
-  expect_match(html, 'class="navbar[^"]*">.*id="board-script-path"')
+  expect_match(html, 'id="board-script-path".*id="board-view"')
+  expect_no_match(as.character(chrome_ui("chrome")), "script-path", fixed = TRUE)
   options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
   expect_equal(options, paste0('<option value="', c("b.R", "a.R", "c.R"), '"'))
   expect_error(app_ui(metadata, "b.R", scripts = 1), "must be a character vector")
