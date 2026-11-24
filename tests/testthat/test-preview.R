@@ -185,7 +185,7 @@ test_that("the value preview shows a frame, asks before a large value, and cache
   withr::local_options(targetsboard.preview_bytes = 1e9)
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
     html <- output$value_preview$html
     expect_match(html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
@@ -231,7 +231,7 @@ test_that("a _targetsboard.R that fails to load is notified, and the board carri
   )
   server <- local_app_server()
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     expect_equal(notes, "_targetsboard.R didn't load: typo in my methods")
     session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
     expect_match(output$value_preview$html, "tb-preview-printed", fixed = TRUE)

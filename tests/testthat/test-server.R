@@ -4,7 +4,7 @@ test_that("one background poller is shared by all sessions", {
   server <- local_app_server()
 
   shiny::testServer(server, {
-    rds_path <- environment(server)$poller_rds_path()
+    rds_path <- backend_of(server)$rds_path()
     wait_for(function() file.exists(rds_path))
 
     session$elapse(600)
@@ -17,7 +17,7 @@ test_that("one background poller is shared by all sessions", {
   })
 
   process <- poller_of(server)$process
-  environment(server)$stop_poller()
+  backend_of(server)$stop_poller()
   expect_false(process$is_alive())
 })
 
@@ -100,7 +100,7 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     # A spinner covers the board meanwhile, so the old graph can't be used.
     expect_equal(spinner, "show board_loading")
     expect_equal(output$board_loading_caption, "Loading pipeline\u2026") # no script name
-    rds_path <- environment(server)$poller_rds_path()
+    rds_path <- backend_of(server)$rds_path()
     wait_for(function() file.exists(rds_path))
     session$elapse(600)
     expect_equal(states[[3]], "load_script ready")
@@ -112,7 +112,7 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
     session$elapse(600)
     expect_length(states, 3)
     expect_equal(output$board_loading_caption, "Loading pipeline\u2026")
-    wait_for(function() file.exists(poller_error_path(environment(server)$poller_rds_path())))
+    wait_for(function() file.exists(poller_error_path(backend_of(server)$rds_path())))
     session$elapse(600)
     expect_equal(states[[4]], "load_script ready")
     expect_equal(spinner, rep(c("show board_loading", "hide board_loading"), 2))
@@ -142,7 +142,7 @@ test_that("Load asks before drawing a graph over the size limit, and Cancel keep
 
   shiny::testServer(server, {
     wait_new_graph <- function() {
-      rds_path <- environment(server)$poller_rds_path()
+      rds_path <- backend_of(server)$rds_path()
       wait_for(function() file.exists(rds_path))
       session$elapse(600)
     }
@@ -229,7 +229,7 @@ test_that("a target's menu runs it, invalidates it after confirmation, or previe
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(flow_node_action = list(action = "run", node = "b"))
     expect_equal(ran, list("b"))
 
@@ -268,7 +268,7 @@ test_that("the actions of a selected group cover every target of it", {
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     # As the widget sends it: `nodes`, a JSON array, can arrive as a list.
     session$setInputs(flow_node_action = list(action = "run", node = "a", nodes = list("a", "c")))
     expect_equal(ran, list(c("a", "c")))
@@ -304,7 +304,7 @@ test_that("Invalidate all asks for every target of the graph, then invalidates t
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(invalidate_all = 1)
     for (name in c("a", "b", "c")) expect_match(modal, sprintf("<code>%s</code>", name), fixed = TRUE)
     expect_equal(nrow(targets::tar_meta(targets_only = TRUE)), 3) # not yet
@@ -376,7 +376,7 @@ test_that("a run's progress reaches the widget as status-only updates", {
 
   shiny::testServer(server, {
     # Keep the graph as it is: only the progress file changes.
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$flushReact() # the first flush, which a real app does at start
     targets::tar_make(reporter = "silent")
     session$elapse(600)
@@ -398,7 +398,7 @@ test_that("a script that stops loading is notified until it loads again", {
   )
 
   shiny::testServer(server, {
-    error_path <- poller_error_path(environment(server)$poller_rds_path())
+    error_path <- poller_error_path(backend_of(server)$rds_path())
     writeLines("stop('broken pipeline')", "_targets.R")
     wait_for(function() file.exists(error_path))
     session$elapse(600)
@@ -454,7 +454,7 @@ test_that("the tar_visnetwork tab shows tar_visnetwork()'s own widget", {
   server <- local_app_server()
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     widget <- targets::tar_visnetwork(targets_only = TRUE)
     board(list(x = widget$x, widget = widget, progress_mtime = progress_mtime()))
     expect_match(output$vis_network, "hierarchical", fixed = TRUE) # tar_visnetwork()'s layout
@@ -486,7 +486,7 @@ test_that("the graph follows the page's dark mode switch", {
   })
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(dark_mode = "dark")
     expect_equal(sent[[length(sent)]], list(inputId = "flow", color_mode = "dark"))
     session$setInputs(dark_mode = "light")
@@ -511,7 +511,7 @@ test_that("a row clicked in the tar_meta() table shows its target on the board",
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(meta_row_clicked = "b")
     expect_equal(calls, list(
       list("tab", list("view", "board")),
@@ -530,7 +530,7 @@ test_that("the board writes the widget's layout into the store's user folder", {
     positions = list(a = list(x = 0, y = 0), b = list(x = 0, y = 150), c = list(x = 0, y = 300))
   )
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(flow_layout = layout)
     expect_equal(read_board_layout(file.path("_targets", "user", "targetsboard_layout.json")), layout)
   })
@@ -564,10 +564,10 @@ test_that("during a run, patterns show their branch counts; they go when it stop
   })
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$flushReact()
     session$setInputs(run_all = 1)
-    process <- environment(server)$runner$process
+    process <- backend_of(server)$runner$process
     seen <- FALSE
     while (process$is_alive()) {
       Sys.sleep(0.3)

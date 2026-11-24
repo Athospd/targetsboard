@@ -225,7 +225,7 @@ test_that("the value preview leads with the problem; an errored target shows not
   local_problem_store()
   server <- local_app_server()
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "model", flow_double_clicked_node = "model")
     html <- output$value_preview$html
     expect_match(html, 'class="tb-problem" data-target="model"', fixed = TRUE)
@@ -311,7 +311,7 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     expect_equal(problems()$name, c("branch", "model", "warned"))
     expect_match(output$problems, "object 'y' not found", fixed = TRUE) # the table renders
     expect_match(output$problems_count$html, ">3<", fixed = TRUE)
@@ -326,7 +326,7 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     preview_open(FALSE)
     session$setInputs(keep_going = TRUE, run_all = 1)
     session$elapse(600)
-    environment(server)$runner$process$wait(120 * 1000)
+    backend_of(server)$runner$process$wait(120 * 1000)
     session$elapse(1100)
     expect_length(notes, 1)
     expect_equal(notes[[1]]$type, "warning")

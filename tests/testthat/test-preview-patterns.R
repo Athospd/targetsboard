@@ -60,7 +60,7 @@ test_that("the board's preview of a pattern follows its picker, and opens on bra
   local_pattern_pipeline()
   server <- local_app_server()
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "squares", flow_double_clicked_node = "squares")
     html <- output$value_preview$html
     expect_match(html, 'max="4" value="1"', fixed = TRUE)

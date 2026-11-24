@@ -90,7 +90,7 @@ test_that("the board builds a file's view when its section opens", {
   server <- local_app_server()
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "files", flow_double_clicked_node = "files")
     html <- output$value_preview$html
     expect_match(html, "3 files.", fixed = TRUE)

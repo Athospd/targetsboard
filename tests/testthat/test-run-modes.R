@@ -109,7 +109,7 @@ test_that("the board's runs follow its run mode switches", {
   })
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(run_all = 1)
     session$setInputs(keep_going = TRUE, stop_at_warnings = FALSE, run_all = 2)
     session$setInputs(stop_at_warnings = TRUE, flow_node_action = list(action = "run", node = "b", nodes = "b"))
