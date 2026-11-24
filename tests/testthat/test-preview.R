@@ -136,7 +136,7 @@ test_that("a large value is read only when asked", {
   expect_false(preview_too_large(list(name = "unknown")))
   html <- as.character(preview_gate(big))
   expect_match(html, "This value is 5 MB in the store, more than the 1 kB", fixed = TRUE)
-  expect_match(html, 'id="value_preview_read"', fixed = TRUE)
+  expect_match(html, 'id="read"', fixed = TRUE)
 })
 
 test_that("_targetsboard.R adds preview methods for a project's own classes", {
@@ -197,7 +197,7 @@ test_that("the value preview shows a frame, asks before a large value, and cache
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
     # _targetsboard.R's method, loaded at start.
     expect_match(html, '<b class="tb-test-view">number 4</b>', fixed = TRUE)
@@ -207,23 +207,23 @@ test_that("the value preview shows a frame, asks before a large value, and cache
     # Back and forth: c comes from the cache.
     session$setInputs(flow_focused_node = "b")
     session$setInputs(flow_focused_node = "c")
-    output$value_preview$html
+    output[["preview-content"]]$html
     expect_equal(reads, 2)
 
     # A method edited, then Refresh: it takes the new one, built again.
     writeLines("tar_board_preview.numeric <- function(x, target, ...) htmltools::tags$i('edited')", "_targetsboard.R")
     session$setInputs(refresh = 1)
-    expect_match(output$value_preview$html, "<i>edited</i>", fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, "<i>edited</i>", fixed = TRUE)
     expect_equal(reads, 3)
 
     # Over the size limit: not read until asked.
     options(targetsboard.preview_bytes = 1)
     session$setInputs(flow_focused_node = "a")
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, "Load the value", fixed = TRUE)
     expect_equal(reads, 3)
-    session$setInputs(value_preview_read = 1)
-    html <- output$value_preview$html
+    session$setInputs(`preview-read` = 1)
+    html <- output[["preview-content"]]$html
     expect_no_match(html, "Load the value", fixed = TRUE)
     expect_match(html, '<i>edited</i>', fixed = TRUE)
     expect_equal(reads, 4)
@@ -244,7 +244,7 @@ test_that("a _targetsboard.R that fails to load is notified, and the board carri
     backend_of(server)$stop_poller()
     expect_equal(notes, "_targetsboard.R didn't load: typo in my methods")
     session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
-    expect_match(output$value_preview$html, "tb-preview-printed", fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, "tb-preview-printed", fixed = TRUE)
   })
 })
 
@@ -340,8 +340,8 @@ test_that("a plot is drawn at twice the pixels of its size on the page", {
 test_that("the frame gives a plot an image sized by the page, and a widget the width", {
   plot_view <- tar_board_preview_plot(function() plot(1))
   built <- list(facts = list(class = "x"), views = list(Preview = plot_view, Printed = shiny::tags$pre("x")))
-  html <- as.character(preview_frame(list(name = "p"), built, plot_ids = "value_preview_plot_1"))
-  expect_match(html, '<div class="tb-preview-plot">[[:space:]]*<div id="value_preview_plot_1" class="shiny-image-output" style="width:100%;height:100%;">')
+  html <- as.character(preview_frame(list(name = "p"), built, plot_ids = "preview-plot_1"))
+  expect_match(html, '<div class="tb-preview-plot">[[:space:]]*<div id="preview-plot_1" class="shiny-image-output" style="width:100%;height:100%;">')
 
   widget <- size_widget(reactable::reactable(data.frame(a = 1)))
   expect_equal(widget[c("width", "height")], list(width = "100%", height = 420))
@@ -393,25 +393,25 @@ test_that("the preview follows its target's records: invalidated, then built aga
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
-    expect_match(output$value_preview$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
     before <- built
 
     # Another target's records change: c's preview stays as it is.
     Sys.sleep(1.1) # file times can have 1s resolution
     targets::tar_invalidate(a)
     session$elapse(1100)
-    output$value_preview
+    output[["preview-content"]]
     expect_equal(built, before)
 
     Sys.sleep(1.1)
     targets::tar_invalidate(c)
     session$elapse(1100)
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, "No value stored for this target yet.", fixed = TRUE)
 
     Sys.sleep(1.1)
     targets::tar_make(reporter = "silent")
     session$elapse(1100)
-    expect_match(output$value_preview$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
   })
 })

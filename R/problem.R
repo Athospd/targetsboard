@@ -204,9 +204,11 @@ debug_run_code <- function(name, script = NULL, run = name, store = NULL, dir = 
 #' @param running Whether a run is going: no debug run then.
 #' @param script,store The board's script and store, and `dir` its folder:
 #'   for the code to copy.
+#' @param ns The preview module's namespace: its inputs' links send
+#'   `target_link` in it.
 #' @noRd
 problem_ui <- function(problem, inputs = character(), running = FALSE, script = NULL,
-                       store = NULL, dir = NULL) {
+                       store = NULL, dir = NULL, ns = identity) {
   shiny::tags$div(
     class = "tb-problem",
     `data-target` = problem$name,
@@ -222,7 +224,7 @@ problem_ui <- function(problem, inputs = character(), running = FALSE, script = 
           shiny::tags$button(
             type = "button", class = "tb-input-link btn btn-link btn-sm p-0 me-2", `data-target` = id, id
           ) |>
-            send_on_click("meta_row_clicked", id)
+            send_on_click(ns("target_link"), id)
         })
       )
     },

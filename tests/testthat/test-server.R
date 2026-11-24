@@ -186,27 +186,27 @@ test_that("a double-click previews a target's value, then the preview follows th
 
   shiny::testServer(server, {
     session$setInputs(flow_focused_node = "c")
-    expect_error(output$value_preview) # focusing alone reads no value
+    expect_error(output[["preview-content"]]) # focusing alone reads no value
 
     session$setInputs(flow_double_clicked_node = "c")
-    expect_match(output$value_preview$html, '<pre class="tb-preview-printed">[1] 4</pre>', fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, '<pre class="tb-preview-printed">[1] 4</pre>', fixed = TRUE)
 
     # It follows the focus while open.
     session$setInputs(flow_focused_node = "b")
-    expect_match(output$value_preview$html, '<pre class="tb-preview-printed">[1] 2</pre>', fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, '<pre class="tb-preview-printed">[1] 2</pre>', fixed = TRUE)
 
     # Clearing the focus closes it, and focusing again doesn't reopen it.
     session$setInputs(flow_focused_node = NULL)
-    expect_false(preview_open())
     session$setInputs(flow_focused_node = "c")
-    expect_error(output$value_preview)
+    expect_error(output[["preview-content"]])
 
     # Nor does its own toggle, once closed by it.
     session$setInputs(flow_double_clicked_node = "c")
-    expect_true(preview_open())
-    session$setInputs(value_preview_sidebar = TRUE)
-    session$setInputs(value_preview_sidebar = FALSE)
-    expect_false(preview_open())
+    expect_match(output[["preview-content"]]$html, "[1] 4", fixed = TRUE)
+    session$setInputs(`preview-sidebar` = TRUE)
+    session$setInputs(`preview-sidebar` = FALSE)
+    session$setInputs(flow_focused_node = "b")
+    expect_error(output[["preview-content"]])
   })
 })
 
@@ -244,8 +244,7 @@ test_that("a target's menu runs it, invalidates it after confirmation, or previe
     expect_true(all(c("a", "c") %in% meta))
 
     session$setInputs(flow_focused_node = "a", flow_node_action = list(action = "value", node = "a"))
-    expect_true(preview_open())
-    expect_match(output$value_preview$html, '<pre class="tb-preview-printed">[1] 1</pre>', fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, '<pre class="tb-preview-printed">[1] 1</pre>', fixed = TRUE)
   })
 })
 

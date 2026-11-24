@@ -131,7 +131,7 @@ test_that("the pane shows the snippets to copy, but no debug run while running",
   expect_equal(lengths(regmatches(html, gregexpr(">Copy<", html, fixed = TRUE))), 2)
   # Copied by actions.js, which says so; its inputs' links show them.
   expect_match(html, 'class="btn btn-sm btn-outline-secondary tb-copy" data-copy="targets::tar_workspace(model)', fixed = TRUE)
-  expect_match(html, 'data-target="params" data-tb-input="meta_row_clicked" data-tb-value="&quot;params&quot;"', fixed = TRUE)
+  expect_match(html, 'data-target="params" data-tb-input="target_link" data-tb-value="&quot;params&quot;"', fixed = TRUE)
 
   html <- as.character(problem_ui(problem, running = TRUE))
   expect_match(html, "Debug run: not while a run is going.", fixed = TRUE)
@@ -229,24 +229,24 @@ test_that("the value preview leads with the problem; an errored target shows not
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "model", flow_double_clicked_node = "model")
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, 'class="tb-problem" data-target="model"', fixed = TRUE)
     expect_match(html, 'data-target="data"', fixed = TRUE) # its input, linked
     expect_no_match(html, "tb-preview-printed", fixed = TRUE)
 
     session$setInputs(flow_focused_node = "warned")
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, 'data-target="warned"', fixed = TRUE)
     expect_match(html, "tb-preview-printed", fixed = TRUE) # and its value
 
     # A pattern whose branch errored: its problem says why there is no value.
     session$setInputs(flow_focused_node = "branch")
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, 'data-target="branch"', fixed = TRUE)
     expect_no_match(html, "No value stored", fixed = TRUE)
 
     session$setInputs(flow_focused_node = "data")
-    expect_no_match(output$value_preview$html, "tb-problem", fixed = TRUE)
+    expect_no_match(output[["preview-content"]]$html, "tb-problem", fixed = TRUE)
   })
 })
 
@@ -319,12 +319,13 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     expect_match(output[["problems-count"]]$html, "text-bg-danger", fixed = TRUE)
     expect_match(output[["log-text"]], "No run started from the board yet", fixed = TRUE)
 
+    # A problem picked: shown on the board, with the preview asked for.
+    requests <- preview_request()
     session$setInputs(`problems-row_clicked` = "model")
     expect_equal(focused, "model")
-    expect_true(preview_open())
+    expect_equal(preview_request(), requests + 1)
 
     # A run that keeps going: it finishes, with errors, and says where.
-    preview_open(FALSE)
     session$setInputs(keep_going = TRUE, run_all = 1)
     session$elapse(600)
     backend_of(server)$runner$process$wait(120 * 1000)
@@ -339,9 +340,10 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     expect_match(output[["log-text"]], "^Run started [0-9-]+ [0-9:]+: all targets, keep going after errors
 ")
 
+    requests <- preview_request()
     session$setInputs(show_problem = "branch")
     expect_equal(focused, "branch")
-    expect_true(preview_open())
+    expect_equal(preview_request(), requests + 1)
   })
 })
 

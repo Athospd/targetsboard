@@ -69,22 +69,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
             ),
             layout_sidebar(
               class = "p-0",
-              sidebar = sidebar(
-                id = "value_preview_sidebar",
-                width = "40%",
-                open = FALSE,
-                position = "right",
-                # The same spinner card as Load's while a value is read and
-                # its preview built, over the previous preview.
-                tags$div(
-                  class = "tb-preview-loading tb-loading",
-                  shinycssloaders::withSpinner(
-                    uiOutput("value_preview"),
-                    type = 8, custom.css = TRUE, hide.ui = FALSE, id = "value_preview_spinner",
-                    caption = "Loading value\u2026"
-                  )
-                )
-              ),
+              sidebar = preview_ui("preview"),
               targetsboard(
                 "flow", metadata$nodes, metadata$edges,
                 options = board_options(), layout = layout

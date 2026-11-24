@@ -284,23 +284,18 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       )
     })
 
-    # The value preview: opened by a double-click on a target, or its menu's
-    # "Show its value". While open, it follows the focused target; it closes
-    # with the focus, or by its own toggle.
-    preview_open <- shiny::reactiveVal(FALSE)
-    shiny::observeEvent(input$flow_double_clicked_node, preview_open(TRUE))
-    shiny::observeEvent(input$flow_focused_node, {
-      if (is.null(input$flow_focused_node)) preview_open(FALSE)
-    }, ignoreNULL = FALSE)
-    shiny::observeEvent(input$value_preview_sidebar, {
-      if (isFALSE(input$value_preview_sidebar)) preview_open(FALSE)
-    })
-    observe({
-      bslib::toggle_sidebar(
-        "value_preview_sidebar",
-        open = preview_open() && !is.null(input$flow_focused_node)
-      )
-    })
+    # The value preview (preview_server()): opened by a double-click on a
+    # target, its Value, or a link to its problem, on the focused target.
+    preview_request <- shiny::reactiveVal(0)
+    request_preview <- function() preview_request(shiny::isolate(preview_request()) + 1)
+    shiny::observeEvent(input$flow_double_clicked_node, request_preview())
+    preview <- preview_server(
+      "preview", backend,
+      focused = shiny::reactive(input$flow_focused_node),
+      open_request = shiny::reactive(if (preview_request() > 0) preview_request()),
+      board = board, running = running, tar_meta = tar_meta_data,
+      methods = shiny::reactive(preview_methods())
+    )
 
     # The actions of the right-click menus and the toolbars (board_options()):
     # on the target they were chosen on, or on the selected group.
@@ -311,102 +306,8 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         action$action,
         run = launch_run(nodes),
         invalidate = ask_to_invalidate(nodes),
-        value = preview_open(TRUE)
+        value = request_preview()
       )
-    })
-
-    output$value_preview <- shiny::renderUI({
-      req(preview_open(), input$flow_focused_node)
-      name <- input$flow_focused_node
-      # A target that errored or warned shows its problem first; an errored
-      # one has no value to show.
-      problem <- target_problem(name, poller$script)
-      problem_part <- NULL
-      if (has_problem(problem)) {
-        edges <- board()$x$edges
-        inputs <- intersect(edges$from[edges$to == name], board_targets(board()$x$nodes))
-        problem_part <- problem_ui(
-          problem, inputs, running = running(), script = poller$script,
-          store = targets::tar_config_get("store"), dir = normalizePath(getwd(), winslash = "/")
-        )
-        if (!is.null(problem$error)) return(problem_part)
-      }
-      preview_methods()
-      focused_records_changed()
-      # The problem says why there is no value: a pattern whose branches
-      # errored. Without one, say it plainly.
-      no_value <- function() problem_part %||% shiny::p("No value stored for this target yet.")
-      store <- targets::tar_config_get("store")
-      target <- preview_target(name, store, branch = branch_choice())
-      if (is.null(target)) return(no_value())
-      key <- preview_key(target)
-      # A large value is read only when asked: it can take long and fill
-      # the board's memory.
-      if (preview_too_large(target) && !key %in% read_anyway()) {
-        return(shiny::tagList(problem_part, preview_gate(target, store = store)))
-      }
-      built <- previews$get(key)
-      if (is.null(built)) {
-        missing <- new.env() # a value can be NULL itself
-        value <- tryCatch(suppressWarnings(read_preview_value(target, store)), error = function(e) missing)
-        if (identical(value, missing)) return(no_value())
-        built <- previews$set(key, build_preview(value, target))
-      }
-      # Plots are drawn by the board, at the size of the preview. Reusing
-      # the ids replaces the previous renderers instead of piling them up.
-      plots <- Filter(function(view) inherits(view, "tar_board_preview_plot"), built$views)
-      plot_ids <- sprintf("value_preview_plot_%d", seq_along(plots))
-      for (i in seq_along(plots)) {
-        local({
-          view <- plots[[i]]
-          output[[plot_ids[[i]]]] <- render_preview_plot(view, plot_ids[[i]], session)
-        })
-      }
-      # A file's view is built here, in the session, when its section
-      # opens: the first now, the others on value_preview_file_open.
-      files <- Find(function(view) inherits(view, "tar_board_preview_files"), built$views)
-      preview_files(list(paths = files$paths, target = target))
-      if (!is.null(files)) render_file_section(1)
-      shiny::tagList(problem_part, preview_frame(target, built, plot_ids, store))
-    })
-    preview_files <- shiny::reactiveVal(NULL)
-    render_file_section <- function(i) {
-      files <- shiny::isolate(preview_files())
-      if (is.null(files) || i > length(files$paths)) return()
-      path <- files$paths[[i]]
-      # With the target's paths: a document's rendered file may be one.
-      target <- c(files$target, list(files = files$paths))
-      output[[file_output_id(i)]] <- shiny::renderUI(file_section_view(path, target))
-    }
-    shiny::observeEvent(input$value_preview_file_open, render_file_section(input$value_preview_file_open))
-    # A pattern's preview opens on its first branch; the picker changes it.
-    branch_choice <- shiny::reactiveVal(1L)
-    shiny::observeEvent(input$flow_focused_node, branch_choice(1L), priority = 10, ignoreNULL = FALSE)
-    shiny::observeEvent(input$value_preview_branch, branch_choice(as.integer(input$value_preview_branch)))
-    read_anyway <- shiny::reactiveVal(character())
-    # The preview follows the focused target's records in tar_meta(), its
-    # branches' too: it changes when the target is invalidated or built
-    # again. Only its own: a run writes new metadata for each target it
-    # builds, which shouldn't redraw a preview whose target didn't change.
-    focused_records <- function(meta, name) {
-      if (is.null(meta) || is.null(name)) return(NULL)
-      parent <- if ("parent" %in% names(meta)) meta$parent else NA_character_
-      meta[meta$name %in% name | parent %in% name, ]
-    }
-    seen_records <- NULL
-    shiny::observeEvent(input$flow_focused_node, {
-      seen_records <<- focused_records(shiny::isolate(tar_meta_data()), input$flow_focused_node)
-    }, ignoreNULL = FALSE)
-    focused_records_changed <- shiny::reactiveVal(0)
-    shiny::observeEvent(tar_meta_data(), {
-      records <- focused_records(tar_meta_data(), shiny::isolate(input$flow_focused_node))
-      if (identical(records, seen_records)) return()
-      seen_records <<- records
-      focused_records_changed(shiny::isolate(focused_records_changed()) + 1)
-    }, ignoreNULL = FALSE, ignoreInit = TRUE)
-    shiny::observeEvent(input$value_preview_read, {
-      target <- preview_target(input$flow_focused_node, targets::tar_config_get("store"), branch = branch_choice())
-      if (!is.null(target)) read_anyway(union(read_anyway(), preview_key(target)))
     })
 
     # The Script field names the script the board draws. The poller is shared,
@@ -453,14 +354,13 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       edges <- board()$x$edges
       neighbours <- unique(c(name, edges$from[edges$to == name], edges$to[edges$from == name]))
       bslib::nav_select("view", "board")
-      if (preview) preview_open(TRUE)
+      if (preview) request_preview()
       update_targetsboard_focus(session, "flow", name)
       targetsboard_fit_view(session, "flow", neighbours)
     }
     shiny::observeEvent(meta_clicked(), show_on_board(meta_clicked()))
-    # The problem pane's links to a target (problem.R) send meta_row_clicked
-    # themselves, until the preview is a module.
-    shiny::observeEvent(input$meta_row_clicked, show_on_board(input$meta_row_clicked))
+    # The problem pane's links to its inputs.
+    shiny::observeEvent(preview$target_link(), show_on_board(preview$target_link()))
     # A problem picked in the Problems tab, or a run's notification: on the
     # board, with its Problem in the value preview.
     shiny::observeEvent(problem_clicked(), show_on_board(problem_clicked(), preview = TRUE))

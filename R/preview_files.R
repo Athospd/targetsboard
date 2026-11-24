@@ -40,9 +40,9 @@ files_page <- 50
 #' A section holds an output for its view, which the session fills when it
 #' opens; with a single path, the view alone.
 #' @noRd
-files_sections <- function(view) {
+files_sections <- function(view, ns = identity) {
   paths <- view$paths
-  if (length(paths) == 1) return(shiny::uiOutput(file_output_id(1)))
+  if (length(paths) == 1) return(shiny::uiOutput(ns(file_output_id(1))))
   shiny::tagList(
     shiny::tags$p(class = "tb-table-caption", sprintf("%s files.", format(length(paths), big.mark = ","))),
     shiny::tags$div(
@@ -53,11 +53,11 @@ files_sections <- function(view) {
         shiny::tags$details(
           class = "tb-preview-file", `data-index` = i,
           open = if (i == 1) NA, hidden = if (i > files_page) NA,
-          `data-tb-input` = if (i > 1) "value_preview_file_open",
+          `data-tb-input` = if (i > 1) ns("file_open"),
           `data-tb-value` = if (i > 1) i,
-          `data-tb-output` = if (i > 1) file_output_id(i),
+          `data-tb-output` = if (i > 1) ns(file_output_id(i)),
           shiny::tags$summary(shiny::tags$code(basename(paths[[i]]))),
-          if (i == 1) shiny::uiOutput(file_output_id(1), class = "tb-preview-file-body")
+          if (i == 1) shiny::uiOutput(ns(file_output_id(1)), class = "tb-preview-file-body")
         )
       })
     ),
@@ -70,7 +70,8 @@ files_sections <- function(view) {
   )
 }
 
-file_output_id <- function(i) paste0("value_preview_file_", i)
+# A file section's output, in the preview module's namespace.
+file_output_id <- function(i) paste0("file_", i)
 
 #' A file's view, built in the session when its section opens: its path,
 #' size and modified time, and what `tar_board_preview()` gives for its type

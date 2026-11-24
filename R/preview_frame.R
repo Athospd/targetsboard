@@ -173,7 +173,7 @@ read_code <- function(name, store = NULL, branches = NULL) {
   paste0("targets::tar_read(", paste(c(name, branches, store_arg(store)), collapse = ", "), ")")
 }
 
-preview_header <- function(target, facts = NULL, store = NULL) {
+preview_header <- function(target, facts = NULL, store = NULL, ns = identity) {
   built <- if (!is.null(target$time)) format(as.POSIXct(target$time), "%Y-%m-%d %H:%M")
   items <- c(
     facts$class, facts$shape, format_bytes(target$bytes),
@@ -189,36 +189,39 @@ preview_header <- function(target, facts = NULL, store = NULL) {
       copy_code_button(code)
     ),
     shiny::tags$div(class = "tb-preview-facts", lapply(items, shiny::tags$span)),
-    if (!is.null(target$pattern)) branch_picker(target$pattern)
+    if (!is.null(target$pattern)) branch_picker(target$pattern, ns = ns)
   )
 }
 
-# A button that asks for the branch to show: 1 to n, or 0 for all of them.
-branch_button <- function(value, ...) {
-  shiny::tags$button(type = "button", ...) |> send_on_click("value_preview_branch", value)
+# A button that asks for the branch to show, as input `input_id`: 1 to n,
+# or 0 for all of them.
+branch_button <- function(value, input_id, ...) {
+  shiny::tags$button(type = "button", ...) |> send_on_click(input_id, value)
 }
 
 #' A pattern's branch picker: previous and next, a branch by number, and
 #' all the branches combined while their size is under the preview's limit
+#' @param ns The preview module's namespace, for the input it sends.
 #' @noRd
-branch_picker <- function(pattern, limit = preview_bytes_limit()) {
+branch_picker <- function(pattern, limit = preview_bytes_limit(), ns = identity) {
+  input_id <- ns("branch")
   n <- pattern$branches
   i <- pattern$branch
   fits <- is.null(pattern$total_bytes) || isTRUE(pattern$total_bytes <= limit)
   all_link <- function(label) {
-    branch_button(0, class = "btn btn-link btn-sm p-0 tb-branch-all", label)
+    branch_button(0, input_id, class = "btn btn-link btn-sm p-0 tb-branch-all", label)
   }
   if (i == 0L) {
     return(shiny::tags$div(
       class = "tb-preview-branches",
       shiny::tags$span(sprintf("All %s branches", format(n, big.mark = ","))),
-      branch_button(1, class = "btn btn-link btn-sm p-0", "One branch")
+      branch_button(1, input_id, class = "btn btn-link btn-sm p-0", "One branch")
     ))
   }
   shiny::tags$div(
     class = "tb-preview-branches",
     branch_button(
-      max(i - 1L, 1L), class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Previous branch",
+      max(i - 1L, 1L), input_id, class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Previous branch",
       `aria-label` = "Previous branch", disabled = if (i <= 1) NA, shiny::icon("chevron-left")
     ),
     shiny::tags$label(
@@ -226,12 +229,12 @@ branch_picker <- function(pattern, limit = preview_bytes_limit()) {
       shiny::tags$input(
         type = "number", class = "form-control form-control-sm tb-branch-number", min = 1, max = n, value = i,
         # A change sends it, if it's a branch (srcjs/actions.js).
-        `aria-label` = "Branch number", `data-tb-input` = "value_preview_branch"
+        `aria-label` = "Branch number", `data-tb-input` = input_id
       ),
       sprintf("of %s", format(n, big.mark = ","))
     ),
     branch_button(
-      i + 1L, class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Next branch",
+      i + 1L, input_id, class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Next branch",
       `aria-label` = "Next branch", disabled = if (i >= n) NA, shiny::icon("chevron-right")
     ),
     shiny::tags$code(class = "tb-branch-name", pattern$branch_name),
@@ -250,8 +253,9 @@ branch_picker <- function(pattern, limit = preview_bytes_limit()) {
 #' The frame of a value: its header, and a tab per view
 #'
 #' @param plot_ids The output ids of the plot views, in the order they come.
+#' @param ns The preview module's namespace, for the ids the frame writes.
 #' @noRd
-preview_frame <- function(target, built, plot_ids = character(), store = NULL) {
+preview_frame <- function(target, built, plot_ids = character(), store = NULL, ns = identity) {
   i <- 0
   panels <- lapply(names(built$views), function(title) {
     view <- built$views[[title]]
@@ -261,13 +265,13 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL) {
     } else if (inherits(view, "htmlwidget")) {
       view <- shiny::tags$div(class = "tb-preview-widget", size_widget(view))
     } else if (inherits(view, "tar_board_preview_files")) {
-      view <- files_sections(view)
+      view <- files_sections(view, ns)
     }
     bslib::nav_panel(title, shiny::tags$div(class = "tb-preview-view", view))
   })
   bslib::card(
     class = "tb-preview", full_screen = TRUE,
-    preview_header(target, built$facts, store),
+    preview_header(target, built$facts, store, ns),
     bslib::card_body(
       class = "tb-preview-body", padding = 0, gap = 0,
       if (!is.null(built$note)) shiny::tags$p(class = "tb-preview-note", built$note),
@@ -278,17 +282,17 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL) {
 
 #' The frame of a value too large to read without asking
 #' @noRd
-preview_gate <- function(target, limit = preview_bytes_limit(), store = NULL) {
+preview_gate <- function(target, limit = preview_bytes_limit(), store = NULL, ns = identity) {
   bslib::card(
     class = "tb-preview",
-    preview_header(target, store = store),
+    preview_header(target, store = store, ns = ns),
     bslib::card_body(
       class = "tb-preview-gate",
       shiny::tags$p(sprintf(
         "This value is %s in the store, more than the %s the preview reads on its own: reading it can take a while and use a lot of memory.",
         format_bytes(target$bytes), format_bytes(limit)
       )),
-      shiny::actionButton("value_preview_read", "Load the value", class = "btn-sm")
+      shiny::actionButton(ns("read"), "Load the value", class = "btn-sm")
     )
   )
 }
@@ -340,10 +344,12 @@ preview_plot_dpi <- 96
 #' draws the plot again. ragg draws it when installed, else png().
 #' @noRd
 render_preview_plot <- function(view, id, session) {
+  # clientData knows outputs by their full id, the module's namespace in it.
+  full_id <- session$ns(id)
   shiny::renderImage({
     data <- session$clientData
-    width <- data[[paste0("output_", id, "_width")]]
-    height <- data[[paste0("output_", id, "_height")]]
+    width <- data[[paste0("output_", full_id, "_width")]]
+    height <- data[[paste0("output_", full_id, "_height")]]
     shiny::req(width > 0, height > 0)
     file <- tempfile(fileext = ".png")
     draw_png(view, file, width, height)

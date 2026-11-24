@@ -22,6 +22,6 @@ test_that("the board's buttons and links have no JavaScript of their own", {
   )
   expect_no_match(html, "onclick|onchange|ontoggle|setInputValue")
   files <- as.character(files_sections(list(paths = sprintf("f%d.txt", 1:60))))
-  expect_match(files, 'data-tb-input="value_preview_file_open" data-tb-value="2" data-tb-output="value_preview_file_2"', fixed = TRUE)
+  expect_match(files, 'data-tb-input="file_open" data-tb-value="2" data-tb-output="file_2"', fixed = TRUE)
   expect_match(files, 'data-tb-more="50"', fixed = TRUE)
 })
