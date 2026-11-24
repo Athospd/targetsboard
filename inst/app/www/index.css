@@ -101,7 +101,7 @@ body {
 /* Its id outranks the colour and size shinycssloaders gives the caption by
    id, which it does even with custom.css. */
 .tb-loading #board_loading_spinner__caption,
-.tb-loading #value_preview_spinner__caption {
+.tb-loading #preview-spinner__caption {
   grid-row: 1;
   grid-column: 2;
   position: relative;

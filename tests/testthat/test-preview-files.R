@@ -65,7 +65,7 @@ test_that("a file's view that fails says so in its section", {
 
 test_that("files show as sections, 50 at a time, only the first built", {
   one <- as.character(files_sections(files_view("a.csv")))
-  expect_match(one, 'id="value_preview_file_1"', fixed = TRUE)
+  expect_match(one, 'id="file_1"', fixed = TRUE)
   expect_no_match(one, "<details", fixed = TRUE)
 
   many <- as.character(files_sections(files_view(sprintf("f%03d.csv", 1:120))))
@@ -92,12 +92,12 @@ test_that("the board builds a file's view when its section opens", {
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "files", flow_double_clicked_node = "files")
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, "3 files.", fixed = TRUE)
-    expect_match(output$value_preview_file_1$html, "x &lt;- 1", fixed = TRUE)
-    expect_error(output$value_preview_file_3) # not opened yet
-    session$setInputs(value_preview_file_open = 3)
-    expect_match(output$value_preview_file_3$html, "x &lt;- 3", fixed = TRUE)
+    expect_match(output[["preview-file_1"]]$html, "x &lt;- 1", fixed = TRUE)
+    expect_error(output[["preview-file_3"]]) # not opened yet
+    session$setInputs(`preview-file_open` = 3)
+    expect_match(output[["preview-file_3"]]$html, "x &lt;- 3", fixed = TRUE)
   })
 })
 

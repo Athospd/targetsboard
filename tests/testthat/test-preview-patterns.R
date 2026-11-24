@@ -40,11 +40,11 @@ test_that("the branch picker steps through branches, and offers all while small"
   html <- as.character(branch_picker(pattern, limit = 1e6))
   expect_match(html, 'aria-label="Previous branch" disabled', fixed = TRUE)
   # Each step sends its branch (srcjs/actions.js), the number field too.
-  expect_match(html, 'aria-label="Next branch" data-tb-input="value_preview_branch" data-tb-value="2"', fixed = TRUE)
+  expect_match(html, 'aria-label="Next branch" data-tb-input="branch" data-tb-value="2"', fixed = TRUE)
   # Previous, at the first branch, stays on it: 0 would ask for all.
-  expect_match(html, 'aria-label="Previous branch" disabled data-tb-input="value_preview_branch" data-tb-value="1"', fixed = TRUE)
-  expect_match(html, 'aria-label="Branch number" data-tb-input="value_preview_branch"', fixed = TRUE)
-  expect_match(html, 'class="btn btn-link btn-sm p-0 tb-branch-all" data-tb-input="value_preview_branch" data-tb-value="0"', fixed = TRUE)
+  expect_match(html, 'aria-label="Previous branch" disabled data-tb-input="branch" data-tb-value="1"', fixed = TRUE)
+  expect_match(html, 'aria-label="Branch number" data-tb-input="branch"', fixed = TRUE)
+  expect_match(html, 'class="btn btn-link btn-sm p-0 tb-branch-all" data-tb-input="branch" data-tb-value="0"', fixed = TRUE)
   expect_no_match(html, "onclick", fixed = TRUE)
   # The steps are Font Awesome's chevrons, from shiny::icon().
   expect_match(html, 'aria-label="Previous branch"[^>]*>[[:space:]]*<i class="[^"]*fa-chevron-left"')
@@ -69,20 +69,20 @@ test_that("the board's preview of a pattern follows its picker, and opens on bra
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     session$setInputs(flow_focused_node = "squares", flow_double_clicked_node = "squares")
-    html <- output$value_preview$html
+    html <- output[["preview-content"]]$html
     expect_match(html, 'max="4" value="1"', fixed = TRUE)
     expect_match(html, 'data-copy="targets::tar_read(squares, branches = 1)"', fixed = TRUE)
 
-    session$setInputs(value_preview_branch = 3)
-    expect_match(output$value_preview$html, 'data-copy="targets::tar_read(squares, branches = 3)"', fixed = TRUE)
-    session$setInputs(value_preview_branch = 0)
-    html <- output$value_preview$html
+    session$setInputs(`preview-branch` = 3)
+    expect_match(output[["preview-content"]]$html, 'data-copy="targets::tar_read(squares, branches = 3)"', fixed = TRUE)
+    session$setInputs(`preview-branch` = 0)
+    html <- output[["preview-content"]]$html
     expect_match(html, "All 4 branches", fixed = TRUE)
     expect_match(html, 'data-copy="targets::tar_read(squares)"', fixed = TRUE)
 
     # Another target, then back: branch 1 again.
     session$setInputs(flow_focused_node = "plain")
     session$setInputs(flow_focused_node = "squares")
-    expect_match(output$value_preview$html, 'max="4" value="1"', fixed = TRUE)
+    expect_match(output[["preview-content"]]$html, 'max="4" value="1"', fixed = TRUE)
   })
 })
