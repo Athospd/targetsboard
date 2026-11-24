@@ -189,6 +189,7 @@ test_that("the script bar suggests the scripts, with the launch script first and
   expect_match(html, 'id="board-script-path".*id="board-view"')
   expect_no_match(as.character(chrome_ui("chrome")), "script-path", fixed = TRUE)
   options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
+  options <- setdiff(options, paste0('<option value="', board_themes()$name, '"')) # the theme picker's
   expect_equal(options, paste0('<option value="', c("b.R", "a.R", "c.R"), '"'))
   expect_error(app_ui(metadata, "b.R", scripts = 1), "must be a character vector")
 })

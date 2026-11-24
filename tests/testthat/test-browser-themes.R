@@ -17,7 +17,7 @@ test_that("every board theme keeps the board readable, in both modes", {
     "  const f = rgba(getComputedStyle(el).color); const t = f.slice(0, 3).map((v, i) => v * f[3] + b[i] * (1 - f[3]));",
     "  const [x, y] = [lum(t), lum(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };",
     "return { heading: ct('.sidebar-title'), run_all: ct('#board-run-all'), refresh: ct('#board-script-refresh'),",
-    "  tab: ct('#board-view .nav-link:not(.active)'), toolbar: ct('.tb-node-toolbar button'),",
+    "  tab: ct('#board-view .nav-link:not(.active)'), toolbar: ct('.tb-node-toolbar button'), picker: ct('#chrome-theme'),",
     "  canvas: getComputedStyle(document.querySelector('.react-flow')).backgroundColor }; })()"
   )
   for (i in seq_len(nrow(themes))) {
@@ -29,13 +29,15 @@ test_that("every board theme keeps the board readable, in both modes", {
     app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
     app$click(selector = ".react-flow__node[data-id='b']")
     app$wait_for_js("document.querySelector('.tb-node-toolbar button') !== null")
-    for (mode in c("light", "dark")) {
+    modes <- if (themes$dark_only[i]) "dark" else c("light", "dark")
+    expect_equal(app$get_js("document.querySelector('bslib-input-dark-mode').hidden"), themes$dark_only[i])
+    for (mode in modes) {
       app$run_js(sprintf("document.querySelector('bslib-input-dark-mode').setAttribute('mode', '%s')", mode))
       app$wait_for_js(sprintf("document.documentElement.dataset.bsTheme === '%s'", mode))
       Sys.sleep(0.5)
       got <- app$get_js(contrast_js)
       label <- sprintf("%s, %s mode", name, mode)
-      for (part in c("heading", "run_all", "refresh", "toolbar")) {
+      for (part in c("heading", "run_all", "refresh", "toolbar", "picker")) {
         expect_gte(got[[part]], 4.5, label = paste(label, part))
       }
       expect_gte(got$tab, 3, label = paste(label, "inactive tab")) # bold, large-ish

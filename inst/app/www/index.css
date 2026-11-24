@@ -575,3 +575,12 @@ pre.hljs {
   font-size: 1rem;
   font-weight: 600;
 }
+
+/* The theme picker, in the top bar. The page's colours, as Bootstrap's own
+   select has them: some Bootswatch themes compile theirs for light mode
+   only (Lux), or leave it see-through on a dark navbar (Materia). */
+.form-select.tb-theme-picker {
+  width: auto;
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+}

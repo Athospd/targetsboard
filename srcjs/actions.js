@@ -200,3 +200,67 @@ document.addEventListener('keydown', (event) => {
   window.Shiny?.setInputValue?.(input.id, input.value);
   document.getElementById(input.dataset.tbEnter)?.click();
 });
+
+// The theme picker. The pick is remembered in this browser and restored on
+// load, unless the targetsboard.theme option chose the theme. A dark-only
+// theme forces dark mode and hides the switch; leaving it gives back the mode
+// the page had before.
+const THEME_KEY = 'targetsboard.theme';
+
+function darkSwitch() {
+  return document.querySelector('bslib-input-dark-mode');
+}
+
+function themeMode(darkOnly) {
+  const dark = darkSwitch();
+  if (!dark) return;
+  if (darkOnly) {
+    if (!dark.hidden) dark.dataset.tbMode = dark.getAttribute('mode') || 'light';
+    dark.setAttribute('mode', 'dark');
+    dark.hidden = true;
+  } else if (dark.hidden) {
+    dark.hidden = false;
+    dark.setAttribute('mode', dark.dataset.tbMode || 'light');
+    delete dark.dataset.tbMode;
+  }
+}
+
+function storage(fn) {
+  try { return fn(window.localStorage); } catch (e) { return null; }
+}
+
+document.addEventListener('change', (event) => {
+  const picker = event.target;
+  if (!picker.matches?.('select[data-tb-theme]')) return;
+  storage((s) => s.setItem(THEME_KEY, picker.value));
+});
+
+// A theme set while the page is open (session$setCurrentTheme()) appends
+// its CSS to <head>, after ours. Some of our rules win by coming after
+// Bootstrap's (index.css: the body's font, --bslib-spacer, the main area's
+// padding), so ours go last again, in order, as on load.
+const THEME_CSS = /(bootstrap(\.min)?|components|shiny-sass|bslib-component-css(\.min)?)\.css/;
+
+function oursLast() {
+  const sheets = [...document.head.querySelectorAll('link[rel="stylesheet"], style')];
+  sheets
+    .filter((el) => !(el.href && (el.href.includes('restyle=') || THEME_CSS.test(el.href))))
+    .forEach((el) => document.head.appendChild(el));
+}
+
+new MutationObserver((records) => {
+  const restyled = records.some((r) => [...r.addedNodes].some(
+    (n) => n.tagName === 'LINK' && n.href.includes('restyle=')
+  ));
+  if (restyled) oursLast();
+}).observe(document.head, { childList: true });
+
+window.jQuery(document).on('shiny:connected', () => {
+  window.Shiny.addCustomMessageHandler('tb-theme', (message) => themeMode(message.dark_only));
+  const picker = document.querySelector('select[data-tb-theme="remember"]');
+  const saved = storage((s) => s.getItem(THEME_KEY));
+  if (!picker || !saved || saved === picker.value) return;
+  if (![...picker.options].some((o) => o.value === saved)) return;
+  picker.value = saved;
+  window.jQuery(picker).trigger('change');
+});

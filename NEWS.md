@@ -4,9 +4,10 @@
 
 * Themes: the board's look is the "Targets board" theme, and a few
   Bootswatch themes, checked for readable text in light and dark mode, can
-  replace it with `options(targetsboard.theme = )`, e.g. `"Cosmo"`. A
-  Bootswatch theme also colours the canvas and the minimap from its own
-  colours, so a dark theme gets a dark canvas.
+  replace it: pick one in the top bar, and the browser remembers it, or start
+  the board with one with `options(targetsboard.theme = )`, e.g. `"Cosmo"`.
+  A Bootswatch theme also colours the canvas and the minimap from its own
+  colours, and a dark one keeps the page in dark mode and hides the switch.
 * The script the board draws is chosen in a bar above the board's tabs, as
   a browser's address bar: Refresh, the script's path, and Load. The path is
   free text. Focused, it lists the known scripts, filtered as one types;
