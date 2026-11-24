@@ -60,14 +60,14 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   app$wait_for_js(paste0(node("a"), ".classList.contains('react-flow__node-running')"))
   expect_equal(transform("a"), before)
 
-  app$run_js(
-    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
-       {id: 'board-graph-flow', nodes: [], warnings: ['b']}}))"
-  )
-  # Checked together: the board's own status updates may arrive later.
+  # The board's own status updates can retype a again in between: send both
+  # until they show, and read them together.
   app$wait_for_js(paste0(
-    node("b"), ".querySelector('.warning-mark') !== null && ",
-    node("a"), ".classList.contains('react-flow__node-running')"
+    "(() => { const send = (detail) => window.dispatchEvent(new CustomEvent('targetsboard:status', {detail}));",
+    " send({id: 'board-graph-flow', nodes: [{id: 'a', type: 'running', target_status: 'dispatched'}]});",
+    " send({id: 'board-graph-flow', nodes: [], warnings: ['b']});",
+    " return ", node("b"), ".querySelector('.warning-mark') !== null && ",
+    node("a"), ".classList.contains('react-flow__node-running'); })()"
   ))
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
