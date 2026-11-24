@@ -59,7 +59,7 @@ local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", .e
   skip_if(is.null(chromote::find_chrome()), "Chrome not found")
   writeLines(app, file.path(dir, "app.R"))
   # Slow CI runners can take over a minute to start Chrome and the app.
-  app <- shinytest2::AppDriver$new(dir, name = name, load_timeout = 120 * 1000)
+  app <- new_app_driver(dir, name = name, load_timeout = 120 * 1000)
   withr::defer(app$stop(), envir = .env)
   app
 }
@@ -157,4 +157,14 @@ dismiss_modal <- function(app, attempts = 10) {
     if (closed) return(invisible())
   }
   stop("The modal did not close.")
+}
+
+# Starts a shinytest2 app. Chrome's first page load can pass chromote's 10 s
+# command timeout when test files run in parallel, several starting Chrome at
+# once: give each command a minute. A test that hangs still fails, a minute
+# later.
+new_app_driver <- function(...) {
+  chrome <- chromote::default_chromote_object()
+  chrome$default_timeout <- 60
+  shinytest2::AppDriver$new(...)
 }

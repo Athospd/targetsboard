@@ -128,7 +128,7 @@ for (n in browser_sizes) for (kind in c("dynamic", "static")) {
     writeLines("targetsboard::tar_board_app()", file.path(dir, "app.R"))
     start <- Sys.time()
     app <- tryCatch(
-      shinytest2::AppDriver$new(dir, name = "scale", load_timeout = 300 * 1000, timeout = 60 * 1000),
+      new_app_driver(dir, name = "scale", load_timeout = 300 * 1000, timeout = 60 * 1000),
       error = function(e) e
     )
     if (inherits(app, "error")) fail(paste("The board did not start:", conditionMessage(app)))

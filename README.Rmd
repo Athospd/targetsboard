@@ -159,5 +159,7 @@ update_targetsboard_status(session, "dag", setNames(progress$progress, progress$
   a development build with a source map.
 - `dev/` holds scripts for running the board while developing; example
   pipelines are in `inst/examples/`.
-- Tests: `devtools::test()`. The browser test needs Chrome and is skipped
-  on CRAN.
+- Tests: `devtools::test()`. Test files run in parallel, 2 at a time
+  unless `TESTTHAT_CPUS` says more: `Sys.setenv(TESTTHAT_CPUS = 8)` cuts
+  a full run to less than half. The browser tests (`test-browser-*.R`)
+  need Chrome, use the installed targetsboard, and are skipped on CRAN.

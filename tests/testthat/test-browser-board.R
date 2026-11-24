@@ -1,0 +1,319 @@
+# The board app in headless Chrome: drawing, the Load spinner, the Script
+# field, and its actions reaching the server.
+# Uses the installed targetsboard (as R CMD check does), like every browser
+# test: install the branch to a scratch library first to test a change.
+
+test_that("the board renders the DAG, focuses targets and keeps its layout", {
+  skip_on_cran()
+  skip_if_not_installed("shinytest2")
+  skip_if_not_installed("chromote")
+  skip_if(is.null(chromote::find_chrome()), "Chrome not found")
+
+  dir <- local_pipeline(make = TRUE)
+  writeLines("targetsboard::tar_board_app()", file.path(dir, "app.R"))
+
+  app <- new_app_driver(dir, name = "board", load_timeout = 60 * 1000)
+  withr::defer(app$stop())
+
+  node <- function(id) sprintf("document.querySelector(\".react-flow__node[data-id='%s']\")", id)
+  transform <- function(id) app$get_js(paste0(node(id), ".style.transform"))
+  has_class <- function(id, class) app$get_js(sprintf("%s.classList.contains('%s')", node(id), class))
+
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  labels <- app$get_js(
+    "Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.innerText.trim())"
+  )
+  expect_setequal(unlist(labels), c("a", "b", "c"))
+
+  # The automatic layout ran: nodes no longer all sit at the origin.
+  positions <- app$get_js(
+    "Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.style.transform)"
+  )
+  expect_length(unique(unlist(positions)), 3)
+
+  # Clicking a target focuses it; double-clicking previews its value.
+  app$click(selector = ".react-flow__node[data-id='c']")
+  app$wait_for_value(input = "flow_focused_node")
+  expect_equal(app$get_value(input = "flow_focused_node"), "c")
+  mouse_event(app, "c", "dblclick")
+  app$wait_for_js(preview_of("c"), timeout = preview_timeout)
+  expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "4")
+  # The page's R code highlighter (www/highlight.js) loaded, with R.
+  expect_true(app$get_js("!!window.targetsboardHighlight && !!window.targetsboardHighlight.getLanguage('r')"))
+  expect_true(has_class("c", "tb-focused"))
+  expect_false(has_class("a", "tb-dimmed")) # upstream of c: in its lineage
+
+  # Escape in the preview, as when leaving its full-screen, keeps the focus
+  # and the preview: only the board's own Escape clears them.
+  app$run_js("document.querySelector('.tb-preview-name').setAttribute('tabindex', '-1'); document.querySelector('.tb-preview-name').focus();")
+  press_key(app, "Escape")
+  expect_equal(app$get_value(input = "flow_focused_node"), "c")
+  expect_true(app$get_js("!!document.querySelector('.tb-preview-printed')"))
+
+  # A status-only update retypes the node in place, without moving it, and
+  # warning marks come and go without changing the status.
+  before <- transform("a")
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [{id: 'a', type: 'running', target_status: 'dispatched'}]}}))"
+  )
+  app$wait_for_js(paste0(node("a"), ".classList.contains('react-flow__node-running')"))
+  expect_equal(transform("a"), before)
+
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [], warnings: ['b']}}))"
+  )
+  # Checked together: the board's own status updates may arrive later.
+  app$wait_for_js(paste0(
+    node("b"), ".querySelector('.warning-mark') !== null && ",
+    node("a"), ".classList.contains('react-flow__node-running')"
+  ))
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [], warnings: []}}))"
+  )
+  app$wait_for_js(paste0(node("b"), ".querySelector('.warning-mark') === null"))
+
+  # A pattern's branch counts, during a run: shown, red with errors, cleared.
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [], branches: {b: {total: 6, done: 3, errored: 1}}}}))"
+  )
+  app$wait_for_js(paste0(node("b"), ".querySelector('.branch-progress-errored') !== null"))
+  expect_equal(app$get_js(paste0(node("b"), ".querySelector('.branch-progress').innerText")), "3/6")
+  expect_false(app$get_js(paste0(node("a"), ".querySelector('.branch-progress') !== null")))
+  app$run_js(
+    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
+       {id: 'flow', nodes: [], branches: []}}))"
+  )
+  app$wait_for_js(paste0(node("b"), ".querySelector('.branch-progress') === null"))
+
+  # New targets appear; the targets already drawn stay where they were.
+  placed <- list(a = transform("a"), b = transform("b"), c = transform("c"))
+  writeLines(
+    c(
+      "library(targets)",
+      "list(tar_target(a, 1), tar_target(b, a + 1), tar_target(c, b * 2), tar_target(d, c + 1),",
+      "     tar_target(e, 0))"
+    ),
+    file.path(dir, "_targets.R")
+  )
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 5", timeout = 30 * 1000)
+  app$wait_for_js(paste0(node("d"), ".style.transform !== 'translate(0px, 0px)'"))
+  expect_equal(list(a = transform("a"), b = transform("b"), c = transform("c")), placed)
+  expect_false(transform("d") %in% unlist(placed))
+  expect_false(has_class("d", "tb-dimmed")) # downstream of the focused c
+  expect_true(has_class("e", "tb-dimmed")) # unrelated to c
+
+  # Clicking the background clears the focus.
+  app$click(selector = ".react-flow__pane")
+  app$wait_for_js(paste0("!", node("a"), ".classList.contains('tb-dimmed') && !",
+                         node("c"), ".classList.contains('tb-focused')"))
+})
+
+test_that("the Load spinner covers the board only while Load loads, not at the start", {
+  dir <- local_pipeline()
+  writeLines(c(
+    "library(targets)",
+    "Sys.sleep(3)",
+    "list(tar_target(slow_a, 1), tar_target(slow_b, slow_a))"
+  ), file.path(dir, "slow.R"))
+  app <- local_board_app(dir, "spinner_only_while_loading", "targetsboard::tar_board_app(scripts = 'slow.R')")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length > 0")
+  # Straight after the graph is drawn, before the server's first update: a
+  # click in a target's middle reaches the target, not a cover.
+  hit <- paste0(
+    "(() => { const r = document.querySelector('.react-flow__node').getBoundingClientRect();",
+    " const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);",
+    " return e.closest('.react-flow__node') !== null; })()"
+  )
+  expect_true(app$get_js(hit))
+  expect_equal(app$get_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display"), "none")
+  # And still none once the server has answered.
+  app$wait_for_js("Shiny.shinyapp.$values['board_loading'] !== undefined")
+  expect_true(app$get_js(hit))
+
+  # Load a slow script: the spinner covers the pane, captioned, and takes the
+  # click; then it goes once the new graph is drawn.
+  app$run_js("const s = $('#script')[0].selectize; s.setValue('slow.R'); s.blur();")
+  app$click(selector = "#load_script")
+  app$wait_for_js(paste(
+    "getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display !== 'none'",
+    "&& document.querySelector('#board_loading_caption').innerText === 'Loading pipeline\u2026'"
+  ), timeout = 10000)
+  expect_false(app$get_js(hit))
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='slow_a']\") !== null", timeout = 30000)
+  app$wait_for_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display === 'none'")
+  expect_true(app$get_js(hit))
+})
+
+test_that("a board started before its script draws the pipeline once it appears", {
+  skip_on_cran()
+  skip_if_not_installed("shinytest2")
+  skip_if_not_installed("chromote")
+  skip_if(is.null(chromote::find_chrome()), "Chrome not found")
+
+  dir <- withr::local_tempdir()
+  writeLines("targetsboard::tar_board_app()", file.path(dir, "app.R"))
+
+  app <- new_app_driver(dir, name = "empty", load_timeout = 60 * 1000)
+  withr::defer(app$stop())
+  app$wait_for_js("document.querySelector('.react-flow') !== null")
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 0)
+
+  writeLines(
+    c("library(targets)", "list(tar_target(a, 1), tar_target(b, a))"),
+    file.path(dir, "_targets.R")
+  )
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
+  # Laid out as a whole: the two targets don't sit on top of each other,
+  # once the layout has run (it waits for them to be measured).
+  app$wait_for_js(
+    "new Set(Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.style.transform)).size === 2",
+    timeout = 10 * 1000
+  )
+  positions <- app$get_js(
+    "Array.from(document.querySelectorAll('.react-flow__node')).map(n => n.style.transform)"
+  )
+  expect_length(unique(unlist(positions)), 2)
+})
+
+test_that("the delete keys don't remove targets from the read-only board", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "delete")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+
+  app$click(selector = ".react-flow__node[data-id='b']")
+  app$wait_for_value(input = "flow_selected_nodes")
+  for (key in c("Backspace", "Delete")) press_key(app, key)
+  Sys.sleep(1)
+
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 3)
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__edge').length"), 2)
+})
+
+test_that("a click on a tar_meta() row shows its target on the board", {
+  dir <- local_chain_pipeline(8)
+  targets::tar_make(reporter = "silent")
+  app <- local_board_app(dir, "metajump")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 8")
+  # A group selected before: the row's target replaces it.
+  send_widget_message(app, "targetsboard:command",
+                      list(id = "flow", command = "select", nodes = c("t1", "t2")))
+  app$wait_for_js("document.querySelector('.tb-group-toolbar') !== null")
+
+  app$click(selector = "a[data-value='tar_meta']")
+  app$wait_for_js("document.querySelectorAll('#meta .rt-tbody .rt-tr').length === 8")
+  app$run_js(
+    "Array.from(document.querySelectorAll('#meta .rt-tbody .rt-tr'))
+       .find(r => r.querySelector('.rt-td').innerText.trim() === 't6')
+       .querySelector('.rt-td').click()"
+  )
+  app$wait_for_js("document.querySelector(\"a[data-value='board']\").classList.contains('active')")
+  app$wait_for_js(paste0(node_js("t6"), ".classList.contains('tb-focused')"))
+  app$wait_for_value(input = "flow_focused_node")
+  expect_equal(app$get_value(input = "flow_focused_node"), "t6")
+  # Alone: selected, ringed, with its own toolbar.
+  app$wait_for_js("document.querySelector('.tb-group-toolbar') === null")
+  expect_equal(unlist(app$get_value(input = "flow_selected_nodes")), "t6")
+  expect_equal(
+    unlist(app$get_js("Array.from(document.querySelectorAll('.react-flow__node.tb-focused')).map(n => n.dataset.id)")),
+    "t6"
+  )
+  # In view, with its neighbours, and the start of the chain out of it, once
+  # the zoom has finished: mid-way, both can be in view.
+  app$wait_for_js(paste0(
+    "(() => { const w = document.querySelector('.react-flow').getBoundingClientRect();",
+    " const inside = r => r.left >= w.left && r.right <= w.right;",
+    " return w.width > 0 && inside(", node_js("t6"), ".getBoundingClientRect())",
+    " && !inside(", node_js("t1"), ".getBoundingClientRect()); })()"
+  ), timeout = 10 * 1000)
+})
+
+test_that("the focused target's toolbar runs the board's actions", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "toolbar")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  toolbar <- "document.querySelector('.tb-node-toolbar')"
+
+  expect_false(app$get_js(paste(toolbar, "!== null")))
+  app$click(selector = ".react-flow__node[data-id='b']")
+  app$wait_for_js(paste(toolbar, "!== null"))
+  expect_equal(
+    unlist(app$get_js(
+      "Array.from(document.querySelectorAll('.tb-node-toolbar button')).map(b => b.dataset.action)"
+    )),
+    c("run", "invalidate", "value")
+  )
+  # Above its target.
+  expect_true(app$get_js(paste0(
+    "(() => { const t = ", toolbar, ".getBoundingClientRect();",
+    " const n = ", node_js("b"), ".getBoundingClientRect();",
+    " return t.bottom <= n.top + 1 && t.right > n.left && t.left < n.right; })()"
+  )))
+
+  app$click(selector = ".tb-node-toolbar [data-action='value']")
+  app$wait_for_js(preview_of("b"), timeout = preview_timeout)
+  expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "2")
+
+  app$click(selector = ".tb-node-toolbar [data-action='invalidate']")
+  app$wait_for_js("document.querySelector('.modal-dialog') !== null")
+  expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>b</code>", fixed = TRUE)
+  dismiss_modal(app)
+
+  # It follows the focus, and goes with it.
+  app$click(selector = ".react-flow__node[data-id='c']")
+  app$wait_for_js(paste0(
+    "(() => { const t = ", toolbar, "; if (!t) return false;",
+    " const r = t.getBoundingClientRect(), n = ", node_js("c"), ".getBoundingClientRect();",
+    " return r.right > n.left && r.left < n.right; })()"
+  ))
+  app$click(selector = ".react-flow__pane")
+  app$wait_for_js(paste(toolbar, "=== null"))
+})
+
+test_that("the Script field filters the scripts as one types, and Load switches to one", {
+  skip_on_cran()
+  skip_if_not_installed("shinytest2")
+  skip_if_not_installed("chromote")
+  skip_if(is.null(chromote::find_chrome()), "Chrome not found")
+
+  dir <- withr::local_tempdir()
+  writeLines(c("library(targets)", "list(tar_target(a, 1), tar_target(b, a))"), file.path(dir, "_targets.R"))
+  writeLines(c("library(targets)", "list(tar_target(x, 1))"), file.path(dir, "other.R"))
+  writeLines(c("library(targets)", "list(tar_target(y, 1))"), file.path(dir, "third.R"))
+  writeLines(
+    "targetsboard::tar_board_app(scripts = c('other.R', 'third.R'))",
+    file.path(dir, "app.R")
+  )
+  app <- new_app_driver(dir, name = "scripts", load_timeout = 60 * 1000)
+  withr::defer(app$stop())
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
+  expect_equal(app$get_value(input = "script"), "_targets.R")
+
+  # Typing filters the dropdown to the matching scripts.
+  app$run_js("const s = $('#script')[0].selectize; s.focus(); s.setTextboxValue('oth'); s.refreshOptions(true);")
+  app$wait_for_js("document.querySelector('.selectize-dropdown-content .option') !== null")
+  shown <- app$get_js(
+    "Array.from(document.querySelectorAll('.selectize-dropdown-content .option')).map(o => o.dataset.value)"
+  )
+  expect_equal(unlist(shown), "other.R")
+
+  # Choosing it and pressing Load draws its pipeline.
+  app$run_js("const s = $('#script')[0].selectize; s.setValue('other.R'); s.blur();")
+  app$click("load_script")
+  app$wait_for_js(
+    "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
+  )
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 1)
+
+  # A tab opened afterwards names the script it draws, not the launch script.
+  second <- new_app_driver(app$get_url(), name = "scripts-second", load_timeout = 60 * 1000)
+  withr::defer(second$stop())
+  second$wait_for_js(
+    "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
+  )
+  second$wait_for_value(input = "script", ignore = list(NULL, "_targets.R"), timeout = 10 * 1000)
+  expect_equal(second$get_value(input = "script"), "other.R")
+})

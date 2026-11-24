@@ -1,4 +1,4 @@
-# From the tests: local_group_pipeline() in tests/testthat/test-browser.R, used
+# From the tests: local_group_pipeline() in tests/testthat/helper-browser.R, used
 # by "a selected group has its own toolbar, menu and highlighting". Three
 # unconnected parts: a chain a -> b -> c, a pair d -> e, and f alone.
 #
