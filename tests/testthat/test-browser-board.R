@@ -207,6 +207,11 @@ test_that("a click on a tar_meta() row shows its target on the board", {
   send_widget_message(app, "targetsboard:command",
                       list(id = "flow", command = "select", nodes = c("t1", "t2")))
   app$wait_for_js("document.querySelector('.tb-group-toolbar') !== null")
+  # A group's toolbar has no Copy: that's for a single target.
+  expect_equal(
+    unlist(app$get_js("Array.from(document.querySelectorAll('.tb-group-toolbar button')).map(b => b.dataset.action)")),
+    c("run", "invalidate")
+  )
 
   app$click(selector = "a[data-value='tar_meta']")
   app$wait_for_js("document.querySelectorAll('#meta-table .rt-tbody .rt-tr').length === 8")
@@ -249,8 +254,9 @@ test_that("the focused target's toolbar runs the board's actions", {
     unlist(app$get_js(
       "Array.from(document.querySelectorAll('.tb-node-toolbar button')).map(b => b.dataset.action)"
     )),
-    c("run", "invalidate", "value")
+    c("run", "invalidate", "value", "copy_name")
   )
+  expect_equal(app$get_js("document.querySelector(\".tb-node-toolbar [data-action='copy_name']\").textContent"), "Copy")
   # Above its target.
   expect_true(app$get_js(paste0(
     "(() => { const t = ", toolbar, ".getBoundingClientRect();",
@@ -266,6 +272,15 @@ test_that("the focused target's toolbar runs the board's actions", {
   app$wait_for_js("document.querySelector('.modal-dialog') !== null")
   expect_match(app$get_js("document.querySelector('.modal-dialog').innerHTML"), "<code>b</code>", fixed = TRUE)
   dismiss_modal(app)
+
+  # Copy copies its name, quoted as an R string, in the browser.
+  app$run_js(
+    "window.__copied = null;
+     Object.defineProperty(navigator, 'clipboard', {configurable: true,
+       value: {writeText: t => { window.__copied = t; return Promise.resolve(); }}});"
+  )
+  app$click(selector = ".tb-node-toolbar [data-action='copy_name']")
+  app$wait_for_js("window.__copied === '\"b\"'")
 
   # It follows the focus, and goes with it.
   app$click(selector = ".react-flow__node[data-id='c']")
