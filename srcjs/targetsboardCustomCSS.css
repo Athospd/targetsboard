@@ -20,36 +20,69 @@
   --tb-status-errored-text: #ffb6a6;
   --tb-status-running: #d49536;
   --tb-status-running-text: #3f2f11;
+  --tb-spinner: #fff; /* on a running target */
+  /* A target's outline and its handles, where edges meet it. */
+  --tb-node-border: #1a192b;
+  --tb-handle: #1a192b;
+  --tb-handle-border: #fff;
+  /* The edges, and a selected one. */
+  --tb-edge: #b1b1b7;
+  --tb-edge-selected: #555;
+  /* The box drawn to select a group: the page's primary colour. */
+  --tb-selection-bg: rgba(var(--bs-primary-rgb, 0, 89, 220), 0.08);
+  --tb-selection-border: rgba(var(--bs-primary-rgb, 0, 89, 220), 0.8);
   /* Marks on a target: warnings, branches that errored, the focus ring. */
   --tb-warning: #f2c94c;
   --tb-warning-text: #3f2f11;
   --tb-danger: #c62828;
   --tb-danger-text: #fff;
   --tb-focus-ring: #2f223d;
-  /* Menus, toolbars and badges over the canvas. */
-  --tb-surface: #fff;
-  --tb-surface-text: #222;
-  --tb-surface-hover: #f0e5d7;
-  --tb-surface-border: #ccc;
+  /* Menus, toolbars, buttons and badges over the canvas: in the app, the
+     page's Bootstrap surfaces, as its dropdowns; alone, their values. */
+  --tb-surface: var(--bs-body-bg, #fff);
+  --tb-surface-text: var(--bs-body-color, #212529);
+  --tb-surface-hover: var(--bs-tertiary-bg, #f8f9fa);
+  --tb-surface-border: var(--bs-border-color, #dee2e6);
   --tb-surface-shadow: rgba(0, 0, 0, 0.15);
+  /* Sizes: the page's type scale, and Bootstrap's radii. */
+  --tb-font-size-xs: 0.8125rem;
+  --tb-font-size-xxs: 0.75rem;
+  --tb-radius: var(--bs-border-radius, 0.375rem);
+  --tb-radius-sm: var(--bs-border-radius-sm, 0.25rem);
+  --tb-radius-pill: var(--bs-border-radius-pill, 50rem);
 }
 
 .reactflow-wrapper.tb-dark {
   --tb-canvas-bg: #141414;
   --tb-canvas-marks: #777;
   --tb-focus-ring: #d6c7ea;
-  /* In the app, the page's own dark surfaces; alone, their values. */
-  --tb-surface: var(--bs-tertiary-bg, #2b3035);
+  --tb-node-border: #3c3c3c;
+  --tb-handle: #bebebe;
+  --tb-handle-border: #1e1e1e;
+  /* Lighter than React Flow's #3e3e3e, which nearly vanished on the canvas. */
+  --tb-edge: #6c6c6c;
+  --tb-edge-selected: #a0a0a0;
+  --tb-selection-bg: rgba(200, 200, 220, 0.08);
+  --tb-selection-border: rgba(200, 200, 220, 0.8);
+  --tb-surface: var(--bs-body-bg, #212529);
   --tb-surface-text: var(--bs-body-color, #dee2e6);
-  --tb-surface-hover: var(--bs-secondary-bg, #343a40);
+  --tb-surface-hover: var(--bs-tertiary-bg, #2b3035);
   --tb-surface-border: var(--bs-border-color, #495057);
   --tb-surface-shadow: rgba(0, 0, 0, 0.5);
 }
 
-/* React Flow draws the canvas from its own variables. */
+/* React Flow draws the canvas, edges, handles and selection box from its own
+   variables: ours set them. */
 .reactflow-wrapper .react-flow {
   --xy-background-color: var(--tb-canvas-bg);
   --xy-background-pattern-color: var(--tb-canvas-marks);
+  --xy-edge-stroke: var(--tb-edge);
+  --xy-edge-stroke-selected: var(--tb-edge-selected);
+  --xy-node-border: 1px solid var(--tb-node-border);
+  --xy-handle-background-color: var(--tb-handle);
+  --xy-handle-border-color: var(--tb-handle-border);
+  --xy-selection-background-color: var(--tb-selection-bg);
+  --xy-selection-border: 1px dotted var(--tb-selection-border);
 }
 
 /* A target's colours, by status. */
@@ -59,10 +92,10 @@
 .base-node.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); }
 
 .base-node {
-  padding: 10px;
+  padding: 0.625rem;
   border-radius: var(--xy-node-border-radius, var(--xy-node-border-radius-default));
-  width: 150px;
-  font-size: 12px;
+  width: 150px; /* the same for every target: layout.js relies on it */
+  font-size: var(--tb-font-size-xxs);
   color: var(--xy-node-color, var(--xy-node-color-default));
   text-align: center;
   border: var(--xy-node-border, var(--xy-node-border-default));
@@ -76,60 +109,22 @@
   height: 100%;
 }
  
-.providerflow aside {
-  border-left: 1px solid #eee;
-  padding: 15px 10px;
-  font-size: 12px;
-  background: #fff;
-}
- 
-.providerflow aside .description {
-  margin-bottom: 10px;
-}
- 
-.providerflow aside .title {
-  font-weight: 700;
-  margin-bottom: 5px;
-}
- 
-.providerflow aside .transform {
-  margin-bottom: 20px;
-}
- 
 .providerflow .reactflow-wrapper {
   flex-grow: 1;
 }
  
-.providerflow .selectall {
-  margin-top: 10px;
-}
- 
-@media screen and (min-width: 768px) {
-  .providerflow {
-    flex-direction: column;
-  }
- 
-  .providerflow aside {
-    width: 20%;
-    max-width: 250px;
-    height: 200px;
-  }
-}
-
-
-
 /* Spinner styles */
 .spinner {
-  border: 4px solid rgba(255, 255, 255, 0.3);
+  border: 4px solid color-mix(in srgb, var(--tb-spinner) 30%, transparent);
   border-radius: 50%;
-  border-top: 4px solid white;
+  border-top: 4px solid var(--tb-spinner);
   width: 20px;
   height: 20px;
   -webkit-animation: spin 2s linear infinite; /* Chrome, Safari, Opera */
   animation: spin 2s linear infinite;
   position: absolute;
-  top: 10px; /* Adjust as needed */
-  right: 10px; /* Adjust as needed */
+  top: 10px;
+  right: 10px;
 }
 
 /* Animation for spinning effect */
@@ -160,7 +155,7 @@
   background: var(--tb-warning);
   color: var(--tb-warning-text);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--tb-font-size-xxs);
   text-align: center;
   box-shadow: 0 0 0 2px var(--tb-canvas-bg);
 }
@@ -183,16 +178,16 @@
   display: flex;
   flex-direction: column;
   min-width: 170px;
-  padding: 4px 0;
+  padding: 0.25rem 0;
   background: var(--tb-surface);
   border: 1px solid var(--tb-surface-border);
-  border-radius: 6px;
+  border-radius: var(--tb-radius);
   box-shadow: 0 4px 12px var(--tb-surface-shadow);
-  font-size: 13px;
+  font-size: var(--tb-font-size-xs);
 }
 
 .tb-node-menu button {
-  padding: 6px 12px;
+  padding: 0.375rem 0.75rem;
   border: 0;
   background: none;
   text-align: left;
@@ -207,21 +202,24 @@
 /* The focused target's toolbar. */
 .tb-node-toolbar {
   display: flex;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
-.tb-node-toolbar button {
-  padding: 2px 8px;
+/* The canvas's one button: the toolbar's, and Tidy's (buttonStyles.css). */
+.tb-node-toolbar button,
+.tb-layout-buttons button {
+  padding: 0.125rem 0.5rem;
   border: 1px solid var(--tb-surface-border);
-  border-radius: 4px;
+  border-radius: var(--tb-radius-sm);
   background: var(--tb-surface);
   color: var(--tb-surface-text);
-  font-size: 12px;
+  font-size: var(--tb-font-size-xxs);
   cursor: pointer;
   box-shadow: 0 2px 6px var(--tb-surface-shadow);
 }
 
-.tb-node-toolbar button:hover {
+.tb-node-toolbar button:hover,
+.tb-layout-buttons button:hover {
   background: var(--tb-surface-hover);
 }
 
@@ -230,12 +228,12 @@
   position: absolute;
   top: -9px;
   right: -8px;
-  padding: 0 6px;
-  border-radius: 9px;
+  padding: 0 0.375rem;
+  border-radius: var(--tb-radius-pill);
   background: var(--tb-surface);
   color: var(--tb-surface-text);
   border: 1px solid var(--tb-surface-border);
-  font-size: 11px;
+  font-size: var(--tb-font-size-xxs);
   line-height: 16px;
   font-variant-numeric: tabular-nums;
 }

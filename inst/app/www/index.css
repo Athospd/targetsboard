@@ -1,3 +1,13 @@
+/* The page's type scale and the board's sizes. Bootstrap's body size (1rem)
+   is the base; every smaller text uses one of these, so the scale changes
+   here only. Colours come from Bootstrap's --bs-* variables (app_theme()). */
+:root {
+  --tb-font-size-sm: 0.875rem;   /* panes and their prose */
+  --tb-font-size-xs: 0.8125rem;  /* tables, code, facts */
+  --tb-font-size-xxs: 0.75rem;   /* captions, pagination, badges */
+  --tb-font-size-display: 2rem;  /* a single value, shown large */
+}
+
 
 html,
 body {
@@ -16,21 +26,21 @@ body {
   }
   
 /* The Problem pane: what went wrong in a target's last build. */
-.tb-problem { padding: 0.75rem; font-size: 0.875rem; }
+.tb-problem { padding: 0.75rem; font-size: var(--tb-font-size-sm); }
 .tb-problem-title { color: var(--bs-danger); margin-bottom: 0.5rem; }
-.tb-problem pre { white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; margin-bottom: 0.5rem; }
-.tb-problem-error { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); padding: 0.5rem; border-radius: 0.25rem; }
+.tb-problem pre { white-space: pre-wrap; word-break: break-word; font-size: var(--tb-font-size-xs); margin-bottom: 0.5rem; }
+.tb-problem-error { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); padding: 0.5rem; border-radius: var(--bs-border-radius-sm); }
 .tb-problem-warnings { color: var(--bs-warning-text-emphasis); padding-left: 1.2rem; }
 .tb-traceback-own pre { border-left: 3px solid var(--bs-primary); padding-left: 0.5rem; }
-.tb-traceback-packages summary { color: var(--bs-secondary-color); cursor: pointer; font-size: 0.8rem; }
+.tb-traceback-packages summary { color: var(--bs-secondary-color); cursor: pointer; font-size: var(--tb-font-size-xs); }
 .tb-code { margin-top: 0.75rem; }
-.tb-code pre { background: var(--bs-tertiary-bg); padding: 0.5rem; border-radius: 0.25rem; }
+.tb-code pre { background: var(--bs-tertiary-bg); padding: 0.5rem; border-radius: var(--bs-border-radius-sm); }
 .tb-problem-branch { border-top: 1px solid var(--bs-border-color); padding: 0.5rem 0; }
 .tb-problem-branch summary { cursor: pointer; }
 
 /* The Log tab: the latest run's output, scrolled within the card. */
 .tb-run-log { height: 100%; overflow: auto; padding: 0.5rem; }
-.tb-run-log pre { white-space: pre-wrap; font-size: 0.8rem; margin: 0; }
+.tb-run-log pre { white-space: pre-wrap; font-size: var(--tb-font-size-xs); margin: 0; }
 
 /* While Load loads another script: shinycssloaders' spinner over the Board
    pane (the graph and its preview), so the old graph can't be used. The
@@ -106,7 +116,7 @@ body {
   grid-column: 2;
   position: relative;
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--tb-font-size-sm);
   font-weight: 500;
   color: var(--bs-body-color);
   white-space: nowrap;
@@ -147,12 +157,12 @@ body {
 /* bslib lays a card header out in a row: the name and its facts stack. */
 .tb-preview .tb-preview-header {
   display: block;
-  font-size: 0.8125rem;
+  font-size: var(--tb-font-size-xs);
   font-weight: 400;
 }
 .tb-preview-name {
   padding: 0;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--bs-body-color);
   background: none;
@@ -171,7 +181,7 @@ body {
   border-radius: var(--bs-border-radius);
   background: var(--bs-tertiary-bg);
   color: var(--bs-body-color);
-  font-size: 0.75rem;
+  font-size: var(--tb-font-size-xxs);
   line-height: 1.5;
 }
 .tb-copy-code:hover {
@@ -211,7 +221,7 @@ body {
 .tb-preview-body .nav-underline {
   padding: 0 0.75rem;
   border-bottom: 1px solid var(--bs-border-color-translucent);
-  font-size: 0.875rem;
+  font-size: var(--tb-font-size-sm);
 }
 .tb-preview-view {
   padding: 0.75rem;
@@ -219,18 +229,18 @@ body {
 }
 .tb-preview-printed {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--tb-font-size-xs);
 }
 .tb-preview-note {
   margin: 0.75rem 0.75rem 0;
   padding: 0.5rem 0.75rem;
-  font-size: 0.8125rem;
+  font-size: var(--tb-font-size-xs);
   color: var(--bs-warning-text-emphasis);
   background: var(--bs-warning-bg-subtle);
   border-radius: var(--bs-border-radius);
 }
 .tb-preview-gate {
-  font-size: 0.875rem;
+  font-size: var(--tb-font-size-sm);
 }
 
 /* Tables in the value preview (reactable): a column's name over its type,
@@ -244,13 +254,13 @@ body {
 .tb-col-type,
 .tb-col-type-cell {
   font-family: var(--bs-font-monospace);
-  font-size: 0.75rem;
+  font-size: var(--tb-font-size-xxs);
   font-weight: 400;
   color: var(--bs-secondary-color);
 }
 .tb-table-caption {
   margin: 0 0 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--tb-font-size-xs);
   color: var(--bs-secondary-color);
 }
 .tb-col-spark {
@@ -278,7 +288,7 @@ body {
 }
 /* A vector: its facts, its statistics, its distribution, then its values. */
 .tb-scalar {
-  font-size: 2rem;
+  font-size: var(--tb-font-size-display);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
@@ -287,12 +297,12 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.75rem;
-  font-size: 0.8125rem;
+  font-size: var(--tb-font-size-xs);
   color: var(--bs-secondary-color);
 }
 .tb-vector-stats {
   margin: 0.5rem 0;
-  font-size: 0.875rem;
+  font-size: var(--tb-font-size-sm);
 }
 .tb-vector-spark {
   margin-bottom: 0.75rem;
@@ -335,7 +345,7 @@ body {
   flex-wrap: wrap;
   gap: 0.25rem 0.75rem;
   margin-bottom: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--tb-font-size-xs);
   color: var(--bs-secondary-color);
 }
 .tb-file-facts code {
@@ -373,14 +383,14 @@ body {
   height: calc(100vh - 16rem);
 }
 .tb-preview-text {
-  font-size: 0.8rem;
+  font-size: var(--tb-font-size-xs);
   max-height: 40rem;
 }
 .tb-preview-markdown {
-  font-size: 0.875rem;
+  font-size: var(--tb-font-size-sm);
 }
 .tb-preview-markdown pre {
-  font-size: 0.8rem;
+  font-size: var(--tb-font-size-xs);
 }
 
 /* R code in colour (highlight.js's classes), from a GitHub-like palette,
@@ -410,7 +420,7 @@ pre.hljs {
 /* A list in the value preview: its items as a tree, each on one line with
    its name, type and first values. */
 .tb-tree {
-  font-size: 0.8125rem;
+  font-size: var(--tb-font-size-xs);
 }
 .tb-tree-items .tb-tree-items {
   margin-left: 0.5rem;
@@ -454,7 +464,7 @@ pre.hljs {
 }
 .tb-tree-type {
   font-family: var(--bs-font-monospace);
-  font-size: 0.75rem;
+  font-size: var(--tb-font-size-xxs);
   color: var(--bs-secondary-color);
   white-space: nowrap;
 }
@@ -495,7 +505,7 @@ pre.hljs {
   padding: 0;
   background: none;
   color: var(--bs-secondary-color);
-  font-size: 0.75rem;
+  font-size: var(--tb-font-size-xxs);
 }
 .tb-branch-all-off {
   color: var(--bs-secondary-color);
@@ -523,7 +533,7 @@ pre.hljs {
   left: 0;
   right: 0;
   z-index: 1050;
-  margin: 2px 0 0;
+  margin: 0.125rem 0 0;
   padding: 0.25rem 0;
   max-height: 50vh;
   overflow-y: auto;
@@ -535,7 +545,7 @@ pre.hljs {
 .tb-suggestion {
   padding: 0.25rem 0.75rem;
   font-family: var(--bs-font-monospace);
-  font-size: 0.875rem;
+  font-size: var(--tb-font-size-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -556,8 +566,12 @@ pre.hljs {
   white-space: nowrap;
 }
 
-/* Bootstrap's outline-secondary text is its grey, #6c757d, too faint on the
-   dark page: the address bar's buttons and Copy looked disabled. */
-[data-bs-theme="dark"] .btn-outline-secondary {
-  --bs-btn-color: var(--bs-secondary-color);
+/* The headings: the app's title first, the sidebar's below it. */
+.tb-app-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.bslib-page-sidebar > .bslib-sidebar-layout > .sidebar .sidebar-title {
+  font-size: 1rem;
+  font-weight: 600;
 }

@@ -335,7 +335,7 @@ code_block <- function(title, kind, code) {
       class = "d-flex justify-content-between align-items-center",
       shiny::tags$span(class = "text-muted", title),
       # Copied, it says so for a moment (srcjs/actions.js).
-      shiny::tags$button(type = "button", class = "btn btn-sm btn-outline-secondary tb-copy", `data-copy` = code, "Copy")
+      shiny::tags$button(type = "button", class = "btn btn-sm btn-default tb-copy", `data-copy` = code, "Copy")
     ),
     # Text alone in <pre>: a nested tag would indent the first line.
     shiny::tags$pre(class = "language-r", code)

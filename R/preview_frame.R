@@ -221,7 +221,7 @@ branch_picker <- function(pattern, limit = preview_bytes_limit(), ns = identity)
   shiny::tags$div(
     class = "tb-preview-branches",
     branch_button(
-      max(i - 1L, 1L), input_id, class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Previous branch",
+      max(i - 1L, 1L), input_id, class = "btn btn-sm btn-default tb-branch-step", title = "Previous branch",
       `aria-label` = "Previous branch", disabled = if (i <= 1) NA, shiny::icon("chevron-left")
     ),
     shiny::tags$label(
@@ -234,7 +234,7 @@ branch_picker <- function(pattern, limit = preview_bytes_limit(), ns = identity)
       sprintf("of %s", format(n, big.mark = ","))
     ),
     branch_button(
-      i + 1L, input_id, class = "btn btn-sm btn-outline-secondary tb-branch-step", title = "Next branch",
+      i + 1L, input_id, class = "btn btn-sm btn-default tb-branch-step", title = "Next branch",
       `aria-label` = "Next branch", disabled = if (i >= n) NA, shiny::icon("chevron-right")
     ),
     shiny::tags$code(class = "tb-branch-name", pattern$branch_name),

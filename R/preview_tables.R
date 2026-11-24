@@ -35,9 +35,9 @@ board_table_theme <- function(..., headerStyle = list()) {
 preview_table_theme <- function() {
   board_table_theme(
     cellPadding = "0.3rem 0.5rem",
-    style = list(fontSize = "0.8125rem"),
+    style = list(fontSize = "var(--tb-font-size-xs)"),
     headerStyle = list(fontWeight = 600),
-    paginationStyle = list(fontSize = "0.75rem")
+    paginationStyle = list(fontSize = "var(--tb-font-size-xxs)")
   )
 }
 

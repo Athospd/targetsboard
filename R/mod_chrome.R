@@ -6,7 +6,7 @@ chrome_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tags$div(
     class = "d-flex justify-content-between align-items-center w-100",
-    "Targets board",
+    shiny::tags$span(class = "tb-app-title", "Targets board"),
     shiny::tags$div(
       class = "d-flex align-items-center gap-2",
       bslib::input_dark_mode(id = ns("dark_mode"), mode = "light"),

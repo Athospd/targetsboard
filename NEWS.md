@@ -75,6 +75,15 @@
 
 ## Minor changes
 
+* The board's look is evened out: one type scale (`--tb-font-size-*`),
+  Bootstrap's radii, sizes in rem, one button style in two sizes (the
+  page's, bslib's default; the canvas's, the toolbar's, which Tidy now
+  shares), and the app's title above the sidebar's in weight and size. The
+  canvas's menus and buttons take the page's Bootstrap surfaces in light
+  mode too, so they follow a Bootstrap theme.
+* The graph's edges, targets' outlines and handles, the running spinner and
+  the group-selection box are colour tokens too; in dark mode the edges are
+  lighter, as React Flow's nearly vanished on the canvas.
 * The board's colours (canvas, statuses, menus, toolbars) are colour tokens,
   `--tb-*` CSS variables with light and dark values, in one place, so the
   board's look changes there only.
