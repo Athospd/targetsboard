@@ -289,7 +289,7 @@ test_that("a long data frame sends only its first rows, and says so", {
   expect_s3_class(rows_view(listy), "shiny.tag.list")
 })
 
-test_that("vectors preview as a summary, a distribution and their values", {
+test_that("vectors preview as a summary and a distribution, and names or counts", {
   target <- list(name = "x")
   expect_match(as.character(tar_board_preview(42.195, target)), '<div class="tb-scalar">42.195</div>', fixed = TRUE)
 
@@ -301,6 +301,16 @@ test_that("vectors preview as a summary, a distribution and their values", {
   expect_match(as.character(tar_board_preview(factor(c("a", "b", "a")), target)), "<span>fct</span>", fixed = TRUE)
   expect_s3_class(tar_board_preview(c(alpha = 1, beta = 2), target), "shiny.tag.list") # a name and value table
   expect_match(as.character(tar_board_preview(as.Date("2026-01-01") + 0:9, target)), "2026-01-01 to 2026-01-10", fixed = TRUE)
+  # Numbers, dates and date-times: no list of their values, which Printed
+  # shows already.
+  stamps <- as.POSIXct("2026-01-01", tz = "UTC") + c(10, 2000, 86400)
+  for (x in list(c(1:10, NA), as.Date("2026-01-01") + 0:9, stamps)) {
+    expect_no_match(as.character(tar_board_preview(x, target)), "values.</p>", fixed = TRUE)
+    expect_no_match(as.character(tar_board_preview(x, target)), "<pre", fixed = TRUE)
+  }
+  # Names and counts, which Printed doesn't make as easy to read, stay.
+  expect_match(as.character(tar_board_preview(c(alpha = 1, beta = 2), target)), "alpha", fixed = TRUE)
+  expect_match(as.character(tar_board_preview(c("a", "b", "a"), target)), "Count", fixed = TRUE)
   # Matrices aren't vectors: no view of their own yet.
   expect_null(tar_board_preview(matrix(1:4, 2), target))
   expect_null(tar_board_preview(numeric(), target))
@@ -333,4 +343,40 @@ test_that("date-times get a histogram without overflowing hist()", {
   stamps <- as.POSIXct("2026-01-01", tz = "UTC") + seq(0, 86400 * 30, length.out = 40)
   expect_no_warning(spark <- spark_histogram(stamps))
   expect_match(as.character(spark), "<rect", fixed = TRUE)
+})
+
+test_that("the preview follows its target's records: invalidated, then built again", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  server <- local_app_server()
+  built <- 0
+  real_preview_target <- preview_target
+  local_mocked_bindings(preview_target = function(...) {
+    built <<- built + 1
+    real_preview_target(...)
+  })
+  shiny::testServer(server, {
+    backend_of(server)$stop_poller()
+    session$setInputs(flow_focused_node = "c", flow_double_clicked_node = "c")
+    expect_match(output$value_preview$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+    before <- built
+
+    # Another target's records change: c's preview stays as it is.
+    Sys.sleep(1.1) # file times can have 1s resolution
+    targets::tar_invalidate(a)
+    session$elapse(1100)
+    output$value_preview
+    expect_equal(built, before)
+
+    Sys.sleep(1.1)
+    targets::tar_invalidate(c)
+    session$elapse(1100)
+    html <- output$value_preview$html
+    expect_match(html, "No value stored for this target yet.", fixed = TRUE)
+
+    Sys.sleep(1.1)
+    targets::tar_make(reporter = "silent")
+    session$elapse(1100)
+    expect_match(output$value_preview$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
+  })
 })

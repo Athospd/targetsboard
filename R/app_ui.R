@@ -93,25 +93,25 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
           )
         ),
         nav_panel(
-          tags$span("Problems", uiOutput("problems_count", inline = TRUE)), value = "problems",
-          reactable::reactableOutput("problems")
+          tags$span("Problems", problems_count_ui("problems")), value = "problems",
+          problems_ui("problems")
         ),
         nav_panel(
           "Log", value = "log",
-          tags$div(class = "tb-run-log", verbatimTextOutput("run_log"))
+          log_ui("log")
         ),
         nav_panel(
           "tar_visnetwork()", value = "tar_visnetwork",
-          visNetwork::visNetworkOutput("vis_network", height = "100%")
+          visnetwork_ui("visnetwork")
         ),
         nav_panel(
           "tar_meta()", value = "tar_meta",
-          reactable::reactableOutput("meta")
+          meta_ui("meta")
         ),
         if (board_dev_mode()) {
           nav_panel(
             "Internals", value = "internals",
-            verbatimTextOutput("internals")
+            internals_ui("internals")
           )
         }
       )

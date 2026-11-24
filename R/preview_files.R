@@ -201,6 +201,82 @@ text_file_view <- function(path, language = NULL) {
   )
 }
 
+#' Markdown, rendered, with its R code blocks coloured
+#'
+#' highlight.js colours the board's `<pre class="language-r">`; Markdown puts
+#' a block's language on its `<code>`, so it moves to the `<pre>`.
+#' @param lines The Markdown's lines.
+#' @noRd
+markdown_view <- function(lines) {
+  html <- as.character(shiny::markdown(lines))
+  html <- gsub('<pre><code class="language-r">', '<pre class="language-r"><code>', html, fixed = TRUE)
+  shiny::tags$div(class = "tb-preview-markdown", shiny::HTML(html))
+}
+
+#' A Quarto or R Markdown document: what it was rendered to, or its source
+#'
+#' The rendered document is what the target made, with its chunks' output:
+#' the board doesn't render it again. It's the file next to the source with
+#' its name, HTML or else PDF. tar_quarto() and tar_render() return it too,
+#' first: it has its own section then, and the source's shows the source.
+#' @param path The source.
+#' @param target The target, with `files`, its paths, in a file section.
+#' @noRd
+document_view <- function(path, target) {
+  stem <- tools::file_path_sans_ext(path)
+  candidates <- paste0(stem, c(".html", ".pdf"))
+  rendered <- candidates[file.exists(candidates)][1]
+  note <- function(...) shiny::tags$p(class = "tb-table-caption", ...)
+  same_file <- function(a, b) normalizePath(a, winslash = "/", mustWork = FALSE) %in% normalizePath(b, winslash = "/", mustWork = FALSE)
+  if (!is.na(rendered) && !same_file(rendered, target$files %||% character())) {
+    older <- file.mtime(rendered) < file.mtime(path)
+    return(shiny::tagList(
+      note(sprintf("Rendered as %s%s.", basename(rendered), if (older) ", older than its source" else "")),
+      tar_board_preview(board_file(rendered), target)
+    ))
+  }
+  source <- if (file.size(path) < 1e6) {
+    markdown_view(document_markdown(readLines(path, warn = FALSE, encoding = "UTF-8")))
+  } else {
+    text_file_view(path, "r")
+  }
+  shiny::tagList(
+    if (!is.na(rendered)) {
+      note(sprintf("Its source: %s has its own section.", basename(rendered)))
+    } else {
+      note("Not rendered: its source, with its chunks as code.")
+    },
+    source
+  )
+}
+
+#' A Quarto or R Markdown document's lines as plain Markdown
+#'
+#' As the rendered document reads, without running it: the front matter
+#' gives its title as a heading and is otherwise left out, and each chunk
+#' (```` ```{r label, echo=FALSE} ````) becomes a code block in its
+#' language. Chunks show their code, not their output.
+#' @param lines The document's lines.
+#' @noRd
+document_markdown <- function(lines) {
+  title <- NULL
+  if (length(lines) > 1 && grepl("^---\\s*$", lines[[1]])) {
+    end <- which(grepl("^(---|\\.\\.\\.)\\s*$", lines[-1]))[1] + 1
+    if (!is.na(end)) {
+      front <- lines[seq_len(end - 2) + 1]
+      field <- grep("^title:", front, value = TRUE)[1]
+      if (!is.na(field)) {
+        title <- trimws(sub("^title:", "", field))
+        title <- sub("^([\"'])(.*)\\1$", "\\2", title)
+      }
+      lines <- lines[-seq_len(end)]
+    }
+  }
+  lines <- sub("^(\\s*`{3,})\\s*\\{([A-Za-z0-9_]+)[^}]*\\}\\s*$", "\\1\\2", lines)
+  if (!is.null(title) && nzchar(title)) lines <- c(paste("#", title), "", lines)
+  lines
+}
+
 #' @rdname tar_board_preview
 #' @export
 tar_board_preview.tar_board_file <- function(x, target, ...) {
@@ -229,8 +305,9 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
       rows_view(data)
     ))
   }
+  if (ext %in% c("qmd", "rmd")) return(document_view(path, target))
   if (ext %in% c("md", "markdown") && file.size(path) < 1e6) {
-    return(shiny::tags$div(class = "tb-preview-markdown", shiny::markdown(readLines(path, warn = FALSE, encoding = "UTF-8"))))
+    return(markdown_view(readLines(path, warn = FALSE, encoding = "UTF-8")))
   }
   if (ext %in% c("r", "rmd", "qmd")) return(text_file_view(path, "r"))
   if (ext %in% c("txt", "log", "json", "yaml", "yml", "md", "markdown", "toml", "sql", "py", "sh")) {

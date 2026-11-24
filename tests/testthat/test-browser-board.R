@@ -209,9 +209,9 @@ test_that("a click on a tar_meta() row shows its target on the board", {
   app$wait_for_js("document.querySelector('.tb-group-toolbar') !== null")
 
   app$click(selector = "a[data-value='tar_meta']")
-  app$wait_for_js("document.querySelectorAll('#meta .rt-tbody .rt-tr').length === 8")
+  app$wait_for_js("document.querySelectorAll('#meta-table .rt-tbody .rt-tr').length === 8")
   app$run_js(
-    "Array.from(document.querySelectorAll('#meta .rt-tbody .rt-tr'))
+    "Array.from(document.querySelectorAll('#meta-table .rt-tbody .rt-tr'))
        .find(r => r.querySelector('.rt-td').innerText.trim() === 't6')
        .querySelector('.rt-td').click()"
   )
