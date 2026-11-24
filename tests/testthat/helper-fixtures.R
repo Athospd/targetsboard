@@ -161,11 +161,14 @@ dismiss_modal <- function(app, attempts = 10) {
   stop("The modal did not close.")
 }
 
-# Starts a shinytest2 app. Chrome's first page load can pass chromote's 10 s
-# command timeout when test files run in parallel, several starting Chrome at
-# once: give each command a minute. A test that hangs still fails, a minute
-# later.
+# Starts a shinytest2 app. When test files run in parallel, several start
+# Chrome at once, and chromote's 10 s limits can pass: for Chrome to start
+# (the chromote.timeout option, read when Chrome launches) and for each
+# command, such as the first page load (the Chromote object's
+# default_timeout). Both get a minute. A test that hangs still fails, a
+# minute later.
 new_app_driver <- function(...) {
+  withr::local_options(chromote.timeout = 60)
   chrome <- chromote::default_chromote_object()
   chrome$default_timeout <- 60
   shinytest2::AppDriver$new(...)
