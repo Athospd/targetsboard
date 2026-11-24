@@ -72,7 +72,7 @@ test_that("the board shows a killed run's targets as canceled", {
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller() # keep the graph as it is
+    backend_of(server)$stop_poller() # keep the graph as it is
     session$flushReact()
     process <- local_console_run()
     session$elapse(600)
@@ -125,11 +125,11 @@ test_that("the board runs, refuses a second run, stops and tells how it went", {
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$flushReact()
 
     session$setInputs(run_all = 1)
-    runner <- environment(server)$runner
+    runner <- backend_of(server)$runner
     withr::defer(if (runner$process$is_alive()) runner$process$kill_tree())
     wait_for(function() {
       progress <- targets::tar_progress()
@@ -164,12 +164,12 @@ test_that("a failed run is reported with its error", {
   )
 
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$flushReact()
     session$setInputs(run_all = 1)
     session$elapse(600) # the board sees the run start
     expect_true(running())
-    wait_for(function() !environment(server)$runner$process$is_alive(), timeout = 60)
+    wait_for(function() !backend_of(server)$runner$process$is_alive(), timeout = 60)
     session$elapse(600)
     expect_match(notes, "error Run failed in a:[[:space:]]*<code>boom</code>", all = FALSE)
     expect_match(notes, "Show problem", fixed = TRUE, all = FALSE)
@@ -235,7 +235,7 @@ test_that("the board refuses to invalidate while a run is going", {
 
   process <- local_console_run()
   shiny::testServer(server, {
-    environment(server)$stop_poller()
+    backend_of(server)$stop_poller()
     session$setInputs(flow_selected_nodes = "b", invalidate_confirm = 1)
     expect_null(invalidated)
     expect_match(notes, "stop it before invalidating", all = FALSE)

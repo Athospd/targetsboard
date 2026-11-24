@@ -7,60 +7,36 @@
 #' @noRd
 app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE,
                        scripts = NULL) {
-  # One background poller per app, shared by every browser session.
-  # Restarted only when someone loads a different script.
-  poller <- new.env()
-  poller_rds_path <- shiny::reactiveVal(NULL)
-  loaded_script <- shiny::reactiveVal(script) # the script the poller draws
-  # The value previews built last, shared by every browser session.
-  previews <- preview_cache()
-
-  stop_poller <- function() {
-    if (inherits(poller$process, "r_process") && poller$process$is_alive())
-      poller$process$kill()
-    poller$process <- NULL
-  }
-
-  start_poller <- function(script) {
-    stop_poller()
-    assets <- tar_visnetwork_bg(script = script, targets_only = targets_only)
-    poller$process <- assets$process
-    poller$script <- script
-    loaded_script(script)
-    poller$refresh_path <- assets$refresh_path
-    poller_rds_path(assets$tar_vis_path)
-  }
-
-  # The run started from the board, also shared by every browser session.
-  runner <- new.env()
-  board_run_alive <- function() {
-    inherits(runner$process, "process") && runner$process$is_alive()
-  }
-  # Counts the board's own run from the start: targets records the process
-  # only once the pipeline is loaded.
-  busy <- function() !is.null(active_run()) || board_run_alive()
+  # One backend per app: the poller, the board's run and the value
+  # previews, shared by every browser session (board_backend()).
+  backend <- board_backend(script, targets_only)
+  poller <- backend$poller
+  runner <- backend$runner
+  previews <- backend$previews
+  loaded_script <- backend$loaded_script
+  start_poller <- backend$start_poller
+  stop_poller <- backend$stop_poller
+  board_run_alive <- backend$run_alive
+  busy <- backend$busy
+  request_refresh <- backend$request_refresh
 
   function(input, output, session) {
-    if (is.null(poller$process)) {
-      start_poller(script)
-      shiny::onStop(stop_poller, session = NULL) # runs when the app stops
-    }
+    backend$start_once()
 
-    # The graph, as last recomputed by the poller: re-read only when the
-    # poller rewrites its file.
+    # The graph the board draws: the first render's, then each the poller
+    # recomputes, once Load accepts it.
     board <- shiny::reactiveVal(list(x = metadata, progress_mtime = progress_mtime()))
-    poller_board <- shiny::reactivePoll(
-      500, session,
-      checkFunc = function() {
-        path <- poller_rds_path()
-        if (is.null(path)) NA else file.mtime(path)
-      },
-      valueFunc = function() {
-        path <- poller_rds_path()
-        if (is.null(path) || !file.exists(path)) return(NULL)
-        tryCatch(readRDS(path), error = function(e) NULL)
-      }
-    )
+
+    # What changes on the graph, polled from the store and the poller's
+    # files (graph_data_server()).
+    data <- graph_data_server("graph_data", backend)
+    poller_board <- data$poller_board
+    script_error <- data$script_error
+    progress <- data$progress
+    running <- data$running
+    tar_meta_data <- data$tar_meta
+    warned_targets <- data$warned_targets
+
     shiny::observeEvent(poller_board(), {
       new_board <- poller_board()
       # While the author decides on a large graph, the poller's next
@@ -119,21 +95,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     # update while the cover is hidden.
     shiny::outputOptions(output, "board_loading_caption", suspendWhenHidden = FALSE)
 
-    # A script that stops loading (a typo while editing it): say so, for as
-    # long as it lasts, rather than silently keep the last graph.
-    script_error <- shiny::reactivePoll(
-      500, session,
-      checkFunc = function() {
-        path <- poller_rds_path()
-        if (is.null(path)) NA else file.mtime(poller_error_path(path))
-      },
-      valueFunc = function() {
-        path <- poller_rds_path()
-        error_path <- if (!is.null(path)) poller_error_path(path)
-        if (is.null(error_path) || !file.exists(error_path)) return(NULL)
-        tryCatch(readLines(error_path, warn = FALSE), error = function(e) NULL)
-      }
-    )
     shiny::observeEvent(script_error(), ignoreNULL = FALSE, {
       if (!is.null(script_error())) load_done()
       text <- script_error_text(poller$script, script_error())
@@ -143,22 +104,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         shiny::showNotification(text, id = "script_error", duration = NULL, type = "error", session = session)
       }
     })
-
-    # Live statuses, from the progress file targets writes during a run:
-    # cheap to check, so every half second.
-    progress <- shiny::reactivePoll(
-      500, session,
-      checkFunc = progress_mtime,
-      valueFunc = function() {
-        list(
-          mtime = progress_mtime(),
-          data = tryCatch(targets::tar_progress(), error = function(e) NULL)
-        )
-      }
-    )
-
-    # Whether a run is going, whoever started it: checked twice a second.
-    running <- shiny::reactivePoll(500, session, checkFunc = busy, valueFunc = busy)
 
     # A new graph: send it whole, with the live statuses on top.
     shiny::observeEvent(board(), {
@@ -270,11 +215,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       }
     }, ignoreInit = TRUE)
 
-    # Ask the poller to recompute the graph now.
-    request_refresh <- function() {
-      path <- poller$refresh_path
-      if (!is.null(path)) writeLines(format(Sys.time(), "%H:%M:%OS6"), path)
-    }
     # The preview methods of the project's _targetsboard.R: at start, and
     # again on Refresh, so editing them needs no restart.
     preview_methods <- shiny::reactiveVal(0)
@@ -518,19 +458,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     # that ends the process too.
     shiny::observeEvent(input$turn_off, shiny::stopApp("The board is turned off."))
 
-    # Re-read tar_meta() only when targets writes new metadata; checking the
-    # file's modification time every second is cheap.
-    tar_meta_data <- shiny::reactivePoll(
-      1000, session,
-      checkFunc = function() file.mtime(store_file("meta")),
-      valueFunc = function() {
-        tryCatch(targets::tar_meta(targets_only = TRUE), error = function(e) NULL)
-      }
-    )
-
-    # Targets whose last build raised warnings, for the warning marks.
-    warned_targets <- shiny::reactive(warned_targets_of(tar_meta_data()))
-
     output$meta <- reactable::renderReactable({
       req(tar_meta_data())
       reactable::reactable(
@@ -640,13 +567,6 @@ board_targets <- function(nodes) {
   as.character(nodes$id[nodes$type %in% c("stem", "pattern")])
 }
 
-# A file in the targets store's meta folder, e.g. "progress" or "meta".
-store_file <- function(name) {
-  file.path(targets::tar_config_get("store"), "meta", name)
-}
-
-progress_mtime <- function() file.mtime(store_file("progress"))
-
 #' Statuses of the run in progress
 #'
 #' @param progress `list(mtime, data)`: the progress file's modification time
@@ -696,23 +616,6 @@ overlay_statuses <- function(nodes, statuses) {
   hit <- match(nodes$id, names(statuses))
   nodes$status[!is.na(hit)] <- unname(statuses[hit[!is.na(hit)]])
   nodes
-}
-
-#' Targets whose last build raised warnings
-#'
-#' targets records a branch's warnings on the branch alone: its pattern
-#' carries the mark.
-#' @param meta `tar_meta(targets_only = TRUE)`.
-#' @noRd
-warned_targets_of <- function(meta) {
-  if (is.null(meta) || !"warnings" %in% names(meta)) return(character())
-  warned <- meta[!is.na(meta$warnings), ]
-  names <- warned$name
-  if (all(c("type", "parent") %in% names(warned))) {
-    branch <- warned$type %in% "branch" & !is.na(warned$parent)
-    names[branch] <- warned$parent[branch]
-  }
-  sort(unique(names))
 }
 
 # Graphs with more targets than this ask before the board draws them, when

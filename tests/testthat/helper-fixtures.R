@@ -34,11 +34,13 @@ local_pipeline <- function(make = FALSE, .env = parent.frame()) {
 local_app_server <- function(.env = parent.frame()) {
   metadata <- targets::tar_visnetwork(targets_only = TRUE)$x
   server <- app_server(metadata, "_targets.R")
-  withr::defer(environment(server)$stop_poller(), envir = .env)
+  withr::defer(backend_of(server)$stop_poller(), envir = .env)
   server
 }
 
-poller_of <- function(server) environment(server)$poller
+# The backend (board_backend()) of a server from app_server(), and its poller.
+backend_of <- function(server) environment(server)$backend
+poller_of <- function(server) backend_of(server)$poller
 
 wait_for <- function(condition, timeout = 30) {
   deadline <- Sys.time() + timeout
