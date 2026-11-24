@@ -17,7 +17,7 @@ test_that("every board theme keeps the board readable, in both modes", {
     "  const f = rgba(getComputedStyle(el).color); const t = f.slice(0, 3).map((v, i) => v * f[3] + b[i] * (1 - f[3]));",
     "  const [x, y] = [lum(t), lum(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };",
     "return { heading: ct('.sidebar-title'), run_all: ct('#board-run-all'), refresh: ct('#board-script-refresh'),",
-    "  tab: ct('#board-view .nav-link:not(.active)'), toolbar: ct('.tb-node-toolbar button'), picker: ct('#chrome-theme'),",
+    "  tab: ct('#board-view .nav-link:not(.active)'), toolbar: ct('.tb-node-toolbar button'), picker: ct('#theme-pick'),",
     "  canvas: getComputedStyle(document.querySelector('.react-flow')).backgroundColor }; })()"
   )
   for (i in seq_len(nrow(themes))) {

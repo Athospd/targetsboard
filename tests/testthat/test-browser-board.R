@@ -401,7 +401,11 @@ test_that("in dark mode, the tables, the toolbar and the buttons stay readable",
     app$get_js("getComputedStyle(document.querySelector('.tb-node-toolbar button')).backgroundColor"),
     "rgb(255, 255, 255)"
   ))
-  expect_gte(contrast("#board-script-refresh"), 4.5)
+  refresh <- contrast("#board-script-refresh")
+  expect_gte(refresh, 4.5, label = paste( # with its colours, to tell a fade from a real change
+    "Refresh's contrast",
+    app$get_js("(s => [s.color, s.backgroundColor, s.borderColor, s.transitionDuration].join(' / '))(getComputedStyle(document.querySelector('#board-script-refresh')))")
+  ))
 
   tab("problems")
   app$wait_for_js("document.querySelector('#board-problems-table .rt-no-data') !== null")
