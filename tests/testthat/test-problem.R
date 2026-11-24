@@ -326,7 +326,7 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
     expect_equal(preview_request(), requests + 1)
 
     # A run that keeps going: it finishes, with errors, and says where.
-    session$setInputs(keep_going = TRUE, run_all = 1)
+    session$setInputs(`run-keep_going` = TRUE, `run-all` = 1)
     session$elapse(600)
     backend_of(server)$runner$process$wait(120 * 1000)
     session$elapse(1100)
@@ -341,7 +341,7 @@ test_that("the Problems tab lists the problems; a row or a notification shows on
 ")
 
     requests <- preview_request()
-    session$setInputs(show_problem = "branch")
+    session$setInputs(`run-show_problem` = "branch")
     expect_equal(focused, "branch")
     expect_equal(preview_request(), requests + 1)
   })

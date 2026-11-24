@@ -100,7 +100,7 @@ body {
 }
 /* Its id outranks the colour and size shinycssloaders gives the caption by
    id, which it does even with custom.css. */
-.tb-loading #board_loading_spinner__caption,
+.tb-loading #script-loading_spinner__caption,
 .tb-loading #preview-spinner__caption {
   grid-row: 1;
   grid-column: 2;
@@ -130,7 +130,7 @@ body {
    the output's first value, which comes with the server's first update: the
    cover would block the board at startup. The caption ("Loading pipeline...")
    is only filled while Load loads, so without it there's no cover. */
-.tb-board-loading:has(#board_loading_caption:empty) .load-container {
+.tb-board-loading:has(#script-loading_caption:empty) .load-container {
   display: none;
 }
 
