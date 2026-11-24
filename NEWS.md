@@ -2,6 +2,9 @@
 
 ## New features
 
+* The focused target's toolbar has a Copy button, which copies its name,
+  quoted as an R string, as "Copy its name" in its right-click menu. A
+  selected group's toolbar has none.
 * The value preview shows a value in a frame: a header with its class, shape,
   size in the store, format and build time, its `tar_read()` call on a button
   that copies it, with a copy icon, and a

@@ -502,7 +502,8 @@ board_options <- function() {
       select_downstream = "Select what depends on it",
       select_lineage = "Select its lineage"
     ),
-    toolbar_actions = c(run = "Run", invalidate = "Invalidate", value = "Value"),
+    # Copy copies its name, as copy_name in the menu: for one target only.
+    toolbar_actions = c(run = "Run", invalidate = "Invalidate", value = "Value", copy_name = "Copy"),
     node_group_actions = c(
       run = "Run {n} targets",
       invalidate = "Invalidate {n} targets",
