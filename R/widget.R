@@ -393,9 +393,7 @@ board_configuration <- function(inputId, nodes, edges, height, width, warnings =
     nodes = dataframe_to_reactflow_node_data(nodes, warnings),
     edges = dataframe_to_reactflow_edge_data(edges),
     height = height,
-    width = width,
-    background_color = "#f0e5d7",
-    background_marks_color = "#2f223d"
+    width = width
   )
   if (!is.null(options)) {
     stopifnot(inherits(options, "targetsboard_options"))

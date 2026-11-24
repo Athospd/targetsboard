@@ -75,6 +75,9 @@
 
 ## Minor changes
 
+* The board's colours (canvas, statuses, menus, toolbars) are colour tokens,
+  `--tb-*` CSS variables with light and dark values, in one place, so the
+  board's look changes there only.
 * The graph opens fitted to the view, as the Fit View button makes it: on
   first render, with a saved layout too (the targets go back where they were
   left, but the saved zoom and pan no longer come back), and when Load loads
@@ -90,6 +93,8 @@
 
 ## Bug fixes
 
+* In dark mode, the ring around a target's warning mark is the canvas's
+  colour, not the light canvas's beige.
 * Sorting a table in the value preview no longer moves the sorted column's
   name and histogram aside: the sort arrow sits in the header's corner.
 * `update_targetsboard()` and the widget's other update and command

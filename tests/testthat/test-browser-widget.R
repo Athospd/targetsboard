@@ -15,6 +15,32 @@ test_that("the minimap colours targets by status", {
   expect_setequal(unlist(fills), c("rgb(53, 72, 35)", "rgb(120, 183, 197)"))
 })
 
+test_that("the board's colours come from its tokens, in both modes", {
+  dir <- local_pipeline()
+  targets::tar_make(names = "a", reporter = "silent") # a up to date
+  app <- local_board_app(dir, "tokens", widget_app("options = targetsboard::targetsboard_options(color_mode = 'light')"))
+  app$wait_for_js("document.querySelectorAll('.react-flow__minimap-node').length === 3")
+  style_of <- function(selector, property) {
+    app$get_js(sprintf("getComputedStyle(document.querySelector('%s'))['%s']", selector, property))
+  }
+
+  expect_equal(style_of(".react-flow", "backgroundColor"), "rgb(240, 229, 215)") # #f0e5d7
+  expect_equal(style_of(".tb-status-uptodate", "backgroundColor"), "rgb(53, 72, 35)")
+  expect_equal(style_of(".tb-status-uptodate", "color"), "rgb(211, 240, 183)")
+
+  # One token changes the target and its minimap node.
+  app$run_js("document.querySelector('.reactflow-wrapper').style.setProperty('--tb-status-uptodate', 'rgb(1, 2, 3)')")
+  expect_equal(style_of(".tb-status-uptodate", "backgroundColor"), "rgb(1, 2, 3)")
+  fills <- app$get_js(
+    "Array.from(document.querySelectorAll('.react-flow__minimap-node')).map(n => getComputedStyle(n).fill)"
+  )
+  expect_true("rgb(1, 2, 3)" %in% unlist(fills))
+
+  send_widget_message(app, "targetsboard:options", list(id = "dag", options = list(color_mode = "dark")))
+  app$wait_for_js("document.querySelector('.reactflow-wrapper').classList.contains('tb-dark')")
+  expect_equal(style_of(".react-flow", "backgroundColor"), "rgb(20, 20, 20)") # #141414
+})
+
 test_that("the widget's display options take effect, and change from R", {
   dir <- local_pipeline(make = TRUE)
   app <- local_board_app(dir, "options", widget_app(paste(

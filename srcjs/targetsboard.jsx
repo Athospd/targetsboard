@@ -21,28 +21,19 @@ import LayoutButtons from './LayoutButtons';
 import { layoutGraph } from './layout';
 import { NodeActionsContext, GroupToolbar, groupLabel } from './NodeActions';
 
-import UptodateNode from './UptodateNode';
-import OutdatedNode from './OutdatedNode';
-import ErroredNode from './ErroredNode';
-import RunningNode from './RunningNode';
+import BaseNode from './BaseNode';
 
 // One node component per status the board shows. Defined at module scope: a
 // new object on every render makes React Flow re-mount all nodes (and warn
 // about it).
-const nodeTypes = {
-  uptodate: UptodateNode,
-  outdated: OutdatedNode,
-  errored: ErroredNode,
-  running: RunningNode
-};
+const STATUSES = ['uptodate', 'outdated', 'errored', 'running'];
+const nodeTypes = Object.fromEntries(
+  STATUSES.map((status) => [status, (props) => <BaseNode {...props} status={status} />]),
+);
 
-// The node colours of each status, for the minimap.
-const STATUS_COLORS = {
-  uptodate: '#354823',
-  outdated: '#78B7C5',
-  errored: '#C93312',
-  running: '#d49536',
-};
+// A target's colour in the minimap: its status's token.
+const minimapColor = (node) =>
+  `var(--tb-status-${STATUSES.includes(node.type) ? node.type : 'outdated'})`;
 
 // Display options, as targetsboard_options() sets them in R.
 const DEFAULT_OPTIONS = {
@@ -63,7 +54,6 @@ const DEFAULT_OPTIONS = {
 // drawn at one pixel per unit with a margin, the toolbar left out. A data
 // URL: PNG (at twice the resolution) or SVG.
 const IMAGE_MARGIN = 40;
-const DARK_BACKGROUND = '#141414'; // React Flow's own, in dark mode
 const graphImage = (wrapper, nodes, format, background) => {
   const viewport = wrapper?.querySelector('.react-flow__viewport');
   if (!viewport || nodes.length === 0) return Promise.reject(new Error('Nothing to draw.'));
@@ -345,16 +335,16 @@ function Flow({ configuration }) {
     );
   }, []);
   const wrapperRef = useRef(null);
-  const colorModeRef = useRef('light');
   const imageOf = useCallback(
     (format) =>
       graphImage(
         wrapperRef.current,
         getNodes(),
         format,
-        colorModeRef.current === 'light' ? configuration.background_color : DARK_BACKGROUND,
+        // The canvas token, resolved: the image has no page around it.
+        getComputedStyle(wrapperRef.current).getPropertyValue('--tb-canvas-bg').trim(),
       ),
-    [getNodes, configuration.background_color],
+    [getNodes],
   );
   const downloadImage = useCallback(() => {
     imageOf('png')
@@ -706,14 +696,13 @@ function Flow({ configuration }) {
 
   const menuActions = menu?.nodes.length > 1 ? options.node_group_actions : options.node_actions;
 
-  // The board's own colours are for light mode; dark mode keeps React Flow's.
+  // The colours are tokens, in targetsboardCustomCSS.css; tb-dark switches
+  // them to dark mode's.
   const colorMode = resolveColorMode(options.color_mode);
-  const light = colorMode === 'light';
-  colorModeRef.current = colorMode;
 
   return (
     <div
-      className="reactflow-wrapper"
+      className={`reactflow-wrapper tb-${colorMode}`}
       ref={wrapperRef}
       style={{ height: configuration.height, width: configuration.width, position: 'relative' }}
     >
@@ -739,18 +728,16 @@ function Flow({ configuration }) {
         minZoom={0.05} // fit big pipelines whole, as tar_visnetwork() does
         colorMode={colorMode}
         onlyRenderVisibleElements={options.only_render_visible}
-        style={light ? { background: configuration.background_color } : undefined}
         nodeTypes={nodeTypes}
       >
         {options.minimap && (
-          <MiniMap nodeColor={(n) => STATUS_COLORS[n.type] ?? STATUS_COLORS.outdated} pannable zoomable />
+          <MiniMap nodeColor={minimapColor} pannable zoomable />
         )}
         {options.background !== 'none' && (
           <Background
             id="1"
             gap={15}
             variant={BACKGROUND_VARIANTS[options.background]}
-            color={light ? configuration.background_marks_color : undefined}
             size={1}
           />
         )}

@@ -2,21 +2,22 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { FocusedNodeToolbar } from './NodeActions';
 
+// A target, drawn in the colours of its status: uptodate, outdated, errored
+// or running.
 const BaseNode = ({
   id,
   data,
   isConnectable,
   sourcePosition = Position.Top,
   targetPosition = Position.Bottom,
-  backgroundColor = "white",
-  textColor = "black",
-  extraContent
+  status
 }) => {
+  // Its colours come from the status's tokens, in targetsboardCustomCSS.css.
   return (
-    <div className='base-node' style={{ backgroundColor: backgroundColor, color: textColor }}>
+    <div className={`base-node tb-status-${status}`}>
       <FocusedNodeToolbar id={id} />
       <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
-      {extraContent && <div className="extra-content">{extraContent}</div>}
+      {status === 'running' && <div className="extra-content"><div className="spinner"></div></div>}
       {data?.warning && (
         <span className="warning-mark" title="Its last build raised warnings">!</span>
       )}
