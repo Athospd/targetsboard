@@ -5,13 +5,15 @@ var path = require('path');
 // watch` add a source map for local debugging.
 const outputs = {
     targetsboard: 'htmlwidgets/targetsboard.js',
-    highlight: 'app/www/highlight.js'
+    highlight: 'app/www/highlight.js',
+    preview: 'app/www/preview.js'
 };
 
 module.exports = (env, argv) => ({
     entry: {
         targetsboard: path.join(__dirname, 'srcjs', 'targetsboard.jsx'),
-        highlight: path.join(__dirname, 'srcjs', 'highlight.js')
+        highlight: path.join(__dirname, 'srcjs', 'highlight.js'),
+        preview: path.join(__dirname, 'srcjs', 'preview.js')
     },
     output: {
         path: path.join(__dirname, 'inst'),

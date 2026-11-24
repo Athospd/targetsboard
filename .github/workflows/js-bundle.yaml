@@ -26,7 +26,7 @@ jobs:
 
       - name: Check the committed bundle is up to date
         run: |
-          if ! git diff --exit-code --stat -- inst/htmlwidgets; then
-            echo "::error::inst/htmlwidgets is out of date: run 'npm run build' and commit the result."
+          if ! git diff --exit-code --stat -- inst/htmlwidgets inst/app/www; then
+            echo "::error::inst/htmlwidgets or inst/app/www is out of date: run 'npm run build' and commit the result."
             exit 1
           fi

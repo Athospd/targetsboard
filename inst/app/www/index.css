@@ -302,6 +302,15 @@ body {
   border-radius: var(--bs-border-radius);
   background: #fff;
 }
+/* A PDF's pages as images, where the browser has no PDF viewer
+   (srcjs/preview.js). */
+.tb-preview-pdf-page {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--bs-border-color-translucent);
+  background: #fff;
+}
 .tb-preview[data-full-screen="true"] .tb-preview-document {
   height: calc(100vh - 16rem);
 }
