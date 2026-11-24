@@ -11,8 +11,10 @@
   views of its values, and `tar_board_preview_plot()` makes a plot one of
   them. Methods come from packages, or from a project's `_targetsboard.R`,
   which the board reads at start and on Refresh.
-* A data frame previews as two tables: Rows, its first 1,000 rows with each
-  column's type, searchable and sortable; and Columns, one line per column
+* A data frame previews as two tables: Rows, its first 1,000 rows, 10 a
+  page, with each column's type and, for numbers and dates, a histogram of
+  all its rows in the header, searchable, filterable by column and sortable;
+  and Columns, one line per column
   with its type, missing and unique counts, a summary and a small histogram.
   A vector previews as its summary, its distribution and its values, or its
   counts; a single value shows in full. Tables follow dark mode. skimr is no
