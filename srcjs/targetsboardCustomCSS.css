@@ -8,9 +8,12 @@
    a new look, or a better dark mode, is a change here only. Light values on
    the wrapper; the widget adds tb-dark to it in dark mode. */
 .reactflow-wrapper {
-  /* The canvas and the marks drawn on it. */
-  --tb-canvas-bg: #f0e5d7;
-  --tb-canvas-marks: #2f223d;
+  /* The canvas, the marks drawn on it and the minimap: a theme of the app
+     may set them (--tb-theme-*, R/theme.R); else the board's own. */
+  --tb-canvas-bg: var(--tb-theme-canvas-bg, #f0e5d7);
+  --tb-canvas-marks: var(--tb-theme-canvas-marks, #2f223d);
+  --tb-minimap-bg: var(--tb-theme-minimap-bg, #fff);
+  --tb-minimap-mask: var(--tb-theme-minimap-mask, rgba(240, 240, 240, 0.6));
   /* A target, by status: its fill and its label. */
   --tb-status-uptodate: #354823;
   --tb-status-uptodate-text: #d3f0b7;
@@ -53,8 +56,10 @@
 }
 
 .reactflow-wrapper.tb-dark {
-  --tb-canvas-bg: #141414;
-  --tb-canvas-marks: #777;
+  --tb-canvas-bg: var(--tb-theme-canvas-bg, #141414);
+  --tb-canvas-marks: var(--tb-theme-canvas-marks, #777);
+  --tb-minimap-bg: var(--tb-theme-minimap-bg, #141414);
+  --tb-minimap-mask: var(--tb-theme-minimap-mask, rgba(60, 60, 60, 0.6));
   --tb-focus-ring: #d6c7ea;
   --tb-node-border: #3c3c3c;
   --tb-handle: #bebebe;
@@ -76,6 +81,8 @@
 .reactflow-wrapper .react-flow {
   --xy-background-color: var(--tb-canvas-bg);
   --xy-background-pattern-color: var(--tb-canvas-marks);
+  --xy-minimap-background-color: var(--tb-minimap-bg);
+  --xy-minimap-mask-background-color: var(--tb-minimap-mask);
   --xy-edge-stroke: var(--tb-edge);
   --xy-edge-stroke-selected: var(--tb-edge-selected);
   --xy-node-border: 1px solid var(--tb-node-border);
