@@ -26,6 +26,15 @@ viewport_numbers <- function(app) {
 }
 
 # Drag a target by (dx, dy) screen pixels, with real mouse events.
+# The view is fitted to the graph: the Fit View button leaves it as it is.
+expect_fitted <- function(app) {
+  Sys.sleep(0.5) # the view settled
+  view <- viewport_numbers(app)
+  app$click(selector = ".react-flow__controls-fitview")
+  Sys.sleep(0.5)
+  expect_equal(viewport_numbers(app), view, tolerance = 1e-3)
+}
+
 drag_node <- function(app, id, dx, dy) {
   box <- app$get_js(paste0(
     "(() => { const r = ", node_js(id), ".getBoundingClientRect();",

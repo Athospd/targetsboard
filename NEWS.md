@@ -75,6 +75,10 @@
 
 ## Minor changes
 
+* The graph opens fitted to the view, as the Fit View button makes it: on
+  first render, with a saved layout too (the targets go back where they were
+  left, but the saved zoom and pan no longer come back), and when Load loads
+  another pipeline, which is now laid out afresh.
 * The JavaScript libraries the package bundles, React, React Flow and
   others, are credited in Authors@R and listed with their licences in
   `inst/COPYRIGHTS`. The page pins Bootstrap 5.

@@ -120,7 +120,8 @@ test_that("the board saves where targets were left, and opens with them there", 
   expect_equal(c(saved$positions$b$x, saved$positions$b$y), unname(moved), tolerance = 0.5)
   expect_lt(saved$viewport$zoom, 1.5)
 
-  # A reload opens the board as it was left: targets and view.
+  # A reload puts the targets back where they were left, and fits the view
+  # to them, as the Fit View button does: not the zoomed-out view.
   app$run_js("location.reload()")
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
   app$wait_for_js(paste0(
@@ -129,8 +130,8 @@ test_that("the board saves where targets were left, and opens with them there", 
   ))
   Sys.sleep(0.5)
   expect_equal(node_position(app, "b"), moved, tolerance = 0.5)
-  # The zoom comes back to 4 decimals, as the widget's configuration is sent.
-  expect_equal(viewport_numbers(app), view, tolerance = 1e-3)
+  expect_false(isTRUE(all.equal(viewport_numbers(app), view, tolerance = 1e-3)))
+  expect_fitted(app)
 
   # Tidy lays the graph out again, and that is saved too.
   app$click(selector = ".tb-layout-buttons button:first-child") # Tidy vertically
@@ -167,11 +168,12 @@ test_that("a saved layout places new targets next to their neighbours, not on to
   c_position <- node_position(app, "c")
   expect_false(isTRUE(all.equal(c_position, c(x = 0, y = 0)))) # not left at the origin
   expect_gt(c_position[["x"]], 1000) # downstream of b, to its right
-  # Not every target was saved: fit them all into view instead of the old view.
+  # Fitted to them all, not the saved view.
   expect_false(identical(viewport_transform(app), "translate(30px, 20px) scale(0.5)"))
+  expect_fitted(app)
 })
 
-test_that("a saved layout with every target restores the saved view", {
+test_that("a saved layout with every target puts them back, and fits the view to them", {
   dir <- local_pipeline(make = TRUE)
   dir.create(file.path(dir, "_targets", "user"), showWarnings = FALSE)
   jsonlite::write_json(
@@ -181,8 +183,40 @@ test_that("a saved layout with every target restores the saved view", {
     auto_unbox = TRUE
   )
   app <- local_board_app(dir, "layout_view")
-  app$wait_for_js("document.querySelector('.react-flow__viewport').style.transform === 'translate(30px, 20px) scale(0.5)'")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  app$wait_for_js(paste0(
+    "(() => { const m = ", node_js("c"), ".style.transform.match(/translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/);",
+    " return m && Number(m[2]) === 400; })()"
+  ))
   expect_equal(node_position(app, "c"), c(x = 0, y = 400))
   # Top to bottom, as saved: handles at the top and bottom.
   expect_true(app$get_js(paste0(node_js("b"), ".querySelector('.react-flow__handle-bottom') !== null")))
+  # The view as the Fit View button makes it, not the saved one.
+  expect_false(identical(viewport_transform(app), "translate(30px, 20px) scale(0.5)"))
+  expect_fitted(app)
+})
+
+test_that("loading another pipeline lays it out afresh and fits the view to it", {
+  dir <- local_pipeline(make = TRUE)
+  writeLines(
+    c("library(targets)", "list(tar_target(x, 1), tar_target(y, x + 1))"),
+    file.path(dir, "other.R")
+  )
+  app <- local_board_app(dir, "layout_load", app = "targetsboard::tar_board_app(scripts = 'other.R')")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  # Away from the fitted view first.
+  app$click(selector = ".react-flow__controls-zoomout")
+  app$click(selector = ".react-flow__controls-zoomout")
+  Sys.sleep(1)
+  app$set_inputs(`board-script-path` = "other.R")
+  app$click("board-script-load")
+  app$wait_for_js(
+    "document.querySelectorAll('.react-flow__node').length === 2 && document.querySelector(\".react-flow__node[data-id='x']\") !== null",
+    timeout = 30 * 1000
+  )
+  # Laid out as a pipeline of its own: x then y, left to right.
+  app$wait_for_js(paste0(node_js("y"), ".style.transform !== 'translate(0px, 0px)'"))
+  Sys.sleep(0.5)
+  expect_gt(node_position(app, "y")[["x"]], node_position(app, "x")[["x"]])
+  expect_fitted(app)
 })
