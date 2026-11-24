@@ -27,6 +27,8 @@ test_that("the board's colours come from its tokens, in both modes", {
   expect_equal(style_of(".react-flow", "backgroundColor"), "rgb(240, 229, 215)") # #f0e5d7
   expect_equal(style_of(".tb-status-uptodate", "backgroundColor"), "rgb(53, 72, 35)")
   expect_equal(style_of(".tb-status-uptodate", "color"), "rgb(211, 240, 183)")
+  expect_equal(style_of(".react-flow__edge-path", "stroke"), "rgb(177, 177, 183)") # #b1b1b7
+  expect_equal(style_of(".react-flow__handle", "backgroundColor"), "rgb(26, 25, 43)") # #1a192b
 
   # One token changes the target and its minimap node.
   app$run_js("document.querySelector('.reactflow-wrapper').style.setProperty('--tb-status-uptodate', 'rgb(1, 2, 3)')")
@@ -35,10 +37,15 @@ test_that("the board's colours come from its tokens, in both modes", {
     "Array.from(document.querySelectorAll('.react-flow__minimap-node')).map(n => getComputedStyle(n).fill)"
   )
   expect_true("rgb(1, 2, 3)" %in% unlist(fills))
+  app$run_js("document.querySelector('.reactflow-wrapper').style.setProperty('--tb-edge', 'rgb(4, 5, 6)')")
+  expect_equal(style_of(".react-flow__edge-path", "stroke"), "rgb(4, 5, 6)")
+  app$run_js("document.querySelector('.reactflow-wrapper').style.removeProperty('--tb-edge')")
 
   send_widget_message(app, "targetsboard:options", list(id = "dag", options = list(color_mode = "dark")))
   app$wait_for_js("document.querySelector('.reactflow-wrapper').classList.contains('tb-dark')")
   expect_equal(style_of(".react-flow", "backgroundColor"), "rgb(20, 20, 20)") # #141414
+  expect_equal(style_of(".react-flow__edge-path", "stroke"), "rgb(108, 108, 108)") # #6c6c6c
+  expect_equal(style_of(".base-node", "borderTopColor"), "rgb(60, 60, 60)") # #3c3c3c
 })
 
 test_that("the widget's display options take effect, and change from R", {
