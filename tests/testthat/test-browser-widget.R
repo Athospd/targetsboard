@@ -214,10 +214,12 @@ test_that("the widget draws the whole graph as an image, for R and for download"
   expect_gt(size[["width"]], 8 * 150 * 2) # eight targets, at twice the size
 
   send_widget_message(app, "targetsboard:command", list(id = "flow", command = "export_image", format = "svg"))
-  app$wait_for_js("Shiny.shinyapp.$inputValues['flow_image:shiny.event']?.format === 'svg' ||
-                   Shiny.shinyapp.$inputValues['flow_image']?.format === 'svg'")
+  # Read from the server once it has the SVG, not the PNG before it.
+  app$wait_for_value(input = "flow_image", ignore = list(NULL, image))
+  image <- app$get_value(input = "flow_image")
+  expect_equal(image$format, "svg")
   svg <- withr::local_tempfile(fileext = ".svg")
-  save_targetsboard_image(app$get_value(input = "flow_image"), svg)
+  save_targetsboard_image(image, svg)
   text <- paste(readLines(svg, warn = FALSE), collapse = "\n")
   expect_match(text, "<svg", fixed = TRUE)
   for (id in paste0("t", 1:8)) expect_match(text, paste0(">", id, "<"), fixed = TRUE)

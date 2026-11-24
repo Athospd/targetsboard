@@ -76,12 +76,15 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   app$wait_for_js(paste0(node("b"), ".querySelector('.warning-mark') === null"))
 
   # A pattern's branch counts, during a run: shown, red with errors, cleared.
-  app$run_js(
-    "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
-       {id: 'flow', nodes: [], branches: {b: {total: 6, done: 3, errored: 1}}}}))"
-  )
-  app$wait_for_js(paste0(node("b"), ".querySelector('.branch-progress-errored') !== null"))
-  expect_equal(app$get_js(paste0(node("b"), ".querySelector('.branch-progress').innerText")), "3/6")
+  # The board's own status updates can clear the counts again before they
+  # are read: send them until they show, and read them in the same check.
+  app$wait_for_js(paste0(
+    "(() => { const p = ", node("b"), ".querySelector('.branch-progress');",
+    " if (p && p.innerText === '3/6' && p.classList.contains('branch-progress-errored')) return true;",
+    " window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:",
+    " {id: 'flow', nodes: [], branches: {b: {total: 6, done: 3, errored: 1}}}}));",
+    " return false; })()"
+  ))
   expect_false(app$get_js(paste0(node("a"), ".querySelector('.branch-progress') !== null")))
   app$run_js(
     "window.dispatchEvent(new CustomEvent('targetsboard:status', {detail:
@@ -145,7 +148,9 @@ test_that("the Load spinner covers the board only while Load loads, not at the s
   expect_false(app$get_js(hit))
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='slow_a']\") !== null", timeout = 30000)
   app$wait_for_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display === 'none'")
-  expect_true(app$get_js(hit))
+  # The new graph is still being laid out and fitted: a click reaches its
+  # targets once they settle, with no cover in the way.
+  app$wait_for_js(hit)
 })
 
 test_that("a board started before its script draws the pipeline once it appears", {
