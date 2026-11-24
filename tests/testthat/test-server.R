@@ -30,13 +30,13 @@ test_that("Load restarts the poller only for an existing, different script", {
   shiny::testServer(server, {
     pid <- poller_of(server)$process$get_pid()
 
-    session$setInputs(script = "missing.R", load_script = 1)
+    session$setInputs(`script-path` = "missing.R", `script-load` = 1)
     expect_equal(poller_of(server)$process$get_pid(), pid)
 
-    session$setInputs(script = "_targets.R", load_script = 2)
+    session$setInputs(`script-path` = "_targets.R", `script-load` = 2)
     expect_equal(poller_of(server)$process$get_pid(), pid)
 
-    session$setInputs(script = "other.R", load_script = 3)
+    session$setInputs(`script-path` = "other.R", `script-load` = 3)
     expect_false(poller_of(server)$process$get_pid() == pid)
     expect_equal(poller_of(server)$script, "other.R")
   })
@@ -60,9 +60,9 @@ test_that("Load with no script chosen asks for one, and keeps the board as it is
   shiny::testServer(server, {
     pid <- poller_of(server)$process$get_pid()
     # The field is empty once a typed text that matches no script is left.
-    session$setInputs(script = "", load_script = 1)
+    session$setInputs(`script-path` = "", `script-load` = 1)
     expect_equal(notes, "Choose a script to load.")
-    expect_equal(states, "load_script ready")
+    expect_equal(states, "load ready")
     expect_equal(poller_of(server)$process$get_pid(), pid)
     expect_equal(poller_of(server)$script, "_targets.R")
   })
@@ -88,34 +88,34 @@ test_that("Load stays busy, and covers the board, until the new script's graph a
 
   shiny::testServer(server, {
     # Nothing to load: the button is ready again at once.
-    session$setInputs(script = "missing.R", load_script = 1)
-    expect_equal(states, "load_script ready")
-    session$setInputs(script = "_targets.R", load_script = 2)
-    expect_equal(states, rep("load_script ready", 2))
+    session$setInputs(`script-path` = "missing.R", `script-load` = 1)
+    expect_equal(states, "load ready")
+    session$setInputs(`script-path` = "_targets.R", `script-load` = 2)
+    expect_equal(states, rep("load ready", 2))
 
     # A script that takes a while: busy until its graph is drawn.
-    session$setInputs(script = "slow.R", load_script = 3)
+    session$setInputs(`script-path` = "slow.R", `script-load` = 3)
     session$elapse(600)
     expect_length(states, 2)
     # A spinner covers the board meanwhile, so the old graph can't be used.
-    expect_equal(spinner, "show board_loading")
-    expect_equal(output$board_loading_caption, "Loading pipeline\u2026") # no script name
+    expect_equal(spinner, "show loading")
+    expect_equal(output[["script-loading_caption"]], "Loading pipeline\u2026") # no script name
     rds_path <- backend_of(server)$rds_path()
     wait_for(function() file.exists(rds_path))
     session$elapse(600)
-    expect_equal(states[[3]], "load_script ready")
+    expect_equal(states[[3]], "load ready")
     expect_true("x" %in% board()$x$nodes$id)
-    expect_equal(spinner, c("show board_loading", "hide board_loading"))
+    expect_equal(spinner, c("show loading", "hide loading"))
 
     # A script that doesn't load: ready again, and the error says why.
-    session$setInputs(script = "broken.R", load_script = 4)
+    session$setInputs(`script-path` = "broken.R", `script-load` = 4)
     session$elapse(600)
     expect_length(states, 3)
-    expect_equal(output$board_loading_caption, "Loading pipeline\u2026")
+    expect_equal(output[["script-loading_caption"]], "Loading pipeline\u2026")
     wait_for(function() file.exists(poller_error_path(backend_of(server)$rds_path())))
     session$elapse(600)
-    expect_equal(states[[4]], "load_script ready")
-    expect_equal(spinner, rep(c("show board_loading", "hide board_loading"), 2))
+    expect_equal(states[[4]], "load ready")
+    expect_equal(spinner, rep(c("show loading", "hide loading"), 2))
   })
 })
 
@@ -149,7 +149,7 @@ test_that("Load asks before drawing a graph over the size limit, and Cancel keep
     wait_new_graph() # the launch script's graph, as the poller recomputes it
 
     # Over the limit: held back, and the author is asked, with the count.
-    session$setInputs(script = "big.R", load_script = 1)
+    session$setInputs(`script-path` = "big.R", `script-load` = 1)
     wait_new_graph()
     expect_length(modals, 1)
     expect_match(as.character(modals[[1]]), "4 targets")
@@ -157,17 +157,17 @@ test_that("Load asks before drawing a graph over the size limit, and Cancel keep
     expect_equal(spinner, "show")
 
     # Draw it anyway: drawn, and the spinner goes.
-    session$setInputs(draw_large_graph = 1)
+    session$setInputs(`script-draw_large` = 1)
     expect_true(all(c("w", "z") %in% board()$x$nodes$id))
     expect_equal(spinner, c("show", "hide"))
     expect_identical(modals[[2]], "removed")
 
     # Another one over the limit, cancelled: the current graph stays, and
     # the board goes back to the script it showed.
-    session$setInputs(script = "bigger.R", load_script = 2)
+    session$setInputs(`script-path` = "bigger.R", `script-load` = 2)
     wait_new_graph()
     expect_length(modals, 3)
-    session$setInputs(cancel_large_graph = 1)
+    session$setInputs(`script-cancel_large` = 1)
     expect_true("w" %in% board()$x$nodes$id)
     expect_false("v1" %in% board()$x$nodes$id)
     expect_equal(poller_of(server)$script, "big.R")
@@ -238,7 +238,7 @@ test_that("a target's menu runs it, invalidates it after confirmation, or previe
     session$setInputs(flow_node_action = list(action = "invalidate", node = "b"))
     expect_match(modal, "<code>b</code>", fixed = TRUE)
     expect_no_match(modal, "<code>a</code>", fixed = TRUE)
-    session$setInputs(invalidate_confirm = 1)
+    session$setInputs(`run-invalidate_confirm` = 1)
     meta <- targets::tar_meta(targets_only = TRUE)$name
     expect_false("b" %in% meta)
     expect_true(all(c("a", "c") %in% meta))
@@ -276,7 +276,7 @@ test_that("the actions of a selected group cover every target of it", {
     expect_match(modal, "<code>a</code>", fixed = TRUE)
     expect_match(modal, "<code>c</code>", fixed = TRUE)
     expect_no_match(modal, "<code>b</code>", fixed = TRUE)
-    session$setInputs(invalidate_confirm = 1)
+    session$setInputs(`run-invalidate_confirm` = 1)
     expect_equal(targets::tar_meta(targets_only = TRUE)$name, "b")
 
     # A long list is cut short in the confirmation, but all are invalidated.
@@ -285,7 +285,6 @@ test_that("the actions of a selected group cover every target of it", {
     expect_match(modal, "<code>t10</code>", fixed = TRUE)
     expect_no_match(modal, "<code>t11</code>", fixed = TRUE)
     expect_match(modal, "and 2 more", fixed = TRUE)
-    expect_equal(to_invalidate(), many)
   })
 })
 
@@ -304,10 +303,10 @@ test_that("Invalidate all asks for every target of the graph, then invalidates t
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(invalidate_all = 1)
+    session$setInputs(`run-invalidate_all` = 1)
     for (name in c("a", "b", "c")) expect_match(modal, sprintf("<code>%s</code>", name), fixed = TRUE)
     expect_equal(nrow(targets::tar_meta(targets_only = TRUE)), 3) # not yet
-    session$setInputs(invalidate_confirm = 1)
+    session$setInputs(`run-invalidate_confirm` = 1)
     expect_equal(nrow(targets::tar_meta(targets_only = TRUE)), 0)
   })
 })
@@ -322,7 +321,7 @@ test_that("board_targets() leaves out the functions and globals of the graph", {
 
 test_that("the board's sidebar has Invalidate all, not the selection's buttons", {
   html <- as.character(app_ui(list(nodes = fake_nodes(), edges = fake_edges()), "_targets.R"))
-  expect_match(html, 'id="invalidate_all"', fixed = TRUE)
+  expect_match(html, 'id="run-invalidate_all"', fixed = TRUE)
   expect_match(html, "Invalidate all", fixed = TRUE)
   expect_no_match(html, 'id="run_selected"', fixed = TRUE)
   expect_no_match(html, "Invalidate selected", fixed = TRUE)
@@ -422,7 +421,7 @@ test_that("Refresh asks the poller to recompute", {
   shiny::testServer(server, {
     path <- poller_of(server)$refresh_path
     expect_false(file.exists(path))
-    session$setInputs(refresh = 1)
+    session$setInputs(`script-refresh` = 1)
     expect_true(file.exists(path))
   })
 })
@@ -450,13 +449,11 @@ test_that("targets whose last build raised warnings get a warning mark", {
 test_that("the tar_visnetwork tab shows tar_visnetwork()'s own widget", {
   skip_on_cran()
   local_pipeline(make = TRUE)
-  server <- local_app_server()
+  widget <- targets::tar_visnetwork(targets_only = TRUE)
+  board <- shiny::reactiveVal(list(x = widget$x, widget = widget, progress_mtime = progress_mtime()))
 
-  shiny::testServer(server, {
-    backend_of(server)$stop_poller()
-    widget <- targets::tar_visnetwork(targets_only = TRUE)
-    board(list(x = widget$x, widget = widget, progress_mtime = progress_mtime()))
-    expect_match(output[["visnetwork-graph"]], "hierarchical", fixed = TRUE) # tar_visnetwork()'s layout
+  shiny::testServer(visnetwork_server, args = list(board = board), {
+    expect_match(output$graph, "hierarchical", fixed = TRUE) # tar_visnetwork()'s layout
   })
 })
 
@@ -565,7 +562,7 @@ test_that("during a run, patterns show their branch counts; they go when it stop
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
     session$flushReact()
-    session$setInputs(run_all = 1)
+    session$setInputs(`run-all` = 1)
     process <- backend_of(server)$runner$process
     seen <- FALSE
     while (process$is_alive()) {

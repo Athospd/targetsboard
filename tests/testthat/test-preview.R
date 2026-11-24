@@ -212,7 +212,7 @@ test_that("the value preview shows a frame, asks before a large value, and cache
 
     # A method edited, then Refresh: it takes the new one, built again.
     writeLines("tar_board_preview.numeric <- function(x, target, ...) htmltools::tags$i('edited')", "_targetsboard.R")
-    session$setInputs(refresh = 1)
+    session$setInputs(`script-refresh` = 1)
     expect_match(output[["preview-content"]]$html, "<i>edited</i>", fixed = TRUE)
     expect_equal(reads, 3)
 

@@ -33,19 +33,9 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
       fillable = TRUE,
       sidebar = sidebar(
         title = "Control Panel",
-        script_input(script, scripts),
-        # Busy, with a spinner, until the script's graph arrives: loading a
-        # pipeline can take a while.
-        bslib::input_task_button(
-          "load_script", "Load", icon = icon("folder-open"), label_busy = "Loading...",
-          type = "default", auto_reset = FALSE
-        ),
-        actionButton("refresh", "Refresh", icon = icon("rotate")),
+        script_ui("script", script, scripts),
         tags$hr(),
-        actionButton("run_all", "Run all", icon = icon("play")),
-        run_mode_switches(),
-        actionButton("stop", "Stop", icon = icon("stop"), disabled = TRUE),
-        actionButton("invalidate_all", "Invalidate all", icon = icon("eraser"), disabled = TRUE)
+        run_ui("run")
       ),
       navset_card_underline(
         id = "view",
@@ -58,15 +48,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
           # holds them, so the board fills the card as before.
           card_body(
             class = "tb-board-pane", padding = 0, gap = 0,
-            tags$div(
-              class = "tb-board-loading tb-loading",
-              # Styled in index.css, from the theme's colours (custom.css).
-              shinycssloaders::withSpinner(
-                uiOutput("board_loading"),
-                type = 8, custom.css = TRUE, hide.ui = FALSE, id = "board_loading_spinner",
-                caption = textOutput("board_loading_caption", inline = TRUE)
-              )
-            ),
+            script_loading_ui("script"),
             layout_sidebar(
               class = "p-0",
               sidebar = preview_ui("preview"),
@@ -108,7 +90,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
 # left on doesn't surprise the next session. They apply to every run the
 # board starts. Without the internals they rely on (run_modes_supported()),
 # they are disabled, and say what to add to the script instead.
-run_mode_switches <- function(supported = run_modes_supported()) {
+run_mode_switches <- function(supported = run_modes_supported(), ns = identity) {
   switches <- list(
     keep_going = list(
       label = "Keep going after errors",
@@ -132,7 +114,7 @@ run_mode_switches <- function(supported = run_modes_supported()) {
       } else {
         "Not available with this version of targets."
       }
-      input <- bslib::input_switch(id, mode$label, value = FALSE)
+      input <- bslib::input_switch(ns(id), mode$label, value = FALSE)
       if (!supported) {
         input <- htmltools::tagQuery(input)$find("input")$addAttrs(disabled = NA)$allTags()
       }
@@ -144,9 +126,9 @@ run_mode_switches <- function(supported = run_modes_supported()) {
 #' The Script field: a dropdown of the launch script and `scripts`, filtered
 #' as one types. Only those can be chosen: no path of one's own.
 #' @noRd
-script_input <- function(script, scripts = NULL) {
+script_input <- function(script, scripts = NULL, id = "script") {
   shiny::selectizeInput(
-    "script", "Script",
+    id, "Script",
     choices = script_choices(script, scripts), selected = script,
     options = list(placeholder = "Choose a targets script")
   )

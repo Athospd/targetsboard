@@ -10,22 +10,9 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
   # One backend per app: the poller, the board's run and the value
   # previews, shared by every browser session (board_backend()).
   backend <- board_backend(script, targets_only)
-  poller <- backend$poller
-  runner <- backend$runner
-  previews <- backend$previews
-  loaded_script <- backend$loaded_script
-  start_poller <- backend$start_poller
-  stop_poller <- backend$stop_poller
-  board_run_alive <- backend$run_alive
-  busy <- backend$busy
-  request_refresh <- backend$request_refresh
 
   function(input, output, session) {
     backend$start_once()
-
-    # The graph the board draws: the first render's, then each the poller
-    # recomputes, once Load accepts it.
-    board <- shiny::reactiveVal(list(x = metadata, progress_mtime = progress_mtime()))
 
     # What changes on the graph, polled from the store and the poller's
     # files (graph_data_server()).
@@ -37,6 +24,14 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     tar_meta_data <- data$tar_meta
     warned_targets <- data$warned_targets
 
+    # The script the board draws, Load and Refresh (script_server()): the
+    # accepted graph, and when the preview methods load again.
+    loaded <- script_server(
+      "script", backend, metadata, script, scripts, targets_only,
+      poller_board = poller_board, script_error = script_error
+    )
+    board <- loaded$board
+
     # The tabs beside the board: each a module. The tables' clicks show a
     # target on the board (show_on_board()).
     problem_clicked <- problems_server("problems", board, tar_meta_data)
@@ -44,74 +39,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     visnetwork_server("visnetwork", board)
     meta_clicked <- meta_server("meta", tar_meta_data)
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
-
-    shiny::observeEvent(poller_board(), {
-      new_board <- poller_board()
-      # While the author decides on a large graph, the poller's next
-      # recomputations wait with it.
-      if (!is.null(pending_board())) return(pending_board(new_board))
-      nodes <- nrow(new_board$x$nodes %||% data.frame())
-      if (shiny::isolate(loading()) && nodes > confirm_nodes_limit()) {
-        pending_board(new_board)
-        shiny::showModal(large_graph_modal(shiny::isolate(poller$script), nodes, targets_only))
-        return()
-      }
-      board(new_board)
-      load_done()
-    })
-
-    # A newly loaded script's graph over the size limit is held back until
-    # the author says to draw it: too many targets can use up the browser's
-    # memory. Cancel keeps the current graph and goes back to its script.
-    pending_board <- shiny::reactiveVal(NULL)
-    previous_script <- NULL
-    shiny::observeEvent(input$draw_large_graph, {
-      shiny::req(pending_board())
-      board(pending_board())
-      pending_board(NULL)
-      shiny::removeModal()
-      load_done()
-    })
-    shiny::observeEvent(input$cancel_large_graph, {
-      shiny::req(pending_board())
-      pending_board(NULL)
-      shiny::removeModal()
-      start_poller(previous_script)
-      load_done()
-    })
-
-    # Load stays busy from the click until the new script's graph arrives, or
-    # it turns out not to load. The poller writes a new file for each script,
-    # so the first one it writes is that script's graph.
-    loading <- shiny::reactiveVal(FALSE)
-    load_done <- function() {
-      if (!shiny::isolate(loading())) return()
-      loading(FALSE)
-      bslib::update_task_button("load_script", state = "ready")
-      shinycssloaders::hideSpinner("board_loading")
-    }
-    # Meanwhile a shinycssloaders spinner covers the Board pane, and keeps the
-    # old graph and its preview from being used. board_loading is only its
-    # anchor: an empty output, whose first value hides the spinner the
-    # package shows when an output binds.
-    output$board_loading <- shiny::renderUI(NULL)
-    shiny::outputOptions(output, "board_loading", suspendWhenHidden = FALSE)
-    output$board_loading_caption <- shiny::renderText({
-      if (loading()) "Loading pipeline\u2026"
-    })
-    # The cover shows only with a caption (index.css): the caption has to
-    # update while the cover is hidden.
-    shiny::outputOptions(output, "board_loading_caption", suspendWhenHidden = FALSE)
-
-    shiny::observeEvent(script_error(), ignoreNULL = FALSE, {
-      if (!is.null(script_error())) load_done()
-      text <- script_error_text(poller$script, script_error())
-      if (is.null(text)) {
-        shiny::removeNotification("script_error", session)
-      } else {
-        shiny::showNotification(text, id = "script_error", duration = NULL, type = "error", session = session)
-      }
-    })
 
     # A new graph: send it whole, with the live statuses on top.
     shiny::observeEvent(board(), {
@@ -146,144 +73,6 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       update_targetsboard_status(session, "flow", statuses, branches = branches %||% data.frame())
     }, ignoreInit = TRUE)
 
-    shiny::observe({
-      is_running <- running()
-      shiny::updateActionButton(session, "run_all", disabled = is_running)
-      shiny::updateActionButton(session, "stop", disabled = !is_running)
-      shiny::updateActionButton(
-        session, "invalidate_all",
-        disabled = is_running || length(board_targets(board()$x$nodes)) == 0
-      )
-    })
-
-    launch_run <- function(names = NULL) {
-      if (busy()) {
-        shiny::showNotification("A run is already going.", type = "warning")
-        return()
-      }
-      runner$process <- start_run(poller$script, names, modes = list(
-        keep_going = isTRUE(input$keep_going),
-        stop_at_warnings = isTRUE(input$stop_at_warnings)
-      ))
-      runner$stopped <- FALSE
-    }
-    shiny::observeEvent(input$run_all, launch_run())
-
-    # Stops the run going, whoever started it.
-    shiny::observeEvent(input$stop, {
-      if (board_run_alive()) {
-        runner$stopped <- TRUE
-        runner$process$kill_tree() # the board's own run: its whole tree
-      } else {
-        handle <- active_run()
-        if (!is.null(handle)) stop_run(handle)
-      }
-    })
-
-    # Tell how the board's own run ended, once per session.
-    notified <- NULL
-    shiny::observeEvent(running(), {
-      process <- runner$process
-      if (running() || !inherits(process, "process") || identical(process, notified)) return()
-      notified <<- process
-      error <- run_error(process)
-      # The targets that errored in this run: a run that keeps going after
-      # errors finishes, but with them.
-      errored <- run_errored_targets(tryCatch(
-        targets::tar_progress(fields = c("type", "parent", "progress")),
-        error = function(e) NULL
-      ))
-      show_problem <- if (length(errored)) {
-        shiny::tags$a(href = "#", class = "tb-show-problem ms-1", "Show problem") |>
-          send_on_click("show_problem", errored[1])
-      }
-      if (isTRUE(runner$stopped)) {
-        shiny::showNotification("Run stopped.", type = "warning")
-      } else if (is.null(error) && length(errored) == 0) {
-        shiny::showNotification("Run finished.", type = "message")
-      } else if (is.null(error)) {
-        shiny::showNotification(
-          shiny::tagList(paste0("Run finished, with errors in ", describe_names(errored), "."), show_problem),
-          type = "warning", duration = NULL
-        )
-      } else {
-        shiny::showNotification(
-          shiny::tagList(
-            paste0("Run failed", if (length(errored)) paste0(" in ", describe_names(errored)), ": "),
-            shiny::tags$code(error), show_problem
-          ),
-          type = "error", duration = NULL
-        )
-      }
-    }, ignoreInit = TRUE)
-
-    # The preview methods of the project's _targetsboard.R: at start, and
-    # again on Refresh, so editing them needs no restart.
-    preview_methods <- shiny::reactiveVal(0)
-    reload_preview_methods <- function() {
-      loaded <- tryCatch(load_preview_methods(), error = function(e) e)
-      if (inherits(loaded, "error")) {
-        shiny::showNotification(
-          paste("_targetsboard.R didn't load:", conditionMessage(loaded)),
-          type = "error", duration = NULL
-        )
-      }
-      previews$clear()
-      preview_methods(shiny::isolate(preview_methods()) + 1)
-    }
-    reload_preview_methods()
-    shiny::observeEvent(input$refresh, {
-      request_refresh()
-      reload_preview_methods()
-    })
-
-    # Invalidate targets, after a confirmation: the next run builds them
-    # again, which can take long. The confirmation is for the targets it
-    # names, whatever is selected by then.
-    to_invalidate <- shiny::reactiveVal(NULL)
-    ask_to_invalidate <- function(names) {
-      to_invalidate(names)
-      shown <- utils::head(names, 10)
-      shiny::showModal(shiny::modalDialog(
-        title = "Invalidate targets?",
-        shiny::p(
-          "The next run will build these targets again, and what depends on them.",
-          "Until then, their values can no longer be read."
-        ),
-        shiny::tags$ul(
-          lapply(shown, \(name) shiny::tags$li(shiny::tags$code(name))),
-          if (length(names) > length(shown)) {
-            shiny::tags$li(paste("and", length(names) - length(shown), "more"))
-          }
-        ),
-        footer = shiny::tagList(
-          shiny::modalButton("Cancel"),
-          shiny::actionButton("invalidate_confirm", "Invalidate", class = "btn-danger")
-        )
-      ))
-    }
-    shiny::observeEvent(input$invalidate_all, {
-      names <- board_targets(board()$x$nodes)
-      shiny::req(length(names) > 0)
-      ask_to_invalidate(names)
-    })
-    shiny::observeEvent(input$invalidate_confirm, {
-      shiny::removeModal()
-      if (busy()) {
-        shiny::showNotification("A run is going: stop it before invalidating.", type = "warning")
-        return()
-      }
-      names <- to_invalidate()
-      shiny::req(names)
-      to_invalidate(NULL)
-      invalidate_targets(names)
-      request_refresh()
-      shiny::showNotification(
-        paste0("Invalidated ", length(names), if (length(names) == 1) " target." else " targets."),
-        type = "message"
-      )
-    })
-
     # The value preview (preview_server()): opened by a double-click on a
     # target, its Value, or a link to its problem, on the focused target.
     preview_request <- shiny::reactiveVal(0)
@@ -294,59 +83,17 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       focused = shiny::reactive(input$flow_focused_node),
       open_request = shiny::reactive(if (preview_request() > 0) preview_request()),
       board = board, running = running, tar_meta = tar_meta_data,
-      methods = shiny::reactive(preview_methods())
+      methods = loaded$methods
     )
 
     # The actions of the right-click menus and the toolbars (board_options()):
-    # on the target they were chosen on, or on the selected group.
-    shiny::observeEvent(input$flow_node_action, {
-      action <- input$flow_node_action
-      nodes <- as.character(unlist(action$nodes %||% action$node))
-      switch(
-        action$action,
-        run = launch_run(nodes),
-        invalidate = ask_to_invalidate(nodes),
-        value = request_preview()
-      )
+    # Run and Invalidate go to the run module, Value opens the preview.
+    node_action <- shiny::reactive(input$flow_node_action)
+    shiny::observeEvent(node_action(), {
+      if (identical(node_action()$action, "value")) request_preview()
     })
-
-    # The Script field names the script the board draws. The poller is shared,
-    # so a tab opened after someone loaded another script, or open while they
-    # did, follows it.
-    shiny::observeEvent(loaded_script(), {
-      shown <- loaded_script()
-      if (identical(shown, shiny::isolate(input$script))) return()
-      shiny::updateSelectizeInput(
-        session, "script",
-        choices = script_choices(script, c(scripts, shown)), selected = shown
-      )
-    })
-
-    observeEvent(input$load_script, {
-      new_script <- input$script
-      # Empty when a typed text that matches no script was left in the field.
-      if (!nzchar(new_script %||% "")) {
-        shiny::showNotification("Choose a script to load.", type = "warning")
-        bslib::update_task_button("load_script", state = "ready")
-        return()
-      }
-      if (!file.exists(new_script)) {
-        shiny::showNotification(
-          paste0("Script not found: ", new_script),
-          type = "error"
-        )
-        bslib::update_task_button("load_script", state = "ready")
-        return()
-      }
-      if (identical(new_script, poller$script)) {
-        bslib::update_task_button("load_script", state = "ready")
-        return()
-      }
-      loading(TRUE)
-      shinycssloaders::showSpinner("board_loading")
-      previous_script <<- poller$script
-      start_poller(new_script)
-    })
+    # Run all, Stop, Invalidate all, and the graph's runs (run_server()).
+    run <- run_server("run", backend, board, running, action = node_action)
 
     # A target picked in the tar_meta() table: show it on the board, focused,
     # with what it depends on and what depends on it directly in view.
@@ -364,7 +111,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     # A problem picked in the Problems tab, or a run's notification: on the
     # board, with its Problem in the value preview.
     shiny::observeEvent(problem_clicked(), show_on_board(problem_clicked(), preview = TRUE))
-    shiny::observeEvent(input$show_problem, show_on_board(input$show_problem, preview = TRUE))
+    shiny::observeEvent(run$show_problem(), show_on_board(run$show_problem(), preview = TRUE))
 
     # The graph follows the page's dark mode switch.
     shiny::observeEvent(input$dark_mode, {
@@ -475,7 +222,7 @@ overlay_statuses <- function(nodes, statuses) {
 # thousands of them can use up the browser's memory.
 confirm_nodes_limit <- function() getOption("targetsboard.confirm_nodes", 500)
 
-large_graph_modal <- function(script, nodes, targets_only = TRUE) {
+large_graph_modal <- function(script, nodes, targets_only = TRUE, ns = identity) {
   what <- if (targets_only) "targets" else "targets, functions and globals"
   shiny::modalDialog(
     title = "A large pipeline",
@@ -488,8 +235,8 @@ large_graph_modal <- function(script, nodes, targets_only = TRUE) {
       format(confirm_nodes_limit(), big.mark = ",")
     )),
     footer = shiny::tagList(
-      shiny::actionButton("cancel_large_graph", "Cancel: keep the current graph"),
-      shiny::actionButton("draw_large_graph", "Draw it anyway", class = "btn-danger")
+      shiny::actionButton(ns("cancel_large"), "Cancel: keep the current graph"),
+      shiny::actionButton(ns("draw_large"), "Draw it anyway", class = "btn-danger")
     ),
     easyClose = FALSE
   )

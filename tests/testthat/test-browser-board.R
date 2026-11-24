@@ -134,16 +134,16 @@ test_that("the Load spinner covers the board only while Load loads, not at the s
   expect_true(app$get_js(hit))
   expect_equal(app$get_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display"), "none")
   # And still none once the server has answered.
-  app$wait_for_js("Shiny.shinyapp.$values['board_loading'] !== undefined")
+  app$wait_for_js("Shiny.shinyapp.$values['script-loading'] !== undefined")
   expect_true(app$get_js(hit))
 
   # Load a slow script: the spinner covers the pane, captioned, and takes the
   # click; then it goes once the new graph is drawn.
-  app$run_js("const s = $('#script')[0].selectize; s.setValue('slow.R'); s.blur();")
-  app$click(selector = "#load_script")
+  app$run_js("const s = $('#script-path')[0].selectize; s.setValue('slow.R'); s.blur();")
+  app$click(selector = "#script-load")
   app$wait_for_js(paste(
     "getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display !== 'none'",
-    "&& document.querySelector('#board_loading_caption').innerText === 'Loading pipeline\u2026'"
+    "&& document.querySelector('#script-loading_caption').innerText === 'Loading pipeline\u2026'"
   ), timeout = 10000)
   expect_false(app$get_js(hit))
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='slow_a']\") !== null", timeout = 30000)
@@ -310,10 +310,10 @@ test_that("the Script field filters the scripts as one types, and Load switches 
   app <- new_app_driver(dir, name = "scripts", load_timeout = 60 * 1000)
   withr::defer(app$stop())
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
-  expect_equal(app$get_value(input = "script"), "_targets.R")
+  expect_equal(app$get_value(input = "script-path"), "_targets.R")
 
   # Typing filters the dropdown to the matching scripts.
-  app$run_js("const s = $('#script')[0].selectize; s.focus(); s.setTextboxValue('oth'); s.refreshOptions(true);")
+  app$run_js("const s = $('#script-path')[0].selectize; s.focus(); s.setTextboxValue('oth'); s.refreshOptions(true);")
   app$wait_for_js("document.querySelector('.selectize-dropdown-content .option') !== null")
   shown <- app$get_js(
     "Array.from(document.querySelectorAll('.selectize-dropdown-content .option')).map(o => o.dataset.value)"
@@ -321,8 +321,8 @@ test_that("the Script field filters the scripts as one types, and Load switches 
   expect_equal(unlist(shown), "other.R")
 
   # Choosing it and pressing Load draws its pipeline.
-  app$run_js("const s = $('#script')[0].selectize; s.setValue('other.R'); s.blur();")
-  app$click("load_script")
+  app$run_js("const s = $('#script-path')[0].selectize; s.setValue('other.R'); s.blur();")
+  app$click("script-load")
   app$wait_for_js(
     "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
   )
@@ -334,6 +334,6 @@ test_that("the Script field filters the scripts as one types, and Load switches 
   second$wait_for_js(
     "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
   )
-  second$wait_for_value(input = "script", ignore = list(NULL, "_targets.R"), timeout = 10 * 1000)
-  expect_equal(second$get_value(input = "script"), "other.R")
+  second$wait_for_value(input = "script-path", ignore = list(NULL, "_targets.R"), timeout = 10 * 1000)
+  expect_equal(second$get_value(input = "script-path"), "other.R")
 })
