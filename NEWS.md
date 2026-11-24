@@ -25,9 +25,11 @@
   size its theme gives. A plot or an htmlwidget fills the frame in
   full-screen, and Escape leaves full-screen without closing the preview.
 * A file target previews its files by type: images, PDF and HTML files in
-  place, CSV and TSV files as tables, Markdown rendered, a Quarto or R
-  Markdown file as the document it was rendered to (or its source, with its
-  chunks as code, if it wasn't), and the first 200
+  place (a PDF as images of its first 20 pages, with pdftools, in viewers
+  without a PDF viewer, such as RStudio's and Positron's), CSV and TSV files
+  as tables, Markdown rendered, a Quarto or R Markdown file as the document
+  it was rendered to (or its source, with its chunks as code, if it wasn't),
+  and the first 200
   lines of text files. Several files show as sections, 50 at a time, each
   read only when opened. Each path is dispatched as
   `tar_board_file_<extension>`, so a method adds a type.

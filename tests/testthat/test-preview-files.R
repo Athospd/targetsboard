@@ -101,6 +101,64 @@ test_that("the board builds a file's view when its section opens", {
   })
 })
 
+# A session that only serves data objects, keeping each one's filter.
+stub_session <- function() {
+  session <- new.env()
+  session$served <- list()
+  session$registerDataObj <- function(name, data, filterFunc) {
+    session$served[[length(session$served) + 1]] <- filterFunc
+    paste0("url/", name, "?w=")
+  }
+  session
+}
+
+# A PDF of `pages` pages, each with its number in large type.
+local_pdf <- function(pages = 3, .env = parent.frame()) {
+  path <- withr::local_tempfile(fileext = ".pdf", .local_envir = .env)
+  grDevices::pdf(path, width = 4, height = 3)
+  for (i in seq_len(pages)) {
+    graphics::plot.new()
+    graphics::text(0.5, 0.5, i, cex = 6)
+  }
+  grDevices::dev.off()
+  path
+}
+
+test_that("a PDF shows in the browser's viewer, with its pages as images for a page that has none", {
+  skip_if_not_installed("pdftools")
+  path <- local_pdf(3)
+  session <- stub_session()
+  html <- shiny::withReactiveDomain(session, {
+    as.character(tar_board_preview(board_file(path), list(name = "f", format = "file")))
+  })
+  expect_match(html, '<iframe class="tb-preview-document tb-preview-pdf"', fixed = TRUE)
+  expect_no_match(html, " src=", fixed = TRUE) # preview.js sets it, if the browser can show it
+  expect_match(html, 'data-pdf-src="url/tb_file_', fixed = TRUE)
+  expect_match(html, 'data-pdf-pages="3"', fixed = TRUE)
+  expect_match(html, 'data-pdf-page-url="url/tb_pdf_', fixed = TRUE)
+
+  # The URL gives each page as a PNG; past the last page, the last one.
+  page <- function(query) session$served[[2]](normalizePath(path, winslash = "/"), list(QUERY_STRING = query))
+  png <- page("w=&page=2")
+  expect_equal(png$status, 200)
+  expect_equal(png$content_type, "image/png")
+  expect_identical(png$content[1:4], as.raw(c(0x89, 0x50, 0x4e, 0x47)))
+  expect_identical(page("page=9")$content, page("page=3")$content)
+  expect_false(identical(page("page=1")$content, page("page=3")$content))
+  expect_identical(page("page=x")$content, page("")$content) # not a page: the first
+})
+
+test_that("without pdftools, a PDF has no pages to show in its place", {
+  path <- local_pdf(1)
+  local_mocked_bindings(has_pdftools = function() FALSE)
+  session <- stub_session()
+  html <- shiny::withReactiveDomain(session, {
+    as.character(tar_board_preview(board_file(path), list(name = "f", format = "file")))
+  })
+  expect_match(html, "tb-preview-pdf", fixed = TRUE)
+  expect_no_match(html, "data-pdf-pages", fixed = TRUE)
+})
+
 test_that("Quarto and R Markdown files show rendered, with their title and their R chunks", {
   dir <- withr::local_tempdir()
   qmd <- file.path(dir, "report.qmd")

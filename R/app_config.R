@@ -22,7 +22,9 @@ add_external_resources <- function() {
     shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/index.css"),
     # Colours R code (srcjs/highlight.js): highlight.js, BSD-3, see
     # www/highlight.js.LICENSE.
-    shiny::tags$script(src = "www/highlight.js", defer = NA)
+    shiny::tags$script(src = "www/highlight.js", defer = NA),
+    # PDFs where the browser has no PDF viewer (srcjs/preview.js).
+    shiny::tags$script(src = "www/preview.js", defer = NA)
   )
 }
 

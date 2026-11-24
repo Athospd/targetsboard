@@ -127,6 +127,61 @@ serve_file <- function(path, session = shiny::getDefaultReactiveDomain()) {
   )
 }
 
+#' A PDF, in the browser's PDF viewer
+#'
+#' Some browsers have none: RStudio's and Positron's viewers are Electron
+#' views with Chromium's PDF viewer turned off. There, the board's preview.js
+#' puts the PDF's first pages in the frame's place, drawn as PNG images by
+#' pdftools: so the frame carries its page count and the URL of its pages.
+#' Without pdftools, a link to open it in a browser takes its place.
+#' @param path The PDF.
+#' @noRd
+pdf_view <- function(path) {
+  session <- shiny::getDefaultReactiveDomain()
+  pages <- if (!is.null(session) && has_pdftools()) {
+    tryCatch(pdftools::pdf_info(path)$pages, error = function(e) NULL)
+  }
+  # No src: preview.js sets it where the browser can show it. Loaded where
+  # it can't, a PDF could start a download.
+  shiny::tags$iframe(
+    class = "tb-preview-document tb-preview-pdf", title = basename(path), `data-pdf-src` = serve_file(path),
+    `data-pdf-pages` = pages,
+    `data-pdf-page-url` = if (!is.null(pages)) serve_pdf_pages(path, session)
+  )
+}
+
+has_pdftools <- function() requireNamespace("pdftools", quietly = TRUE)
+
+#' A URL for a PDF's pages as PNG images: add "&page=" and a page number
+#' @noRd
+serve_pdf_pages <- function(path, session) {
+  session$registerDataObj(
+    name = paste0("tb_pdf_", substr(digest::digest(path), 1, 12)),
+    data = normalizePath(path, winslash = "/"),
+    filterFunc = function(data, req) {
+      query <- shiny::parseQueryString(req$QUERY_STRING %||% "")
+      page <- suppressWarnings(as.integer(query$page))
+      if (length(page) != 1 || is.na(page) || page < 1) page <- 1L
+      shiny::httpResponse(200, "image/png", pdf_page_png(data, page))
+    }
+  )
+}
+
+#' A PDF's page as PNG bytes, drawn by pdftools; past its last page, the last
+#' @noRd
+pdf_page_png <- function(path, page) {
+  page <- min(page, pdftools::pdf_info(path)$pages)
+  dir <- tempfile("tb_pdf_")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE))
+  # A single file name is a sprintf() format, of the page and the format.
+  file <- pdftools::pdf_convert(
+    path, format = "png", pages = page, dpi = 110, verbose = FALSE,
+    filenames = file.path(gsub("%", "%%", dir, fixed = TRUE), "page_%d.%s")
+  )
+  readBin(file, "raw", file.size(file))
+}
+
 # The first lines of a text file, and whether there are more.
 first_lines <- function(path, n) {
   lines <- readLines(path, n = n + 1, warn = FALSE, encoding = "UTF-8")
@@ -238,9 +293,7 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
       shiny::tags$img(class = "tb-preview-image", src = url, alt = basename(path))
     ))
   }
-  if (ext == "pdf") {
-    return(shiny::tags$iframe(class = "tb-preview-document", src = serve_file(path), title = basename(path)))
-  }
+  if (ext == "pdf") return(pdf_view(path))
   if (ext %in% c("html", "htm")) {
     return(shiny::tags$iframe(class = "tb-preview-document", src = serve_html_report(path), title = basename(path)))
   }
