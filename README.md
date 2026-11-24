@@ -10,6 +10,8 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 [![R-CMD-check](https://github.com/Athospd/targetsboard/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Athospd/targetsboard/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/Athospd/targetsboard/graph/badge.svg)](https://app.codecov.io/gh/Athospd/targetsboard)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/targetsboard)](https://CRAN.R-project.org/package=targetsboard)
 <!-- badges: end -->
 
 A board for the author of a
