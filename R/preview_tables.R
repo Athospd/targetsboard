@@ -6,28 +6,38 @@
 # The most rows a data frame's Rows tab sends to the page.
 preview_rows <- 1000
 
-# reactable's look, from the page's own colours.
-preview_table_theme <- function() {
+# reactable's colours, from the page's Bootstrap variables, so a table follows
+# the theme and dark mode. Every table of the page uses them; `...` adds
+# reactableTheme()'s other arguments.
+board_table_theme <- function(..., headerStyle = list()) {
   reactable::reactableTheme(
     color = "var(--bs-body-color)",
     backgroundColor = "transparent",
     borderColor = "var(--bs-border-color-translucent)",
     stripedColor = "var(--bs-tertiary-bg)",
     highlightColor = "var(--bs-secondary-bg)",
-    cellPadding = "0.3rem 0.5rem",
-    style = list(fontSize = "0.8125rem"),
-    headerStyle = list(
-      background = "var(--bs-body-bg)", fontWeight = 600,
+    headerStyle = utils::modifyList(list(
+      background = "var(--bs-body-bg)",
       borderBottomColor = "var(--bs-border-color)"
-    ),
+    ), headerStyle),
     inputStyle = list(
       background = "var(--bs-body-bg)", color = "var(--bs-body-color)",
       borderColor = "var(--bs-border-color)"
     ),
-    paginationStyle = list(fontSize = "0.75rem"),
     pageButtonHoverStyle = list(background = "var(--bs-secondary-bg)"),
     pageButtonActiveStyle = list(background = "var(--bs-tertiary-bg)"),
-    pageButtonCurrentStyle = list(background = "var(--bs-secondary-bg)")
+    pageButtonCurrentStyle = list(background = "var(--bs-secondary-bg)"),
+    ...
+  )
+}
+
+# The value preview's tables: the board's colours, smaller and denser.
+preview_table_theme <- function() {
+  board_table_theme(
+    cellPadding = "0.3rem 0.5rem",
+    style = list(fontSize = "0.8125rem"),
+    headerStyle = list(fontWeight = 600),
+    paginationStyle = list(fontSize = "0.75rem")
   )
 }
 

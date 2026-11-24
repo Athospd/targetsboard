@@ -37,6 +37,13 @@
 .reactflow-wrapper.tb-dark {
   --tb-canvas-bg: #141414;
   --tb-canvas-marks: #777;
+  --tb-focus-ring: #d6c7ea;
+  /* In the app, the page's own dark surfaces; alone, their values. */
+  --tb-surface: var(--bs-tertiary-bg, #2b3035);
+  --tb-surface-text: var(--bs-body-color, #dee2e6);
+  --tb-surface-hover: var(--bs-secondary-bg, #343a40);
+  --tb-surface-border: var(--bs-border-color, #495057);
+  --tb-surface-shadow: rgba(0, 0, 0, 0.5);
 }
 
 /* React Flow draws the canvas from its own variables. */

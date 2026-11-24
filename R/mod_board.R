@@ -91,7 +91,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     # The tabs beside the board. The tables' clicks show a target on it.
     problem_clicked <- problems_server("problems", board, data$tar_meta)
     log_server("log", backend)
-    visnetwork_server("visnetwork", board)
+    visnetwork_server("visnetwork", board, color_mode)
     meta_clicked <- meta_server("meta", data$tar_meta)
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
 

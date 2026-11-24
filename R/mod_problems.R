@@ -44,6 +44,7 @@ problems_server <- function(id, board, tar_meta) {
     output$table <- reactable::renderReactable({
       reactable::reactable(
         problems(),
+        theme = board_table_theme(),
         columns = list(
           name = reactable::colDef(name = "Target", minWidth = 120),
           problem = reactable::colDef(name = "Problem", width = 100),

@@ -21,6 +21,7 @@ meta_server <- function(id, tar_meta) {
       shiny::req(tar_meta())
       reactable::reactable(
         tar_meta(),
+        theme = board_table_theme(),
         wrap = FALSE,
         onClick = row_click_js(session$ns("row_clicked")),
         rowStyle = list(cursor = "pointer")

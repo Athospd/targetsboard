@@ -93,6 +93,12 @@
 
 ## Bug fixes
 
+* Dark mode: the Problems and `tar_meta()` tables use the value preview's
+  colours, so their text no longer sits light on white; the focused target's
+  toolbar and the right-click menu take the page's dark surfaces; the
+  `tar_visnetwork()` tab's labels and legend are light; an error's message is
+  Bootstrap's danger text on its subtle background; and the outline buttons
+  (Refresh, Load, Copy) no longer look disabled.
 * In dark mode, the ring around a target's warning mark is the canvas's
   colour, not the light canvas's beige.
 * Sorting a table in the value preview no longer moves the sorted column's
