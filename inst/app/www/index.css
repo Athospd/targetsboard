@@ -401,3 +401,35 @@ pre.hljs {
   padding: 0.125rem 0 0.125rem 1rem;
   color: var(--bs-secondary-color);
 }
+
+/* A pattern's branch picker, under the facts in the preview's header. */
+.tb-preview-branches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  margin-top: 0.5rem;
+}
+.tb-branch-step {
+  padding: 0 0.5rem;
+  line-height: 1.5;
+}
+.tb-branch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+}
+.tb-branch-number {
+  width: 4.5rem;
+  padding: 0 0.375rem;
+}
+.tb-branch-name {
+  padding: 0;
+  background: none;
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+}
+.tb-branch-all-off {
+  color: var(--bs-secondary-color);
+}

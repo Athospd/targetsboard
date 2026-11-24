@@ -64,6 +64,11 @@ local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", .e
   app
 }
 
+# How long a browser test waits for a value preview, in ms: the first one in
+# a fresh app reads the store and loads packages, which took over
+# shinytest2's default 4 s on a CI runner.
+preview_timeout <- 20000
+
 # JS: whether the value preview shows target `id`'s value, in its frame.
 preview_of <- function(id) {
   sprintf(

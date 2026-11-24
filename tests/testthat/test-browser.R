@@ -33,7 +33,7 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   app$wait_for_value(input = "flow_focused_node")
   expect_equal(app$get_value(input = "flow_focused_node"), "c")
   mouse_event(app, "c", "dblclick")
-  app$wait_for_js(preview_of("c"))
+  app$wait_for_js(preview_of("c"), timeout = preview_timeout)
   expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "4")
   # The page's R code highlighter (www/highlight.js) loaded, with R.
   expect_true(app$get_js("!!window.targetsboardHighlight && !!window.targetsboardHighlight.getLanguage('r')"))
@@ -341,7 +341,7 @@ test_that("double-click, right-click menu and viewport reach the server", {
   expect_equal(app$get_value(input = "flow_double_clicked_node"), "a")
   # It opens the value preview: let its sidebar finish sliding in, which
   # narrows the graph.
-  app$wait_for_js(preview_of("a"))
+  app$wait_for_js(preview_of("a"), timeout = preview_timeout)
   Sys.sleep(1)
 
   # Right-click: reports and focuses the target, and opens its menu.
@@ -518,7 +518,7 @@ test_that("the focused target's toolbar runs the board's actions", {
   )))
 
   app$click(selector = ".tb-node-toolbar [data-action='value']")
-  app$wait_for_js(preview_of("b"))
+  app$wait_for_js(preview_of("b"), timeout = preview_timeout)
   expect_match(app$get_js("document.querySelector('.tb-preview-printed').textContent"), "2")
 
   app$click(selector = ".tb-node-toolbar [data-action='invalidate']")

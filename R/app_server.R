@@ -394,7 +394,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       # errored. Without one, say it plainly.
       no_value <- function() problem_part %||% shiny::p("No value stored for this target yet.")
       store <- targets::tar_config_get("store")
-      target <- preview_target(name, store)
+      target <- preview_target(name, store, branch = branch_choice())
       if (is.null(target)) return(no_value())
       key <- preview_key(target)
       # A large value is read only when asked: it can take long and fill
@@ -405,7 +405,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       built <- previews$get(key)
       if (is.null(built)) {
         missing <- new.env() # a value can be NULL itself
-        value <- tryCatch(suppressWarnings(targets::tar_read_raw(name, store = store)), error = function(e) missing)
+        value <- tryCatch(suppressWarnings(read_preview_value(target, store)), error = function(e) missing)
         if (identical(value, missing)) return(no_value())
         built <- previews$set(key, build_preview(value, target))
       }
@@ -434,9 +434,13 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
       output[[file_output_id(i)]] <- shiny::renderUI(file_section_view(path, files$target))
     }
     shiny::observeEvent(input$value_preview_file_open, render_file_section(input$value_preview_file_open))
+    # A pattern's preview opens on its first branch; the picker changes it.
+    branch_choice <- shiny::reactiveVal(1L)
+    shiny::observeEvent(input$flow_focused_node, branch_choice(1L), priority = 10, ignoreNULL = FALSE)
+    shiny::observeEvent(input$value_preview_branch, branch_choice(as.integer(input$value_preview_branch)))
     read_anyway <- shiny::reactiveVal(character())
     shiny::observeEvent(input$value_preview_read, {
-      target <- preview_target(input$flow_focused_node, targets::tar_config_get("store"))
+      target <- preview_target(input$flow_focused_node, targets::tar_config_get("store"), branch = branch_choice())
       if (!is.null(target)) read_anyway(union(read_anyway(), preview_key(target)))
     })
 

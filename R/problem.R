@@ -24,6 +24,13 @@ target_problem <- function(name, script = targets::tar_config_get("script")) {
     )[names(meta)])
   }
   row <- meta[meta$name == name, ]
+  # A target without a problem needs nothing more: the command and the
+  # branches' positions run the pipeline's script (tar_manifest(),
+  # tar_branches()), which took seconds on every preview.
+  troubled <- !is.na(meta$error) | !is.na(meta$warnings)
+  if (!troubled[meta$name == name][1] && !any(troubled[meta$parent %in% name])) {
+    return(list(name = name, type = row$type, error = NULL, warnings = NULL, branches = list()))
+  }
   workspaces <- tryCatch(targets::tar_workspaces(), error = function(e) character())
   functions <- meta$name[meta$type %in% "function"]
 

@@ -54,7 +54,10 @@ serve_html_report <- function(path) {
 #' @param x The target's value, as [targets::tar_read()] returns it.
 #' @param target What the board knows about the target, from the store: a
 #'   list with `name`, `format`, `bytes` (its size in the store) and `time`
-#'   (when it was built).
+#'   (when it was built). For a pattern, also `pattern`: `branches` (how
+#'   many), `branch` (the one shown, or 0 for all of them combined),
+#'   `branch_name` and `total_bytes`; `bytes`, `format` and `time` are then
+#'   the branch's.
 #' @param ... For future arguments.
 #' @return A view, a named list of views, or `NULL`.
 #' @examples

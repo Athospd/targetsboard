@@ -35,6 +35,13 @@
 * The preview gallery, an example pipeline with one target per kind of view
   (`TAR_PROJECT = "preview_gallery"` in `inst/examples/pipelines`), is built
   and checked by the tests.
+* A pattern previews one branch at a time, as `tar_read(name, branches = i)`
+  reads it, opening on the first, with previous and next and a branch
+  number; "All branches" combines them while their size is under the
+  preview's limit.
+* Opening a value preview no longer runs the pipeline's script, unless the
+  target has a problem to show: it took about 2 s for every target, and
+  4 s for a pattern.
 * The value preview reads a value larger than 100 MB in the store only when
   asked; set the limit with `options(targetsboard.preview_bytes = )`. It shows
   a spinner while it reads, and keeps the last few previews, so going back to
