@@ -135,3 +135,39 @@ test_that("a Markdown file's R blocks are coloured too", {
   expect_match(html, '<pre class="language-r"><code>x &lt;- 1', fixed = TRUE)
   expect_match(html, "<pre><code>plain", fixed = TRUE)
 })
+
+test_that("a Quarto or R Markdown file shows the document it was rendered to, when there is one", {
+  dir <- withr::local_tempdir()
+  qmd <- file.path(dir, "report.qmd")
+  writeLines(c("---", "title: \"Fuel economy\"", "---", "", "```{r}", "1 + 1", "```"), qmd)
+  html <- file.path(dir, "report.html")
+  view <- function(files = qmd) {
+    as.character(tar_board_preview(board_file(qmd), list(name = "f", format = "file", files = files)))
+  }
+
+  # Not rendered: its source, saying so.
+  out <- view()
+  expect_match(out, "Not rendered", fixed = TRUE)
+  expect_match(out, "<h1>Fuel economy</h1>", fixed = TRUE)
+
+  # Rendered next to it: the rendered document, as the target made it.
+  writeLines("<html><body><p>[1] 2</p></body></html>", html)
+  Sys.setFileTime(html, Sys.time() + 60)
+  out <- view()
+  expect_match(out, "Rendered as report.html", fixed = TRUE)
+  expect_match(out, '<iframe class="tb-preview-document" src="report_', fixed = TRUE)
+  expect_no_match(out, "<h1>Fuel economy</h1>", fixed = TRUE)
+  expect_no_match(out, "older than", fixed = TRUE)
+
+  # Rendered before the source last changed: said so.
+  Sys.setFileTime(html, Sys.time() - 3600)
+  expect_match(view(), "older than its source", fixed = TRUE)
+
+  # tar_quarto() and tar_render() return the rendered file too, which has
+  # its own section: the source's section shows the source.
+  # Its paths are relative to the project, the working directory.
+  withr::local_dir(dir)
+  out <- view(files = c("report.html", "report.qmd"))
+  expect_match(out, "<h1>Fuel economy</h1>", fixed = TRUE)
+  expect_match(out, "report.html has its own section", fixed = TRUE)
+})

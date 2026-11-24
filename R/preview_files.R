@@ -158,6 +158,43 @@ markdown_view <- function(lines) {
   shiny::tags$div(class = "tb-preview-markdown", shiny::HTML(html))
 }
 
+#' A Quarto or R Markdown document: what it was rendered to, or its source
+#'
+#' The rendered document is what the target made, with its chunks' output:
+#' the board doesn't render it again. It's the file next to the source with
+#' its name, HTML or else PDF. tar_quarto() and tar_render() return it too,
+#' first: it has its own section then, and the source's shows the source.
+#' @param path The source.
+#' @param target The target, with `files`, its paths, in a file section.
+#' @noRd
+document_view <- function(path, target) {
+  stem <- tools::file_path_sans_ext(path)
+  candidates <- paste0(stem, c(".html", ".pdf"))
+  rendered <- candidates[file.exists(candidates)][1]
+  note <- function(...) shiny::tags$p(class = "tb-table-caption", ...)
+  same_file <- function(a, b) normalizePath(a, winslash = "/", mustWork = FALSE) %in% normalizePath(b, winslash = "/", mustWork = FALSE)
+  if (!is.na(rendered) && !same_file(rendered, target$files %||% character())) {
+    older <- file.mtime(rendered) < file.mtime(path)
+    return(shiny::tagList(
+      note(sprintf("Rendered as %s%s.", basename(rendered), if (older) ", older than its source" else "")),
+      tar_board_preview(board_file(rendered), target)
+    ))
+  }
+  source <- if (file.size(path) < 1e6) {
+    markdown_view(document_markdown(readLines(path, warn = FALSE, encoding = "UTF-8")))
+  } else {
+    text_file_view(path, "r")
+  }
+  shiny::tagList(
+    if (!is.na(rendered)) {
+      note(sprintf("Its source: %s has its own section.", basename(rendered)))
+    } else {
+      note("Not rendered: its source, with its chunks as code.")
+    },
+    source
+  )
+}
+
 #' A Quarto or R Markdown document's lines as plain Markdown
 #'
 #' As the rendered document reads, without running it: the front matter
@@ -215,10 +252,9 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
       rows_view(data)
     ))
   }
-  if (ext %in% c("md", "markdown", "qmd", "rmd") && file.size(path) < 1e6) {
-    lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
-    if (ext %in% c("qmd", "rmd")) lines <- document_markdown(lines)
-    return(markdown_view(lines))
+  if (ext %in% c("qmd", "rmd")) return(document_view(path, target))
+  if (ext %in% c("md", "markdown") && file.size(path) < 1e6) {
+    return(markdown_view(readLines(path, warn = FALSE, encoding = "UTF-8")))
   }
   if (ext %in% c("r", "rmd", "qmd")) return(text_file_view(path, "r"))
   if (ext %in% c("txt", "log", "json", "yaml", "yml", "md", "markdown", "toml", "sql", "py", "sh")) {
