@@ -1,22 +1,34 @@
-#' The script the board draws: the Script field, Load and Refresh
+#' The script the board draws: a bar as a browser's address bar
 #'
-#' Its controls sit in the page's sidebar; while Load loads another script,
+#' Refresh, the script's path, and Load, in the page's top bar. The path is
+#' free text, with the known scripts as suggestions the browser filters as
+#' one types; Enter loads it. While Load loads another script,
 #' script_loading_ui() covers the Board pane.
 #' @param id The module's id.
 #' @param script Path to the targets script.
-#' @param scripts Other scripts the Script field offers.
+#' @param scripts Other scripts the bar suggests.
 #' @noRd
 script_ui <- function(id, script, scripts = NULL) {
   ns <- shiny::NS(id)
-  shiny::tagList(
-    script_input(script, scripts, id = ns("path")),
+  shiny::tags$div(
+    class = "input-group input-group-sm tb-address",
+    shiny::actionButton(
+      ns("refresh"), NULL, icon = shiny::icon("rotate"),
+      class = "btn-outline-secondary", title = "Refresh: read the script again"
+    ),
+    script_input(script, id = ns("path"), suggestions = ns("suggestions"), load = ns("load")),
     # Busy, with a spinner, until the script's graph arrives: loading a
     # pipeline can take a while.
     bslib::input_task_button(
       ns("load"), "Load", icon = shiny::icon("folder-open"), label_busy = "Loading...",
-      type = "default", auto_reset = FALSE
+      type = "outline-secondary", auto_reset = FALSE
     ),
-    shiny::actionButton(ns("refresh"), "Refresh", icon = shiny::icon("rotate"))
+    # The suggestions: in the page from the start, then as the server
+    # updates them.
+    shiny::tags$span(
+      id = ns("suggestions_list"), class = "shiny-html-output", hidden = NA,
+      script_suggestions(ns("suggestions"), script_choices(script, scripts))
+    )
   )
 }
 
@@ -129,17 +141,18 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
       }
     })
 
-    # The Script field names the script the board draws. The poller is shared,
-    # so a tab opened after someone loaded another script, or open while they
-    # did, follows it.
+    # The bar names the script the board draws. The poller is shared, so a
+    # tab opened after someone loaded another script, or open while they
+    # did, follows it. The scripts loaded join the suggestions.
+    known <- shiny::reactiveVal(script_choices(script, scripts))
     shiny::observeEvent(backend$loaded_script(), {
       shown <- backend$loaded_script()
+      known(union(shiny::isolate(known()), shown))
       if (identical(shown, shiny::isolate(input$path))) return()
-      shiny::updateSelectizeInput(
-        session, "path",
-        choices = script_choices(script, c(scripts, shown)), selected = shown
-      )
+      shiny::updateTextInput(session, "path", value = shown)
     })
+    output$suggestions_list <- shiny::renderUI(script_suggestions(session$ns("suggestions"), known()))
+    shiny::outputOptions(output, "suggestions_list", suspendWhenHidden = FALSE)
 
     shiny::observeEvent(input$load, {
       new_script <- input$path
@@ -186,4 +199,10 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
 
     list(board = shiny::reactive(board()), methods = shiny::reactive(methods()))
   })
+}
+
+#' The script bar's suggestions, a datalist of paths
+#' @noRd
+script_suggestions <- function(id, paths) {
+  shiny::tags$datalist(id = id, lapply(paths, function(path) shiny::tags$option(value = path)))
 }

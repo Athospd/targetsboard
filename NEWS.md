@@ -2,6 +2,10 @@
 
 ## New features
 
+* The script the board draws is chosen in a bar at the top of the page, as
+  a browser's address bar: Refresh, the script's path, and Load. The path is
+  free text, as long as it needs, with the known scripts as suggestions
+  filtered as one types; Enter loads it. The sidebar keeps the run controls.
 * The focused target's toolbar has a Copy button, which copies its name,
   quoted as an R string, as "Copy its name" in its right-click menu. A
   selected group's toolbar has none.

@@ -179,22 +179,16 @@ test_that("tar_board() hands the dev, confirm_nodes and preview_bytes options to
   }
 })
 
-test_that("the Script field offers the scripts, with the launch script first and chosen", {
+test_that("the script bar suggests the scripts, with the launch script first and in the field", {
   metadata <- list(nodes = fake_nodes(), edges = fake_edges())
   html <- as.character(app_ui(metadata, "b.R", scripts = c("a.R", "b.R", "c.R")))
-  expect_match(html, 'id="board-script-path"><option', fixed = TRUE)
-  expect_match(html, '<option value="b.R" selected>b.R</option>', fixed = TRUE)
+  # A free text field, in the top bar, as a browser's address bar: Enter loads.
+  expect_match(html, '<input id="board-script-path" type="text" value="b.R"', fixed = TRUE)
+  expect_match(html, 'list="board-script-suggestions" data-tb-enter="board-script-load"', fixed = TRUE)
+  expect_match(html, 'class="navbar[^"]*">.*id="board-script-path"')
   options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
   expect_equal(options, paste0('<option value="', c("b.R", "a.R", "c.R"), '"'))
-  # Only the listed scripts can be chosen: no typed path, no "Add ..." entry.
-  # Typing still filters the list.
-  expect_no_match(html, '"create":true', fixed = TRUE)
-  expect_no_match(html, '"createOnBlur"', fixed = TRUE)
-
-  # Without scripts, the field offers just the launch script, as before.
-  html <- as.character(app_ui(metadata, "_targets.R"))
-  options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
-  expect_equal(options, '<option value="_targets.R"')
+  expect_error(app_ui(metadata, "b.R", scripts = 1), "must be a character vector")
 })
 
 test_that("script_choices() puts the launch script first, once", {

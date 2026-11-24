@@ -15,6 +15,9 @@
 //     list just before it, and goes when none is left.
 //   data-copy="text", on a button: copies the text. A .tb-copy-code button
 //     shows a check for a moment (index.css); another says "Copied".
+//   data-tb-enter="id", on a text input: Enter clicks button `id`, as in a
+//     browser's address bar. The input's text goes first: Shiny sends a
+//     text input's value only after a pause in typing.
 
 const FEEDBACK_MS = 1500;
 
@@ -93,3 +96,11 @@ document.addEventListener('toggle', (event) => {
   window.Shiny?.bindAll?.(details);
   send(details.dataset.tbInput, JSON.parse(details.dataset.tbValue));
 }, true);
+
+document.addEventListener('keydown', (event) => {
+  const input = event.target;
+  if (event.key !== 'Enter' || !input.matches?.('input[data-tb-enter]')) return;
+  event.preventDefault();
+  window.Shiny?.setInputValue?.(input.id, input.value);
+  document.getElementById(input.dataset.tbEnter)?.click();
+});

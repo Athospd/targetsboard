@@ -140,7 +140,7 @@ test_that("the Load spinner covers the board only while Load loads, not at the s
 
   # Load a slow script: the spinner covers the pane, captioned, and takes the
   # click; then it goes once the new graph is drawn.
-  app$run_js("const s = $('#board-script-path')[0].selectize; s.setValue('slow.R'); s.blur();")
+  app$set_inputs(`board-script-path` = "slow.R")
   app$click(selector = "#board-script-load")
   app$wait_for_js(paste(
     "getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display !== 'none'",
@@ -294,7 +294,7 @@ test_that("the focused target's toolbar runs the board's actions", {
   app$wait_for_js(paste(toolbar, "=== null"))
 })
 
-test_that("the Script field filters the scripts as one types, and Load switches to one", {
+test_that("the script bar takes a typed path, Enter or Load loads it, and other tabs follow", {
   skip_on_cran()
   skip_if_not_installed("shinytest2")
   skip_if_not_installed("chromote")
@@ -303,31 +303,32 @@ test_that("the Script field filters the scripts as one types, and Load switches 
   dir <- withr::local_tempdir()
   writeLines(c("library(targets)", "list(tar_target(a, 1), tar_target(b, a))"), file.path(dir, "_targets.R"))
   writeLines(c("library(targets)", "list(tar_target(x, 1))"), file.path(dir, "other.R"))
-  writeLines(c("library(targets)", "list(tar_target(y, 1))"), file.path(dir, "third.R"))
-  writeLines(
-    "targetsboard::tar_board_app(scripts = c('other.R', 'third.R'))",
-    file.path(dir, "app.R")
-  )
+  dir.create(file.path(dir, "pipelines"))
+  writeLines(c("library(targets)", "list(tar_target(y, 1))"), file.path(dir, "pipelines", "not_suggested.R"))
+  writeLines("targetsboard::tar_board_app(scripts = 'other.R')", file.path(dir, "app.R"))
   app <- new_app_driver(dir, name = "scripts", load_timeout = 60 * 1000)
   withr::defer(app$stop())
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 30 * 1000)
   expect_equal(app$get_value(input = "board-script-path"), "_targets.R")
+  suggestions <- "Array.from(document.querySelectorAll('#board-script-suggestions option')).map(o => o.value)"
+  expect_equal(unlist(app$get_js(suggestions)), c("_targets.R", "other.R"))
 
-  # Typing filters the dropdown to the matching scripts.
-  app$run_js("const s = $('#board-script-path')[0].selectize; s.focus(); s.setTextboxValue('oth'); s.refreshOptions(true);")
-  app$wait_for_js("document.querySelector('.selectize-dropdown-content .option') !== null")
-  shown <- app$get_js(
-    "Array.from(document.querySelectorAll('.selectize-dropdown-content .option')).map(o => o.dataset.value)"
-  )
-  expect_equal(unlist(shown), "other.R")
-
-  # Choosing it and pressing Load draws its pipeline.
-  app$run_js("const s = $('#board-script-path')[0].selectize; s.setValue('other.R'); s.blur();")
-  app$click("board-script-load")
-  app$wait_for_js(
-    "document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000
-  )
+  # A path typed as a person would, not among the suggestions, and Enter.
+  chrome <- app$get_chromote_session()
+  app$run_js("const i = document.getElementById('board-script-path'); i.focus(); i.select();")
+  chrome$Input$insertText(text = "pipelines/not_suggested.R")
+  for (type in c("rawKeyDown", "keyUp")) {
+    chrome$Input$dispatchKeyEvent(type = type, key = "Enter", code = "Enter", windowsVirtualKeyCode = 13)
+  }
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='y']\") !== null", timeout = 30 * 1000)
   expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 1)
+  # Loaded, it joins the suggestions.
+  app$wait_for_js(paste0(suggestions, ".includes('pipelines/not_suggested.R')"))
+
+  # A suggestion, and the Load button.
+  app$set_inputs(`board-script-path` = "other.R")
+  app$click("board-script-load")
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='x']\") !== null", timeout = 30 * 1000)
 
   # A tab opened afterwards names the script it draws, not the launch script.
   second <- new_app_driver(app$get_url(), name = "scripts-second", load_timeout = 60 * 1000)

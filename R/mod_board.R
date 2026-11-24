@@ -1,6 +1,7 @@
 #' A board: one pipeline's controls, graph and tabs
 #'
-#' board_sidebar_ui() holds its controls, for the page's sidebar; board_ui()
+#' board_address_ui() holds its script bar, for the page's top bar;
+#' board_sidebar_ui() its run controls, for the page's sidebar; board_ui()
 #' its card of tabs: Board, the graph with the value preview beside it;
 #' Problems, what errored or warned, with a count in its title; Log, the
 #' output of the board's latest run; tar_visnetwork(), the graph as that
@@ -9,15 +10,15 @@
 #' is its snake_case id.
 #' @param id The module's id.
 #' @param script Path to the targets script.
-#' @param scripts Other scripts the Script field offers.
+#' @param scripts Other scripts the script bar suggests.
 #' @noRd
-board_sidebar_ui <- function(id, script, scripts = NULL) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    script_ui(ns("script"), script, scripts),
-    shiny::tags$hr(),
-    run_ui(ns("run"))
-  )
+board_address_ui <- function(id, script, scripts = NULL) {
+  script_ui(shiny::NS(id, "script"), script, scripts)
+}
+
+#' @noRd
+board_sidebar_ui <- function(id) {
+  run_ui(shiny::NS(id, "run"))
 }
 
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
@@ -58,6 +59,7 @@ board_ui <- function(id, metadata, layout = NULL) {
 }
 
 #' @param backend The board's backend (board_backend()).
+#' @param scripts Other scripts the script bar suggests.
 #' @param targets_only Whether the graph shows only targets.
 #' @param color_mode Reactive: `"light"` or `"dark"`, the page's mode.
 #' @return A list of reactives: `focused`, the target focused on its graph.

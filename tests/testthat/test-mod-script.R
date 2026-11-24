@@ -47,7 +47,8 @@ test_that("Refresh loads the preview methods again", {
 })
 
 test_that("its ids are in its namespace", {
-  html <- as.character(script_ui("script", "_targets.R"))
+  html <- as.character(script_ui("script", "_targets.R", "other.R"))
+  expect_match(html, 'id="script-suggestions"', fixed = TRUE)
   expect_match(html, 'id="script-path"', fixed = TRUE)
   expect_match(html, 'id="script-load"', fixed = TRUE)
   expect_match(html, 'id="script-refresh"', fixed = TRUE)

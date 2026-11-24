@@ -14,14 +14,14 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
   shiny::tagList(
     add_external_resources(),
     page_sidebar(
-      title = chrome_ui("chrome"),
+      title = chrome_ui("chrome", board_address_ui("board", script, scripts)),
       # Pinned: the board's CSS is written for Bootstrap 5, whatever bslib's
       # default becomes.
       theme = bslib::bs_theme(version = 5),
       fillable = TRUE,
       sidebar = sidebar(
         title = "Control Panel",
-        board_sidebar_ui("board", script, scripts)
+        board_sidebar_ui("board")
       ),
       board_ui("board", metadata, layout)
     )
@@ -65,18 +65,22 @@ run_mode_switches <- function(supported = run_modes_supported(), ns = identity) 
   )
 }
 
-#' The Script field: a dropdown of the launch script and `scripts`, filtered
-#' as one types. Only those can be chosen: no path of one's own.
+#' The script bar's path: free text, as a browser's address bar. `list`
+#' names the datalist of suggestions, which the browser filters as one
+#' types; Enter clicks `load` (data-tb-enter, srcjs/actions.js). A text
+#' input Shiny binds by its class.
 #' @noRd
-script_input <- function(script, scripts = NULL, id = "script") {
-  shiny::selectizeInput(
-    id, "Script",
-    choices = script_choices(script, scripts), selected = script,
-    options = list(placeholder = "Choose a targets script")
+script_input <- function(script, id = "script", suggestions = NULL, load = NULL) {
+  shiny::tags$input(
+    id = id, type = "text", value = script,
+    class = "form-control shiny-input-text tb-address-path",
+    placeholder = "Path to a targets script", `aria-label` = "Script",
+    spellcheck = "false", autocomplete = "off",
+    list = suggestions, `data-tb-enter` = load
   )
 }
 
-#' The scripts the Script field offers: the launch script first, then the
+#' The scripts the script bar suggests: the launch script first, then the
 #' others, each once.
 #' @noRd
 script_choices <- function(script, scripts = NULL) {
