@@ -194,14 +194,8 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
         error = function(e) NULL
       ))
       show_problem <- if (length(errored)) {
-        shiny::tags$a(
-          href = "#", class = "tb-show-problem ms-1",
-          onclick = sprintf(
-            "Shiny.setInputValue('show_problem', %s, {priority: 'event'}); return false;",
-            jsonlite::toJSON(errored[1], auto_unbox = TRUE)
-          ),
-          "Show problem"
-        )
+        shiny::tags$a(href = "#", class = "tb-show-problem ms-1", "Show problem") |>
+          send_on_click("show_problem", errored[1])
       }
       if (isTRUE(runner$stopped)) {
         shiny::showNotification("Run stopped.", type = "warning")

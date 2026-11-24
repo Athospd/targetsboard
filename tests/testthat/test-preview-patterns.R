@@ -39,9 +39,13 @@ test_that("the branch picker steps through branches, and offers all while small"
   pattern <- list(branches = 20L, branch = 1L, branch_name = "boot_abc", total_bytes = 1000)
   html <- as.character(branch_picker(pattern, limit = 1e6))
   expect_match(html, 'aria-label="Previous branch" disabled', fixed = TRUE)
-  expect_match(html, "Shiny.setInputValue(&#39;value_preview_branch&#39;, 2,", fixed = TRUE)
+  # Each step sends its branch (srcjs/actions.js), the number field too.
+  expect_match(html, 'aria-label="Next branch" data-tb-input="value_preview_branch" data-tb-value="2"', fixed = TRUE)
   # Previous, at the first branch, stays on it: 0 would ask for all.
-  expect_match(html, 'aria-label="Previous branch" disabled onclick="[^"]*branch&#39;, 1,')
+  expect_match(html, 'aria-label="Previous branch" disabled data-tb-input="value_preview_branch" data-tb-value="1"', fixed = TRUE)
+  expect_match(html, 'aria-label="Branch number" data-tb-input="value_preview_branch"', fixed = TRUE)
+  expect_match(html, 'class="btn btn-link btn-sm p-0 tb-branch-all" data-tb-input="value_preview_branch" data-tb-value="0"', fixed = TRUE)
+  expect_no_match(html, "onclick", fixed = TRUE)
   # The steps are Font Awesome's chevrons, from shiny::icon().
   expect_match(html, 'aria-label="Previous branch"[^>]*>[[:space:]]*<i class="[^"]*fa-chevron-left"')
   expect_match(html, 'aria-label="Next branch"[^>]*>[[:space:]]*<i class="[^"]*fa-chevron-right"')

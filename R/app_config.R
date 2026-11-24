@@ -23,6 +23,8 @@ add_external_resources <- function() {
     # Colours R code (srcjs/highlight.js): highlight.js, BSD-3, see
     # www/highlight.js.LICENSE.
     shiny::tags$script(src = "www/highlight.js", defer = NA),
+    # What the board's buttons and links do (srcjs/actions.js).
+    shiny::tags$script(src = "www/actions.js", defer = NA),
     # PDFs where the browser has no PDF viewer (srcjs/preview.js).
     shiny::tags$script(src = "www/preview.js", defer = NA)
   )

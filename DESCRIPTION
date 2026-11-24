@@ -46,6 +46,6 @@ Suggests:
     withr
 Config/testthat/edition: 3
 Config/testthat/parallel: true
-Config/testthat/start-first: browser-board, browser-layout, browser-widget,
+Config/testthat/start-first: browser-board, browser-preview, browser-layout, browser-widget,
     browser-selection, server, problem, poller
 Config/roxygen2/version: 8.1.1

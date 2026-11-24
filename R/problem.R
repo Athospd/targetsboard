@@ -220,13 +220,9 @@ problem_ui <- function(problem, inputs = character(), running = FALSE, script = 
         shiny::tags$span("Inputs: "),
         lapply(inputs, function(id) {
           shiny::tags$button(
-            class = "tb-input-link btn btn-link btn-sm p-0 me-2", `data-target` = id,
-            onclick = sprintf(
-              "Shiny.setInputValue('meta_row_clicked', %s, {priority: 'event'})",
-              jsonlite::toJSON(id, auto_unbox = TRUE)
-            ),
-            id
-          )
+            type = "button", class = "tb-input-link btn btn-link btn-sm p-0 me-2", `data-target` = id, id
+          ) |>
+            send_on_click("meta_row_clicked", id)
         })
       )
     },
@@ -312,39 +308,22 @@ debug_run_block <- function(name, running, script, run = name, store = NULL, dir
   code_block("Debug run", "debug_run", debug_run_code(name, script, run, store = store, dir = dir))
 }
 
-# Copies the button's code, then says so for a moment (or that it couldn't:
-# the clipboard needs a secure page, which localhost is).
-copy_button_js <- paste(
-  "const b = this;",
-  "const say = t => { b.textContent = t; clearTimeout(b._tb); b._tb = setTimeout(() => b.textContent = 'Copy', 1500); };",
-  "if (!navigator.clipboard) { say('Copy failed'); return; }",
-  "navigator.clipboard.writeText(b.dataset.copy).then(() => say('Copied'), () => say('Copy failed'));"
-)
-
 #' A button that shows the code it copies, with a copy icon
 #'
 #' As GitHub's for a branch's name: once copied, a check takes the icon's
-#' place for a moment; if it couldn't be, its title says so.
+#' place for a moment; if it couldn't be, its title says so
+#' (srcjs/actions.js copies any button with `data-copy`).
 #' @param code The code.
 #' @noRd
 copy_code_button <- function(code) {
   shiny::tags$button(
     class = "tb-copy-code", type = "button", `data-copy` = code, title = code,
-    `aria-label` = paste("Copy", code), onclick = copy_code_js,
+    `aria-label` = paste("Copy", code),
     shiny::tags$code(code),
     shiny::icon("copy", class = "tb-copy-icon"),
     shiny::icon("check", class = "tb-copied-icon")
   )
 }
-
-copy_code_js <- paste(
-  "const b = this;",
-  "const done = c => { b.classList.remove('tb-copied', 'tb-copy-failed'); b.classList.add(c);",
-  " b.title = c === 'tb-copied' ? 'Copied' : 'Copy failed';",
-  " clearTimeout(b._tb); b._tb = setTimeout(() => { b.classList.remove(c); b.title = b.dataset.copy; }, 1500); };",
-  "if (!navigator.clipboard) { done('tb-copy-failed'); return; }",
-  "navigator.clipboard.writeText(b.dataset.copy).then(() => done('tb-copied'), () => done('tb-copy-failed'));"
-)
 
 # R code to copy into the console, shown in full.
 code_block <- function(title, kind, code) {
@@ -353,11 +332,8 @@ code_block <- function(title, kind, code) {
     shiny::tags$div(
       class = "d-flex justify-content-between align-items-center",
       shiny::tags$span(class = "text-muted", title),
-      shiny::tags$button(
-        class = "btn btn-sm btn-outline-secondary tb-copy", `data-copy` = code,
-        onclick = copy_button_js,
-        "Copy"
-      )
+      # Copied, it says so for a moment (srcjs/actions.js).
+      shiny::tags$button(type = "button", class = "btn btn-sm btn-outline-secondary tb-copy", `data-copy` = code, "Copy")
     ),
     # Text alone in <pre>: a nested tag would indent the first line.
     shiny::tags$pre(class = "language-r", code)

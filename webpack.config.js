@@ -6,14 +6,16 @@ var path = require('path');
 const outputs = {
     targetsboard: 'htmlwidgets/targetsboard.js',
     highlight: 'app/www/highlight.js',
-    preview: 'app/www/preview.js'
+    preview: 'app/www/preview.js',
+    actions: 'app/www/actions.js'
 };
 
 module.exports = (env, argv) => ({
     entry: {
         targetsboard: path.join(__dirname, 'srcjs', 'targetsboard.jsx'),
         highlight: path.join(__dirname, 'srcjs', 'highlight.js'),
-        preview: path.join(__dirname, 'srcjs', 'preview.js')
+        preview: path.join(__dirname, 'srcjs', 'preview.js'),
+        actions: path.join(__dirname, 'srcjs', 'actions.js')
     },
     output: {
         path: path.join(__dirname, 'inst'),
