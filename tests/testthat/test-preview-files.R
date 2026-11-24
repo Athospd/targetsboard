@@ -100,3 +100,23 @@ test_that("the board builds a file's view when its section opens", {
     expect_match(output$value_preview_file_3$html, "x &lt;- 3", fixed = TRUE)
   })
 })
+
+test_that("a CSV or TSV file's line gives its rows and columns, not its size and time again", {
+  dir <- withr::local_tempdir()
+  csv <- file.path(dir, "table.csv")
+  utils::write.csv(data.frame(x = 1:1500, y = "a", z = TRUE), csv, row.names = FALSE)
+  tsv <- file.path(dir, "small.tsv")
+  writeLines(c("a\tb", "1\t2"), tsv) # one row
+  target <- list(name = "f", format = "file")
+
+  html <- as.character(file_section_view(csv, target))
+  expect_match(html, "<span>1,500 rows x 3 columns</span>", fixed = TRUE)
+  expect_no_match(html, "modified", fixed = TRUE)
+  expect_no_match(html, "KB", fixed = TRUE)
+  expect_match(as.character(file_section_view(tsv, target)), "<span>1 row x 2 columns</span>", fixed = TRUE)
+
+  # Other files keep their size and time.
+  log <- file.path(dir, "run.log")
+  writeLines("done", log)
+  expect_match(as.character(file_section_view(log, target)), "modified ", fixed = TRUE)
+})

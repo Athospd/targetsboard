@@ -100,11 +100,45 @@ file_section_view <- function(path, target) {
 
 file_facts <- function(path) {
   info <- file.info(path)
-  shiny::tags$div(
-    class = "tb-file-facts",
-    shiny::tags$code(path),
-    if (!isTRUE(info$isdir)) shiny::tags$span(format_bytes(info$size)),
-    shiny::tags$span(paste("modified", format(info$mtime, "%Y-%m-%d %H:%M")))
+  # A table's size and time are in the frame's header already: its shape
+  # isn't.
+  facts <- if (tolower(tools::file_ext(path)) %in% c("csv", "tsv") && !isTRUE(info$isdir)) {
+    list(shiny::tags$span(table_file_shape(path)))
+  } else {
+    list(
+      if (!isTRUE(info$isdir)) shiny::tags$span(format_bytes(info$size)),
+      shiny::tags$span(paste("modified", format(info$mtime, "%Y-%m-%d %H:%M")))
+    )
+  }
+  shiny::tags$div(class = "tb-file-facts", shiny::tags$code(path), facts)
+}
+
+#' A CSV or TSV file's rows and columns, as "1,500 rows x 3 columns"
+#'
+#' Rows are its lines after the header, counted in chunks without reading the
+#' table; a quoted field that spans lines counts as more than one.
+#' @param path The file.
+#' @noRd
+table_file_shape <- function(path) {
+  sep <- if (tolower(tools::file_ext(path)) == "tsv") "	" else ","
+  header <- readLines(path, n = 1, warn = FALSE, encoding = "UTF-8")
+  columns <- if (length(header)) length(utils::read.table(text = header, sep = sep, quote = "\"", comment.char = "")) else 0
+  con <- file(path, "rb")
+  on.exit(close(con))
+  lines <- 0
+  last <- as.raw(10)
+  repeat {
+    chunk <- readBin(con, "raw", 1048576)
+    if (!length(chunk)) break
+    lines <- lines + sum(chunk == as.raw(10))
+    last <- chunk[length(chunk)]
+  }
+  if (last != as.raw(10)) lines <- lines + 1 # no line break at the end
+  rows <- max(lines - 1, 0)
+  sprintf(
+    "%s %s x %s %s",
+    format(rows, big.mark = ","), if (rows == 1) "row" else "rows",
+    format(columns, big.mark = ","), if (columns == 1) "column" else "columns"
   )
 }
 
