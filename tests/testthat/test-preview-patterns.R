@@ -42,6 +42,9 @@ test_that("the branch picker steps through branches, and offers all while small"
   expect_match(html, "Shiny.setInputValue(&#39;value_preview_branch&#39;, 2,", fixed = TRUE)
   # Previous, at the first branch, stays on it: 0 would ask for all.
   expect_match(html, 'aria-label="Previous branch" disabled onclick="[^"]*branch&#39;, 1,')
+  # The steps are Font Awesome's chevrons, from shiny::icon().
+  expect_match(html, 'aria-label="Previous branch"[^>]*>[[:space:]]*<i class="[^"]*fa-chevron-left"')
+  expect_match(html, 'aria-label="Next branch"[^>]*>[[:space:]]*<i class="[^"]*fa-chevron-right"')
   expect_match(html, 'max="20" value="1"', fixed = TRUE)
   expect_match(html, "of 20", fixed = TRUE)
   expect_match(html, "All branches</button>", fixed = TRUE)

@@ -105,7 +105,7 @@ test_that("the preview cache keeps the last few builds, by target and build", {
   expect_false(identical(preview_key(t1), preview_key(t2)))
 })
 
-test_that("the frame shows the target's facts, a Copy for tar_read(), and full-screen", {
+test_that("the frame shows the target's facts, its tar_read() to copy, and full-screen", {
   target <- list(name = "fit", format = "rds", bytes = 2500000, time = as.POSIXct("2026-11-23 14:05", tz = ""))
   built <- build_preview(1:3, target)
   html <- as.character(preview_frame(target, built, store = "my_store"))
@@ -114,6 +114,16 @@ test_that("the frame shows the target's facts, a Copy for tar_read(), and full-s
     expect_match(html, paste0("<span>", fact, "</span>"), fixed = TRUE)
   }
   expect_match(html, 'data-copy="targets::tar_read(fit, store = &quot;my_store&quot;)"', fixed = TRUE)
+  # The button shows the code it copies, with a copy icon, as GitHub's for
+  # a branch's name: a check takes the icon's place once it's copied.
+  button <- regmatches(html, regexpr('<button class="tb-copy-code"[^>]*>.*?</button>', html))
+  expect_length(button, 1)
+  expect_match(button, '<code>targets::tar_read(fit, store = "my_store")</code>', fixed = TRUE)
+  expect_match(button, 'aria-label="Copy targets::tar_read(fit', fixed = TRUE)
+  # Font Awesome's, from shiny::icon().
+  expect_match(button, '<i class="[^"]*fa-copy tb-copy-icon"')
+  expect_match(button, '<i class="[^"]*fa-check tb-copied-icon"')
+  expect_no_match(button, ">Copy<", fixed = TRUE)
   expect_match(html, "bslib-full-screen-enter", fixed = TRUE)
   expect_match(html, ">Printed<", fixed = TRUE)
 })
