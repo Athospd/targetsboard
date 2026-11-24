@@ -15,6 +15,14 @@
 //     list just before it, and goes when none is left.
 //   data-copy="text", on a button: copies the text. A .tb-copy-code button
 //     shows a check for a moment (index.css); another says "Copied".
+//   data-tb-enter="id", on a text input: Enter clicks button `id`, as in a
+//     browser's address bar. The input's text goes first: Shiny sends a
+//     text input's value only after a pause in typing.
+//   data-tb-suggest="id", on a text input: a list under it of the <option>s
+//     of <datalist id>. Focused, it shows them all; typing filters them.
+//     Arrow keys and Enter, or a click, pick one, which then goes as Enter
+//     does. A browser's own datalist shows only the options matching the
+//     text already there: none, with a whole path in the field.
 
 const FEEDBACK_MS = 1500;
 
@@ -93,3 +101,102 @@ document.addEventListener('toggle', (event) => {
   window.Shiny?.bindAll?.(details);
   send(details.dataset.tbInput, JSON.parse(details.dataset.tbValue));
 }, true);
+
+// The suggestions: one list at a time, for the focused input.
+function suggestions(input) {
+  const list = document.getElementById(input.dataset.tbSuggest);
+  return list ? Array.from(list.options, (o) => o.value) : [];
+}
+
+function closeSuggestions(input) {
+  input._tbSuggest?.remove();
+  input._tbSuggest = null;
+  input.setAttribute('aria-expanded', 'false');
+}
+
+// `filter`: only those containing the typed text, case aside.
+function showSuggestions(input, filter) {
+  const text = filter ? input.value.toLowerCase() : '';
+  const paths = suggestions(input).filter((p) => p.toLowerCase().includes(text));
+  closeSuggestions(input);
+  if (paths.length === 0) return;
+  const menu = document.createElement('ul');
+  menu.className = 'tb-suggestions list-unstyled';
+  menu.setAttribute('role', 'listbox');
+  paths.forEach((path) => {
+    const item = document.createElement('li');
+    item.className = 'tb-suggestion';
+    item.setAttribute('role', 'option');
+    item.textContent = path;
+    item.title = path; // the whole path, when it is cut short
+    item.dataset.value = path;
+    if (path === input.value) item.classList.add('tb-current');
+    menu.appendChild(item);
+  });
+  // Keep the focus in the input; the click picks.
+  menu.addEventListener('mousedown', (event) => event.preventDefault());
+  menu.addEventListener('click', (event) => {
+    const item = event.target.closest('.tb-suggestion');
+    if (item) pick(input, item.dataset.value);
+  });
+  input.closest('.input-group')?.appendChild(menu) ?? input.after(menu);
+  input._tbSuggest = menu;
+  input.setAttribute('aria-expanded', 'true');
+}
+
+function pick(input, value) {
+  input.value = value;
+  closeSuggestions(input);
+  window.Shiny?.setInputValue?.(input.id, value);
+  if (input.dataset.tbEnter) document.getElementById(input.dataset.tbEnter)?.click();
+}
+
+function moveActive(menu, step) {
+  const items = Array.from(menu.children);
+  const at = items.findIndex((i) => i.classList.contains('tb-active'));
+  const next = at < 0 ? (step > 0 ? 0 : items.length - 1) : (at + step + items.length) % items.length;
+  items[at]?.classList.remove('tb-active');
+  items[next].classList.add('tb-active');
+  items[next].scrollIntoView({ block: 'nearest' });
+}
+
+const SUGGEST = 'input[data-tb-suggest]';
+document.addEventListener('focusin', (event) => {
+  if (event.target.matches?.(SUGGEST)) showSuggestions(event.target, false);
+});
+document.addEventListener('focusout', (event) => {
+  if (event.target.matches?.(SUGGEST)) closeSuggestions(event.target);
+});
+document.addEventListener('input', (event) => {
+  if (event.target.matches?.(SUGGEST)) showSuggestions(event.target, true);
+});
+// A click on the focused input opens a list closed by Escape or a pick.
+document.addEventListener('click', (event) => {
+  const input = event.target;
+  if (input.matches?.(SUGGEST) && !input._tbSuggest) showSuggestions(input, false);
+});
+// Before the Enter listener below: Enter on a highlighted suggestion picks it.
+document.addEventListener('keydown', (event) => {
+  const input = event.target;
+  if (!input.matches?.(SUGGEST)) return;
+  const menu = input._tbSuggest;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (!menu) showSuggestions(input, false);
+    if (input._tbSuggest) moveActive(input._tbSuggest, event.key === 'ArrowDown' ? 1 : -1);
+  } else if (event.key === 'Escape') {
+    closeSuggestions(input);
+  } else if (event.key === 'Enter') {
+    const active = menu?.querySelector('.tb-active');
+    if (active) input.value = active.dataset.value;
+    closeSuggestions(input);
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  const input = event.target;
+  if (event.key !== 'Enter' || !input.matches?.('input[data-tb-enter]')) return;
+  event.preventDefault();
+  window.Shiny?.setInputValue?.(input.id, input.value);
+  document.getElementById(input.dataset.tbEnter)?.click();
+});

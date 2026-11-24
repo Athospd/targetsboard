@@ -2,7 +2,8 @@
 #'
 #' The top bar (chrome_ui()) holds only the title, the dark mode switch and
 #' the power button, which turns the board off. The sidebar holds the board's
-#' controls, and the page its card of tabs (board_ui()).
+#' run controls, and the page the board: its script bar above its card of
+#' tabs (board_ui()).
 #'
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
@@ -21,9 +22,9 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
       fillable = TRUE,
       sidebar = sidebar(
         title = "Control Panel",
-        board_sidebar_ui("board", script, scripts)
+        board_sidebar_ui("board")
       ),
-      board_ui("board", metadata, layout)
+      board_ui("board", metadata, script, scripts, layout)
     )
   )
 }
@@ -65,18 +66,24 @@ run_mode_switches <- function(supported = run_modes_supported(), ns = identity) 
   )
 }
 
-#' The Script field: a dropdown of the launch script and `scripts`, filtered
-#' as one types. Only those can be chosen: no path of one's own.
+#' The script bar's path: free text, as a browser's address bar.
+#' `suggestions` names the datalist of suggestions, which a list under the
+#' field shows, all of them when it gets the focus, filtered as one types
+#' (data-tb-suggest); Enter clicks `load` (data-tb-enter, srcjs/actions.js).
+#' A text input Shiny binds by its class.
 #' @noRd
-script_input <- function(script, scripts = NULL, id = "script") {
-  shiny::selectizeInput(
-    id, "Script",
-    choices = script_choices(script, scripts), selected = script,
-    options = list(placeholder = "Choose a targets script")
+script_input <- function(script, id = "script", suggestions = NULL, load = NULL) {
+  shiny::tags$input(
+    id = id, type = "text", value = script,
+    class = "form-control shiny-input-text tb-address-path",
+    placeholder = "Path to a targets script", `aria-label` = "Script",
+    spellcheck = "false", autocomplete = "off",
+    `data-tb-suggest` = suggestions, `data-tb-enter` = load,
+    role = "combobox", `aria-autocomplete` = "list", `aria-expanded` = "false"
   )
 }
 
-#' The scripts the Script field offers: the launch script first, then the
+#' The scripts the script bar suggests: the launch script first, then the
 #' others, each once.
 #' @noRd
 script_choices <- function(script, scripts = NULL) {
