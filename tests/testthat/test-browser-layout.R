@@ -220,3 +220,22 @@ test_that("loading another pipeline lays it out afresh and fits the view to it",
   expect_gt(node_position(app, "y")[["x"]], node_position(app, "x")[["x"]])
   expect_fitted(app)
 })
+
+test_that("in a narrow window the board fits, on every tab (#125)", {
+  dir <- local_pipeline()
+  # Wide enough for the sidebar to stay open beside the board, too narrow
+  # for bslib's 576px minimum next to it.
+  app <- local_board_app(dir, "narrow", width = 700, height = 800)
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length > 0")
+  expect_false(app$get_js("document.querySelector('.bslib-sidebar-layout').classList.contains('sidebar-collapsed')"))
+  fits <- paste(
+    "(() => { const vw = document.documentElement.clientWidth;",
+    "return document.documentElement.scrollWidth <= vw &&",
+    "document.querySelector('.bslib-card').getBoundingClientRect().right <= vw + 1; })()"
+  )
+  tabs <- unlist(app$get_js("[...document.querySelectorAll('#board-view .nav-link')].map(a => a.dataset.value)"))
+  for (tab in tabs) {
+    app$set_inputs(`board-view` = tab)
+    expect_true(app$get_js(fits), label = tab)
+  }
+})
