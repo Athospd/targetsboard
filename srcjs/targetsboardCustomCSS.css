@@ -26,6 +26,11 @@
   --tb-status-running: var(--tb-theme-status-running, #d49536);
   --tb-status-running-text: var(--tb-theme-status-running-text, #3f2f11);
   --tb-spinner: var(--tb-theme-spinner, #fff); /* on a running target */
+  /* A status's outline: by default the node's, below. */
+  --tb-status-uptodate-border: var(--tb-theme-status-uptodate-border, var(--tb-node-border));
+  --tb-status-outdated-border: var(--tb-theme-status-outdated-border, var(--tb-node-border));
+  --tb-status-errored-border: var(--tb-theme-status-errored-border, var(--tb-node-border));
+  --tb-status-running-border: var(--tb-theme-status-running-border, var(--tb-node-border));
   /* A target's outline and its handles, where edges meet it. */
   --tb-node-border: var(--tb-theme-node-border, #1a192b);
   /* A selected target: its outline and a tint over its status's fill, by
@@ -133,10 +138,10 @@
 }
 
 /* A target's colours, by status. */
-.base-node.tb-status-uptodate { background-color: var(--tb-status-uptodate); color: var(--tb-status-uptodate-text); }
-.base-node.tb-status-outdated { background-color: var(--tb-status-outdated); color: var(--tb-status-outdated-text); }
-.base-node.tb-status-errored { background-color: var(--tb-status-errored); color: var(--tb-status-errored-text); }
-.base-node.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); }
+.base-node.tb-status-uptodate { background-color: var(--tb-status-uptodate); color: var(--tb-status-uptodate-text); border-color: var(--tb-status-uptodate-border); }
+.base-node.tb-status-outdated { background-color: var(--tb-status-outdated); color: var(--tb-status-outdated-text); border-color: var(--tb-status-outdated-border); }
+.base-node.tb-status-errored { background-color: var(--tb-status-errored); color: var(--tb-status-errored-text); border-color: var(--tb-status-errored-border); }
+.base-node.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); border-color: var(--tb-status-running-border); }
 
 .base-node {
   padding: 0.625rem;

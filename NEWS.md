@@ -10,6 +10,10 @@
   colours, and a dark one keeps the page in dark mode and hides the switch.
   Four editor themes, Catppuccin, Tokyo Night, Nord and Gruvbox, bring their
   own palettes, light and dark, to the page and the canvas.
+  A theme other than "Targets board" colours the whole canvas from its own
+  colours: the targets by status (its success, info, danger and warning),
+  their outlines and labels, edges and running edges, the focus ring and
+  selection, and the zoom controls, checked for contrast in both modes.
 * The script the board draws is chosen in a bar above the board's tabs, as
   a browser's address bar: Refresh, the script's path, and Load. The path is
   free text. Focused, it lists the known scripts, filtered as one types;
