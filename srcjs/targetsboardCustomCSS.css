@@ -282,6 +282,62 @@
   background: var(--tb-surface-hover);
 }
 
+/* The status legend (StatusLegend.js): a surface as the Tidy buttons', its
+   swatches in the nodes' own status colours. */
+.tb-legend {
+  min-width: 9.5rem;
+  border: 1px solid var(--tb-surface-border);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-surface);
+  color: var(--tb-surface-text);
+  font-size: var(--tb-font-size-xxs);
+  box-shadow: 0 2px 6px var(--tb-surface-shadow);
+  overflow: hidden;
+}
+.tb-legend button {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.125rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tb-legend button:hover:not(:disabled) {
+  background: var(--tb-surface-hover);
+}
+.tb-legend-toggle {
+  justify-content: space-between;
+  font-weight: 600;
+}
+.tb-legend-list {
+  margin: 0;
+  padding: 0 0 0.125rem;
+  list-style: none;
+  border-top: 1px solid var(--tb-surface-border);
+}
+.tb-legend-entry:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.tb-legend-swatch {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1px solid var(--tb-node-border);
+  border-radius: 2px;
+}
+.tb-legend-label {
+  flex: 1 1 auto;
+}
+.tb-legend-count {
+  font-variant-numeric: tabular-nums;
+}
+
 /* A pattern's branches done so far, during a run: "3/6". */
 .branch-progress {
   position: absolute;

@@ -309,6 +309,8 @@ update_targetsboard_options <- function(session, inputId, ...) {
 #'   browser's preference. The board's own beige background is for light mode.
 #' @param minimap Show the minimap, with targets coloured by status.
 #' @param controls Show the zoom controls.
+#' @param legend Show the status legend under the Tidy buttons: each status's
+#'   colour, with how many targets have it; a click selects them.
 #' @param background The background pattern: `"dots"`, `"lines"`, `"cross"`
 #'   or `"none"`.
 #' @param edge_type How edges are drawn: `"default"` (curves),
@@ -348,6 +350,7 @@ update_targetsboard_options <- function(session, inputId, ...) {
 targetsboard_options <- function(color_mode = c("light", "dark", "system"),
                                  minimap = TRUE,
                                  controls = TRUE,
+                                 legend = TRUE,
                                  background = c("dots", "lines", "cross", "none"),
                                  edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
                                  only_render_visible = FALSE,
@@ -367,6 +370,7 @@ targetsboard_options <- function(color_mode = c("light", "dark", "system"),
       color_mode = rlang::arg_match(color_mode),
       minimap = flag(minimap),
       controls = flag(controls),
+      legend = flag(legend),
       background = rlang::arg_match(background),
       edge_type = rlang::arg_match(edge_type),
       only_render_visible = flag(only_render_visible),

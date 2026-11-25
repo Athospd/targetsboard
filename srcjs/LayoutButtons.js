@@ -1,14 +1,12 @@
 import React from 'react';
-import { Panel } from '@xyflow/react';
 import './buttonStyles.css';
 
+// In the canvas's top-right panel, above the status legend.
 const LayoutButtons = ({ onLayout }) => (
-  <Panel position="top-right">
-    <div className="tb-layout-buttons">
-      <button type="button" onClick={() => onLayout('TB')}>Tidy vertically</button>
-      <button type="button" onClick={() => onLayout('LR')}>Tidy horizontally</button>
-    </div>
-  </Panel>
+  <div className="tb-layout-buttons">
+    <button type="button" onClick={() => onLayout('TB')}>Tidy vertically</button>
+    <button type="button" onClick={() => onLayout('LR')}>Tidy horizontally</button>
+  </div>
 );
 
 export default LayoutButtons;

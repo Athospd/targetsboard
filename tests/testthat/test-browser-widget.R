@@ -63,6 +63,7 @@ test_that("the widget's display options take effect, and change from R", {
   expect_true(has_class("dark"))
   expect_equal(count(".react-flow__minimap"), 0)
   expect_equal(count(".react-flow__controls"), 0)
+  expect_equal(count(".tb-legend"), 1) # by default
   expect_equal(count(".react-flow__background path"), 1) # lines, not dots
   expect_equal(count(".react-flow__edge-step"), 2)
 
@@ -277,4 +278,45 @@ test_that("a widget without download_image has no download button", {
   app <- local_board_app(dir, "nodownload", widget_app())
   app$wait_for_js("document.querySelector('.react-flow__controls') !== null")
   expect_false(app$get_js("document.querySelector('.tb-download-image') !== null"))
+})
+
+test_that("the status legend counts the targets by status, selects them, and stays as left", {
+  dir <- local_pipeline(make = TRUE) # a, b and c, all up to date
+  writeLines(
+    c("library(targets)", "list(tar_target(a, 1), tar_target(b, a + 2), tar_target(c, b * 2))"),
+    file.path(dir, "_targets.R")
+  ) # b and c outdated
+  app <- local_board_app(dir, "legend", widget_app())
+  app$wait_for_js("document.querySelectorAll('.tb-legend-entry').length === 4")
+  entry <- function(status) sprintf(".tb-legend-entry[data-status='%s']", status)
+  count_of <- function(status) {
+    app$get_js(sprintf("document.querySelector(\"%s .tb-legend-count\").innerText", entry(status)))
+  }
+  expect_equal(count_of("uptodate"), "1")
+  expect_equal(count_of("outdated"), "2")
+  expect_equal(count_of("errored"), "0")
+  expect_true(app$get_js(sprintf("document.querySelector(\"%s\").disabled", entry("running"))))
+  # Under the Tidy buttons, right-aligned with them.
+  expect_true(app$get_js(paste(
+    "(() => { const t = document.querySelector('.tb-layout-buttons').getBoundingClientRect();",
+    "const l = document.querySelector('.tb-legend').getBoundingClientRect();",
+    "return l.top >= t.bottom && Math.abs(l.right - t.right) < 1; })()"
+  )))
+  # Its swatches are the nodes' colours.
+  expect_equal(
+    app$get_js(sprintf("getComputedStyle(document.querySelector(\"%s .tb-legend-swatch\")).backgroundColor", entry("outdated"))),
+    app$get_js("getComputedStyle(document.querySelector(\".react-flow__node[data-id='b'] .base-node\")).backgroundColor")
+  )
+
+  # A click selects that status's targets, and the app hears of it.
+  app$click(selector = entry("outdated"))
+  app$wait_for_js("document.querySelectorAll('.react-flow__node.selected').length === 2")
+  expect_setequal(unlist(app$get_value(input = "dag_selected_nodes")), c("b", "c"))
+
+  # Closed, it stays closed after a reload.
+  app$click(selector = ".tb-legend-toggle")
+  app$wait_for_js("document.querySelector('.tb-legend-list') === null")
+  app$run_js("location.reload()")
+  app$wait_for_js("document.querySelector('.tb-legend-toggle') !== null")
+  expect_equal(app$get_js("document.querySelector('.tb-legend-toggle').getAttribute('aria-expanded')"), "false")
 })
