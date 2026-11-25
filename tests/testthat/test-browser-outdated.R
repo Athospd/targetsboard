@@ -34,8 +34,9 @@ test_that("an outdated target says why, on hover and in the preview", {
   app$wait_for_js("document.querySelector('.tb-why') !== null", timeout = preview_timeout)
   expect_equal(app$get_js("document.querySelector('.tb-why-reason').innerText.trim()"), "Upstream, b is outdated.")
 
-  # Built again: the reasons go.
+  # Built again: the reasons go, once the poller has computed them again
+  # (slow on CI; a new graph alone drops the hover texts for a moment).
   withr::with_dir(dir, targets::tar_make(reporter = "silent"))
-  app$wait_for_js(sprintf("%s === null", title("b")), timeout = 60 * 1000)
-  app$wait_for_js("document.querySelector('.tb-why') === null")
+  app$wait_for_js("document.querySelector('.tb-why') === null", timeout = 90 * 1000)
+  app$wait_for_js(sprintf("%s === null", title("b")), timeout = 30 * 1000)
 })
