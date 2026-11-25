@@ -96,6 +96,12 @@
 
 ## Minor changes
 
+* A brand: the Pulse mark, a live signal reaching a target, in one
+  colour. With the name it makes the wordmark that replaces the top
+  bar's title, in the theme's text colour; it's the browser tab's icon; the loading spinner is the mark,
+  animated; and a new hex sticker carries it, in the style of targetfy's
+  (#105). `dev/logo/make_logo.py` makes every file from the one mark; the
+  other concepts are in `dev/logo/concepts`.
 * The Value pane's button that copies the `targets::tar_read()` call is in
   the theme's red, its danger colour, so it stands out; readable in every
   theme and mode (#104).

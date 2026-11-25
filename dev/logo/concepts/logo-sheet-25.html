@@ -1,0 +1,215 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body { margin: 0; padding: 16px; background: #f1f3f5; font-family: system-ui, "Segoe UI", Roboto, sans-serif; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.card { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #dee2e6; }
+.light { color: #212529; padding: 10px 12px 12px; position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.dark { background: #212529; color: #dee2e6; padding: 8px 12px; display: flex; align-items: center; gap: 10px; justify-content: center; }
+.num { position: absolute; left: 10px; top: 8px; font-size: 12px; font-weight: 700; opacity: .45; }
+.name { font-size: 13px; font-weight: 600; }
+.big { width: 96px; height: 96px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.s24 { width: 24px; height: 24px; } .s16 { width: 16px; height: 16px; } .s22 { width: 22px; height: 22px; }
+.bar { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; margin-left: 4px; }
+.idea { font-size: 11px; color: #6c757d; padding: 6px 10px 8px; text-align: center; }
+</style></head><body><svg width="0" height="0" style="position:absolute"><symbol id="m1" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="32" cy="32" r="26" stroke-width="4" stroke-dasharray="0 4 17 4" pathLength="100" stroke-linecap="butt"/><path d="M32 2v10M32 52v10M2 32h10M52 32h10" stroke-width="4" /><path d="M18 21c8 0 8 11 14 11M18 43c8 0 8-11 14-11" stroke-width="3.5" /><circle cx="17.00" cy="21.00" r="4" fill="currentColor" stroke="none"/><circle cx="17.00" cy="43.00" r="4" fill="currentColor" stroke="none"/><circle cx="33.00" cy="32.00" r="6" fill="currentColor" stroke="none"/></symbol><symbol id="m2" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="3" y="11" width="17" height="9" rx="4.5" fill="currentColor" stroke="none"/><rect x="3" y="27.5" width="17" height="9" rx="4.5" fill="currentColor" stroke="none"/><rect x="3" y="44" width="17" height="9" rx="4.5" fill="currentColor" stroke="none"/><path d="M20 15.5c10 0 10 16.5 18 16.5M20 32h18M20 48.5c10 0 10-16.5 18-16.5" stroke-width="3.5" /><circle cx="48.00" cy="32.00" r="12.5" stroke-width="4"/><circle cx="48.00" cy="32.00" r="4.5" fill="currentColor" stroke="none"/></symbol><symbol id="m3" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="32.00" cy="32.00" r="25" stroke-width="3.5"/><path d="M7.00 32.00L32 32" stroke-width="3" /><path d="M14.32 14.32L32 32" stroke-width="3" /><path d="M14.32 49.68L32 32" stroke-width="3" /><circle cx="7.00" cy="32.00" r="5" fill="currentColor" stroke="none"/><circle cx="14.32" cy="14.32" r="5" fill="currentColor" stroke="none"/><circle cx="14.32" cy="49.68" r="5" fill="currentColor" stroke="none"/><circle cx="32.00" cy="32.00" r="7" fill="currentColor" stroke="none"/></symbol><symbol id="m4" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M26 6v34c0 9 5 14 13 14" stroke-width="5" /><path d="M12 20h28" stroke-width="5" /><circle cx="12.00" cy="20.00" r="5" fill="currentColor" stroke="none"/><circle cx="40.00" cy="20.00" r="5" fill="currentColor" stroke="none"/><circle cx="26.00" cy="6.00" r="5" fill="currentColor" stroke="none"/><circle cx="47.00" cy="52.00" r="8" stroke-width="3.5"/><circle cx="47.00" cy="52.00" r="3" fill="currentColor" stroke="none"/></symbol><symbol id="m5" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M14 8v36c0 7 4 10 10 10" stroke-width="5" /><path d="M6 20h16" stroke-width="5" /><path d="M32 6v50" stroke-width="5" /><circle cx="44.00" cy="42.00" r="12" stroke-width="5"/><circle cx="44.00" cy="42.00" r="3.5" fill="currentColor" stroke="none"/></symbol><symbol id="m6" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12.00" cy="12.00" r="2.6" fill="currentColor" stroke="none"/><circle cx="12.00" cy="32.00" r="2.6" fill="currentColor" stroke="none"/><circle cx="12.00" cy="52.00" r="2.6" fill="currentColor" stroke="none"/><circle cx="32.00" cy="12.00" r="2.6" fill="currentColor" stroke="none"/><circle cx="32.00" cy="32.00" r="2.6" fill="currentColor" stroke="none"/><circle cx="32.00" cy="52.00" r="2.6" fill="currentColor" stroke="none"/><circle cx="52.00" cy="32.00" r="2.6" fill="currentColor" stroke="none"/><circle cx="52.00" cy="52.00" r="2.6" fill="currentColor" stroke="none"/><path d="M12 52C24 52 20 32 32 32S40 12 52 12" stroke-width="3.5" /><circle cx="12.00" cy="52.00" r="5" fill="currentColor" stroke="none"/><circle cx="52.00" cy="12.00" r="7.5" stroke-width="3.5"/><circle cx="52.00" cy="12.00" r="3" fill="currentColor" stroke="none"/></symbol><symbol id="m7" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="40.00" cy="30.00" r="20" stroke-width="4"/><circle cx="40.00" cy="30.00" r="10" stroke-width="4"/><path d="M6 56C16 56 22 34 40 30" stroke-width="3.5" /><circle cx="6.00" cy="56.00" r="5" fill="currentColor" stroke="none"/><circle cx="40.00" cy="30.00" r="4" fill="currentColor" stroke="none"/></symbol><symbol id="m8" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9.48 51.00A26 26 0 1 1 54.52 51.00" stroke-width="4" /><path d="M15.55 47.50L20.74 44.50" stroke-width="3.5" /><path d="M15.55 28.50L20.74 31.50" stroke-width="3.5" /><path d="M32.00 19.00L32.00 25.00" stroke-width="3.5" /><path d="M48.45 28.50L43.26 31.50" stroke-width="3.5" /><path d="M48.45 47.50L43.26 44.50" stroke-width="3.5" /><path d="M32 38L43.47 21.62" stroke-width="4.5" /><circle cx="32.00" cy="38.00" r="6" fill="currentColor" stroke="none"/></symbol><symbol id="m9" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="6" y="6" width="52" height="52" rx="13" stroke-width="4"/><rect x="19" y="19" width="26" height="26" rx="6" stroke-width="4"/><circle cx="32.00" cy="32.00" r="4.5" fill="currentColor" stroke="none"/></symbol><symbol id="m10" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 11c10 0 8 11 17 11M9 33c10 0 8-11 17-11" stroke-width="3.5" /><path d="M26 22c12 0 8 20 20 20" stroke-width="3.5" /><circle cx="9.00" cy="11.00" r="5" fill="currentColor" stroke="none"/><circle cx="9.00" cy="33.00" r="5" fill="currentColor" stroke="none"/><circle cx="26.00" cy="22.00" r="5" fill="currentColor" stroke="none"/><circle cx="46.00" cy="42.00" r="12" stroke-width="4"/><circle cx="46.00" cy="42.00" r="4.5" fill="currentColor" stroke="none"/></symbol><symbol id="m11" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M32.00 4.00L7.75 18.00L7.75 46.00L32.00 60.00L56.25 46.00L56.25 18.00Z" stroke-width="4" stroke-linejoin="round"/><circle cx="32.00" cy="32.00" r="11" stroke-width="4"/><circle cx="32.00" cy="32.00" r="4.5" fill="currentColor" stroke="none"/></symbol><symbol id="m12" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="4" y="5" width="20" height="10" rx="5" fill="currentColor" stroke="none"/><rect x="40" y="5" width="20" height="10" rx="5" fill="currentColor" stroke="none"/><path d="M14 15c0 14 18 10 18 21M50 15c0 14-18 10-18 21" stroke-width="3.5" /><circle cx="32.00" cy="47.00" r="12" stroke-width="4"/><circle cx="32.00" cy="47.00" r="4.5" fill="currentColor" stroke="none"/></symbol><symbol id="m13" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M58.00 32.00L43.00 32.00" stroke-width="3.5" /><path d="M32.00 6.00L32.00 21.00" stroke-width="3.5" /><path d="M6.00 32.00L21.00 32.00" stroke-width="3.5" /><path d="M32.00 58.00L32.00 43.00" stroke-width="3.5" /><circle cx="58.00" cy="32.00" r="4.5" fill="currentColor" stroke="none"/><circle cx="32.00" cy="6.00" r="4.5" fill="currentColor" stroke="none"/><circle cx="6.00" cy="32.00" r="4.5" fill="currentColor" stroke="none"/><circle cx="32.00" cy="58.00" r="4.5" fill="currentColor" stroke="none"/><circle cx="32.00" cy="32.00" r="9" stroke-width="4"/><circle cx="32.00" cy="32.00" r="3.5" fill="currentColor" stroke="none"/></symbol><symbol id="m14" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M21.00 12.95A22 22 0 1 0 43.00 12.95" stroke-width="4.5" /><path d="M50.00 10.95L40.00 6.95L44.00 16.95Z" fill="currentColor" stroke="none"/><circle cx="32.00" cy="32.00" r="7" fill="currentColor" stroke="none"/></symbol><symbol id="m15" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M32 60C22 46 10 38 10 25a22 22 0 0 1 44 0c0 13-12 21-22 35Z" stroke-width="4" stroke-linejoin="round"/><circle cx="32.00" cy="25.00" r="9" stroke-width="4"/><circle cx="32.00" cy="25.00" r="3.5" fill="currentColor" stroke="none"/></symbol><symbol id="m16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M4 32C16 12 48 12 60 32C48 52 16 52 4 32Z" stroke-width="4" stroke-linejoin="round"/><circle cx="32.00" cy="32.00" r="10" stroke-width="4"/><circle cx="32.00" cy="32.00" r="4" fill="currentColor" stroke="none"/></symbol><symbol id="m17" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M32 6A26 26 0 0 1 32 58" stroke-width="5" /><path d="M32 58A26 26 0 0 1 32 6" stroke-width="5" stroke-dasharray="5 6.2" stroke-linecap="butt"/><circle cx="32.00" cy="32.00" r="8" fill="currentColor" stroke="none"/></symbol><symbol id="m18" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M3 32h11l6-14 9 28 6-14h5" stroke-width="4" stroke-linejoin="round"/><circle cx="50.00" cy="32.00" r="10" stroke-width="4"/><circle cx="50.00" cy="32.00" r="3.5" fill="currentColor" stroke="none"/></symbol><symbol id="m19" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M13 46L30 16M13 46H44M30 16L44 46" stroke-width="3.5" /><circle cx="13.00" cy="46.00" r="6" fill="currentColor" stroke="none"/><circle cx="30.00" cy="16.00" r="6" fill="currentColor" stroke="none"/><circle cx="48.00" cy="46.00" r="9" stroke-width="4"/><circle cx="48.00" cy="46.00" r="3.5" fill="currentColor" stroke="none"/></symbol><symbol id="m20" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="9" y="10" width="46" height="48" rx="7" stroke-width="4"/><rect x="23" y="4" width="18" height="10" rx="3" fill="currentColor" stroke="none"/><path d="M20 27c8 0 8 8 14 8M20 44c8 0 8-9 14-9" stroke-width="3.5" /><circle cx="20.00" cy="27.00" r="4.5" fill="currentColor" stroke="none"/><circle cx="20.00" cy="44.00" r="4.5" fill="currentColor" stroke="none"/><circle cx="41.00" cy="35.00" r="7" stroke-width="3.5"/><circle cx="41.00" cy="35.00" r="3" fill="currentColor" stroke="none"/></symbol><symbol id="m21" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 20V12a6 6 0 0 1 6-6h8M44 6h8a6 6 0 0 1 6 6v8M58 44v8a6 6 0 0 1-6 6h-8M20 58h-8a6 6 0 0 1-6-6v-8" stroke-width="4.5" /><circle cx="32.00" cy="32.00" r="12" stroke-width="4.5"/><circle cx="32.00" cy="32.00" r="5" fill="currentColor" stroke="none"/></symbol><symbol id="m22" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M60.00 32.00L51.00 32.00" stroke-width="3.5" /><path d="M56.25 18.00L51.05 21.00" stroke-width="3.5" /><path d="M46.00 7.75L43.00 12.95" stroke-width="3.5" /><path d="M32.00 4.00L32.00 13.00" stroke-width="3.5" /><path d="M18.00 7.75L21.00 12.95" stroke-width="3.5" /><path d="M7.75 18.00L12.95 21.00" stroke-width="3.5" /><path d="M4.00 32.00L13.00 32.00" stroke-width="3.5" /><path d="M7.75 46.00L12.95 43.00" stroke-width="3.5" /><path d="M18.00 56.25L21.00 51.05" stroke-width="3.5" /><path d="M32.00 60.00L32.00 51.00" stroke-width="3.5" /><path d="M46.00 56.25L43.00 51.05" stroke-width="3.5" /><path d="M56.25 46.00L51.05 43.00" stroke-width="3.5" /><circle cx="32.00" cy="32.00" r="11" stroke-width="4"/><circle cx="32.00" cy="32.00" r="4.5" fill="currentColor" stroke="none"/></symbol><symbol id="m23" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="6" y="6" width="52" height="52" rx="15" stroke-width="4"/><path d="M6 22c14 0 14 10 26 10M6 42c14 0 14-10 26-10" stroke-width="3.5" /><circle cx="32.00" cy="32.00" r="7" fill="currentColor" stroke="none"/></symbol><symbol id="m24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M4 18h24M10 32h18M4 46h24" stroke-width="4.5" /><circle cx="44.00" cy="32.00" r="15" stroke-width="4.5"/><circle cx="44.00" cy="32.00" r="5" fill="currentColor" stroke="none"/></symbol><symbol id="m25" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="26.00" cy="26.00" r="19" stroke-width="4.5"/><path d="M40 40L57 57" stroke-width="7" /><circle cx="26.00" cy="26.00" r="9" stroke-width="3.5"/><circle cx="26.00" cy="26.00" r="3.5" fill="currentColor" stroke="none"/></symbol></svg>
+<div class="grid"><div class="card">
+  <div class="light"><div class="num">1</div><div class="name">Reticle</div>
+    <svg class="big"><use href="#m1"/></svg>
+    <div class="row"><svg class="s24"><use href="#m1"/></svg><svg class="s16"><use href="#m1"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m1"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m1"/></svg><svg class="s16"><use href="#m1"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m1"/></svg>Targets board</span></div>
+  <div class="idea">a sight: targets converge on its centre</div>
+</div><div class="card">
+  <div class="light"><div class="num">2</div><div class="name">Converge</div>
+    <svg class="big"><use href="#m2"/></svg>
+    <div class="row"><svg class="s24"><use href="#m2"/></svg><svg class="s16"><use href="#m2"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m2"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m2"/></svg><svg class="s16"><use href="#m2"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m2"/></svg>Targets board</span></div>
+  <div class="idea">the pipeline flows into its goal</div>
+</div><div class="card">
+  <div class="light"><div class="num">3</div><div class="name">Orbit</div>
+    <svg class="big"><use href="#m3"/></svg>
+    <div class="row"><svg class="s24"><use href="#m3"/></svg><svg class="s16"><use href="#m3"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m3"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m3"/></svg><svg class="s16"><use href="#m3"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m3"/></svg>Targets board</span></div>
+  <div class="idea">upstream targets around the one they feed</div>
+</div><div class="card">
+  <div class="light"><div class="num">4</div><div class="name">t-graph</div>
+    <svg class="big"><use href="#m4"/></svg>
+    <div class="row"><svg class="s24"><use href="#m4"/></svg><svg class="s16"><use href="#m4"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m4"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m4"/></svg><svg class="s16"><use href="#m4"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m4"/></svg>Targets board</span></div>
+  <div class="idea">the t of targets, as a graph</div>
+</div><div class="card">
+  <div class="light"><div class="num">5</div><div class="name">tb</div>
+    <svg class="big"><use href="#m5"/></svg>
+    <div class="row"><svg class="s24"><use href="#m5"/></svg><svg class="s16"><use href="#m5"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m5"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m5"/></svg><svg class="s16"><use href="#m5"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m5"/></svg>Targets board</span></div>
+  <div class="idea">a monogram: the b's bowl is a target</div>
+</div><div class="card">
+  <div class="light"><div class="num">6</div><div class="name">Grid</div>
+    <svg class="big"><use href="#m6"/></svg>
+    <div class="row"><svg class="s24"><use href="#m6"/></svg><svg class="s16"><use href="#m6"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m6"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m6"/></svg><svg class="s16"><use href="#m6"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m6"/></svg>Targets board</span></div>
+  <div class="idea">the board's dotted canvas, one path to the goal</div>
+</div><div class="card">
+  <div class="light"><div class="num">7</div><div class="name">Hit</div>
+    <svg class="big"><use href="#m7"/></svg>
+    <div class="row"><svg class="s24"><use href="#m7"/></svg><svg class="s16"><use href="#m7"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m7"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m7"/></svg><svg class="s16"><use href="#m7"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m7"/></svg>Targets board</span></div>
+  <div class="idea">an edge lands dead centre</div>
+</div><div class="card">
+  <div class="light"><div class="num">8</div><div class="name">Gauge</div>
+    <svg class="big"><use href="#m8"/></svg>
+    <div class="row"><svg class="s24"><use href="#m8"/></svg><svg class="s16"><use href="#m8"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m8"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m8"/></svg><svg class="s16"><use href="#m8"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m8"/></svg>Targets board</span></div>
+  <div class="idea">an instrument reading the pipeline</div>
+</div><div class="card">
+  <div class="light"><div class="num">9</div><div class="name">Board</div>
+    <svg class="big"><use href="#m9"/></svg>
+    <div class="row"><svg class="s24"><use href="#m9"/></svg><svg class="s16"><use href="#m9"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m9"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m9"/></svg><svg class="s16"><use href="#m9"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m9"/></svg>Targets board</span></div>
+  <div class="idea">a target drawn as a board</div>
+</div><div class="card">
+  <div class="light"><div class="num">10</div><div class="name">Cascade</div>
+    <svg class="big"><use href="#m10"/></svg>
+    <div class="row"><svg class="s24"><use href="#m10"/></svg><svg class="s16"><use href="#m10"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m10"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m10"/></svg><svg class="s16"><use href="#m10"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m10"/></svg>Targets board</span></div>
+  <div class="idea">a small DAG, left to right</div>
+</div><div class="card">
+  <div class="light"><div class="num">11</div><div class="name">Hex</div>
+    <svg class="big"><use href="#m11"/></svg>
+    <div class="row"><svg class="s24"><use href="#m11"/></svg><svg class="s16"><use href="#m11"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m11"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m11"/></svg><svg class="s16"><use href="#m11"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m11"/></svg>Targets board</span></div>
+  <div class="idea">an R package's hexagon, a target inside</div>
+</div><div class="card">
+  <div class="light"><div class="num">12</div><div class="name">Funnel</div>
+    <svg class="big"><use href="#m12"/></svg>
+    <div class="row"><svg class="s24"><use href="#m12"/></svg><svg class="s16"><use href="#m12"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m12"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m12"/></svg><svg class="s16"><use href="#m12"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m12"/></svg>Targets board</span></div>
+  <div class="idea">a top-down DAG, merging</div>
+</div><div class="card">
+  <div class="light"><div class="num">13</div><div class="name">Compass</div>
+    <svg class="big"><use href="#m13"/></svg>
+    <div class="row"><svg class="s24"><use href="#m13"/></svg><svg class="s16"><use href="#m13"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m13"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m13"/></svg><svg class="s16"><use href="#m13"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m13"/></svg>Targets board</span></div>
+  <div class="idea">every direction leads to the target</div>
+</div><div class="card">
+  <div class="light"><div class="num">14</div><div class="name">Watch</div>
+    <svg class="big"><use href="#m14"/></svg>
+    <div class="row"><svg class="s24"><use href="#m14"/></svg><svg class="s16"><use href="#m14"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m14"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m14"/></svg><svg class="s16"><use href="#m14"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m14"/></svg>Targets board</span></div>
+  <div class="idea">a live loop around the pipeline</div>
+</div><div class="card">
+  <div class="light"><div class="num">15</div><div class="name">Pin</div>
+    <svg class="big"><use href="#m15"/></svg>
+    <div class="row"><svg class="s24"><use href="#m15"/></svg><svg class="s16"><use href="#m15"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m15"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m15"/></svg><svg class="s16"><use href="#m15"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m15"/></svg>Targets board</span></div>
+  <div class="idea">where your pipeline stands</div>
+</div><div class="card">
+  <div class="light"><div class="num">16</div><div class="name">Eye</div>
+    <svg class="big"><use href="#m16"/></svg>
+    <div class="row"><svg class="s24"><use href="#m16"/></svg><svg class="s16"><use href="#m16"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m16"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m16"/></svg><svg class="s16"><use href="#m16"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m16"/></svg>Targets board</span></div>
+  <div class="idea">watching the pipeline; the iris is a target</div>
+</div><div class="card">
+  <div class="light"><div class="num">17</div><div class="name">Split</div>
+    <svg class="big"><use href="#m17"/></svg>
+    <div class="row"><svg class="s24"><use href="#m17"/></svg><svg class="s16"><use href="#m17"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m17"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m17"/></svg><svg class="s16"><use href="#m17"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m17"/></svg>Targets board</span></div>
+  <div class="idea">half up to date, half outdated</div>
+</div><div class="card">
+  <div class="light"><div class="num">18</div><div class="name">Pulse</div>
+    <svg class="big"><use href="#m18"/></svg>
+    <div class="row"><svg class="s24"><use href="#m18"/></svg><svg class="s16"><use href="#m18"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m18"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m18"/></svg><svg class="s16"><use href="#m18"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m18"/></svg>Targets board</span></div>
+  <div class="idea">a live signal reaching the target</div>
+</div><div class="card">
+  <div class="light"><div class="num">19</div><div class="name">Triangle</div>
+    <svg class="big"><use href="#m19"/></svg>
+    <div class="row"><svg class="s24"><use href="#m19"/></svg><svg class="s16"><use href="#m19"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m19"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m19"/></svg><svg class="s16"><use href="#m19"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m19"/></svg>Targets board</span></div>
+  <div class="idea">the smallest DAG</div>
+</div><div class="card">
+  <div class="light"><div class="num">20</div><div class="name">Clipboard</div>
+    <svg class="big"><use href="#m20"/></svg>
+    <div class="row"><svg class="s24"><use href="#m20"/></svg><svg class="s16"><use href="#m20"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m20"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m20"/></svg><svg class="s16"><use href="#m20"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m20"/></svg>Targets board</span></div>
+  <div class="idea">a board, a pipeline pinned on it</div>
+</div><div class="card">
+  <div class="light"><div class="num">21</div><div class="name">Viewfinder</div>
+    <svg class="big"><use href="#m21"/></svg>
+    <div class="row"><svg class="s24"><use href="#m21"/></svg><svg class="s16"><use href="#m21"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m21"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m21"/></svg><svg class="s16"><use href="#m21"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m21"/></svg>Targets board</span></div>
+  <div class="idea">framing the target, as a camera</div>
+</div><div class="card">
+  <div class="light"><div class="num">22</div><div class="name">Dial</div>
+    <svg class="big"><use href="#m22"/></svg>
+    <div class="row"><svg class="s24"><use href="#m22"/></svg><svg class="s16"><use href="#m22"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m22"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m22"/></svg><svg class="s16"><use href="#m22"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m22"/></svg>Targets board</span></div>
+  <div class="idea">an instrument's dial, a target at its heart</div>
+</div><div class="card">
+  <div class="light"><div class="num">23</div><div class="name">Square</div>
+    <svg class="big"><use href="#m23"/></svg>
+    <div class="row"><svg class="s24"><use href="#m23"/></svg><svg class="s16"><use href="#m23"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m23"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m23"/></svg><svg class="s16"><use href="#m23"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m23"/></svg>Targets board</span></div>
+  <div class="idea">the board, two edges into the goal</div>
+</div><div class="card">
+  <div class="light"><div class="num">24</div><div class="name">Lanes</div>
+    <svg class="big"><use href="#m24"/></svg>
+    <div class="row"><svg class="s24"><use href="#m24"/></svg><svg class="s16"><use href="#m24"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m24"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m24"/></svg><svg class="s16"><use href="#m24"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m24"/></svg>Targets board</span></div>
+  <div class="idea">parallel lanes reaching the goal</div>
+</div><div class="card">
+  <div class="light"><div class="num">25</div><div class="name">Lens</div>
+    <svg class="big"><use href="#m25"/></svg>
+    <div class="row"><svg class="s24"><use href="#m25"/></svg><svg class="s16"><use href="#m25"/></svg>
+      <span class="bar"><svg class="s22"><use href="#m25"/></svg>Targets board</span></div></div>
+  <div class="dark"><svg class="s24"><use href="#m25"/></svg><svg class="s16"><use href="#m25"/></svg>
+    <span class="bar"><svg class="s22"><use href="#m25"/></svg>Targets board</span></div>
+  <div class="idea">inspect any target</div>
+</div></div></body></html>
