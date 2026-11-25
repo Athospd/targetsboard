@@ -53,7 +53,8 @@ graph_data_server <- function(id, backend) {
       valueFunc = function() {
         list(
           mtime = progress_mtime(),
-          data = tryCatch(targets::tar_progress(), error = function(e) NULL)
+          # type and parent: the run summary counts as tar_progress_summary().
+          data = tryCatch(targets::tar_progress(fields = c("type", "parent", "progress")), error = function(e) NULL)
         )
       }
     )

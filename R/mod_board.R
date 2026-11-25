@@ -116,7 +116,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     )
 
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.
-    run <- run_server("run", backend, board, data$running, action = graph$node_action)
+    run <- run_server("run", backend, board, data$running, data$progress, action = graph$node_action)
 
     # A target picked in the tar_meta() table or a problem's links: on the
     # Board tab, focused; a problem picked, with its Problem in the preview.

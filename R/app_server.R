@@ -67,7 +67,7 @@ board_targets <- function(nodes) {
 #' Statuses of the run in progress
 #'
 #' @param progress `list(mtime, data)`: the progress file's modification time
-#'   and `targets::tar_progress()`.
+#'   and `targets::tar_progress()` (with its `type` and `parent`).
 #' @param since The progress file's modification time when the graph was last
 #'   recomputed: older progress is already in the graph, or stale.
 #' @return A named character vector of statuses, possibly empty.

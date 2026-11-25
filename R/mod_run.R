@@ -10,7 +10,9 @@ run_ui <- function(id) {
     shiny::actionButton(ns("all"), "Run all", icon = shiny::icon("play")),
     run_mode_switches(ns = ns),
     shiny::actionButton(ns("stop"), "Stop", icon = shiny::icon("stop"), disabled = TRUE),
-    shiny::actionButton(ns("invalidate_all"), "Invalidate all", icon = shiny::icon("eraser"), disabled = TRUE)
+    shiny::actionButton(ns("invalidate_all"), "Invalidate all", icon = shiny::icon("eraser"), disabled = TRUE),
+    # The run going, or the last one: its counts and time (run_summary()).
+    shiny::uiOutput(ns("summary"))
   )
 }
 
@@ -18,15 +20,17 @@ run_ui <- function(id) {
 #'   and refresh.
 #' @param board Reactive: the graph the board draws, for its targets.
 #' @param running Reactive: whether the pipeline is running.
+#' @param progress Reactive: the progress file's `list(mtime, data)`
+#'   (graph_data_server()), for the run's summary.
 #' @param action Reactive event: an action chosen on the graph, a list of
 #'   `action` and `nodes` (or `node`). It handles `run` and `invalidate`.
 #' @return A list of reactives: `show_problem`, the target whose problem a
 #'   run's notification asks to show.
 #' @noRd
-run_server <- function(id, backend, board, running, action) {
+run_server <- function(id, backend, board, running, progress, action) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(board), shiny::is.reactive(running),
-    shiny::is.reactive(action)
+    shiny::is.reactive(progress), shiny::is.reactive(action)
   )
   shiny::moduleServer(id, function(input, output, session) {
     runner <- backend$runner
@@ -40,6 +44,23 @@ run_server <- function(id, backend, board, running, action) {
         session, "invalidate_all",
         disabled = is_running || length(board_targets(board()$x$nodes)) == 0
       )
+    })
+
+    # The run's summary. Its start comes from tar_process(), read again when
+    # the progress file changes (a new run rewrites both); while it runs,
+    # the clock ticks every second.
+    run_start <- shiny::reactive({
+      progress()$mtime
+      running()
+      run_started()
+    })
+    output$summary <- shiny::renderUI({
+      if (running()) shiny::invalidateLater(1000)
+      current <- progress()
+      run_summary_ui(run_summary(
+        current$data, board_targets(board()$x$nodes),
+        started = run_start(), ended = current$mtime, running = running()
+      ))
     })
 
     launch_run <- function(names = NULL) {
