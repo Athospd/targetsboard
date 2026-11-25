@@ -1,6 +1,6 @@
 # The tabs beside the board, each tested alone with testServer() and fake
 # reactives: problems_server(), meta_server(), log_server(),
-# visnetwork_server() and internals_server().
+# visnetwork_server(), internals_server() and script_view_server().
 
 fake_meta <- function() {
   data.frame(
@@ -122,5 +122,61 @@ test_that("the tables' row clicks send their input with the full namespace", {
   shiny::testServer(meta_server, args = list(tar_meta = meta), {
     expect_match(output$table, session$ns("row_clicked"), fixed = TRUE)
     expect_match(session$ns("row_clicked"), "-row_clicked$")
+  })
+})
+
+test_that("where_things_are() finds the script, the store and what is in it, and the configuration", {
+  dir <- local_pipeline(make = TRUE)
+  full <- function(...) normalizePath(file.path(dir, ...), winslash = "/", mustWork = FALSE)
+  paths <- where_things_are("_targets.R")
+  expect_equal(
+    paths$label,
+    c("Script", "Project folder", "Data store", "Metadata", "Progress", "Values", "Workspaces", "Configuration")
+  )
+  expect_equal(paths$path[paths$label == "Script"], full("_targets.R")) # absolute
+  expect_equal(paths$path[paths$label == "Metadata"], full("_targets", "meta", "meta"))
+  expect_true(all(paths$exists[1:6]))
+  expect_false(paths$exists[paths$label == "Workspaces"]) # nothing errored yet
+  expect_false(paths$exists[paths$label == "Configuration"]) # no _targets.yaml
+
+  # A store and a project from _targets.yaml.
+  writeLines(c("main:", "  store: elsewhere", "other:", "  store: other_store"), "_targets.yaml")
+  withr::local_envvar(TAR_PROJECT = "other")
+  paths <- where_things_are("_targets.R")
+  expect_equal(paths$path[paths$label == "Data store"], full("other_store"))
+  expect_true(paths$exists[paths$label == "Configuration"])
+  expect_equal(paths$path[paths$label == "Project (TAR_PROJECT)"], "other")
+
+  html <- as.character(paths_table(paths))
+  expect_match(html, "Where things are", fixed = TRUE)
+  expect_match(html, paste0('data-copy="', full("_targets.R"), '"'), fixed = TRUE) # copies with a click
+  expect_match(html, "not created yet", fixed = TRUE)
+})
+
+test_that("script_view_server() shows the loaded script as it is on disk, and follows it", {
+  local_pipeline()
+  writeLines("list()", "other.R")
+  script <- shiny::reactiveVal("_targets.R")
+  shiny::testServer(script_view_server, args = list(script = script), {
+    session$flushReact()
+    expect_match(output$code$html, "tar_target(a, 1)", fixed = TRUE)
+    expect_match(output$code$html, 'class="language-r"', fixed = TRUE) # coloured by highlight.js
+    expect_match(output$paths$html, "Where things are", fixed = TRUE)
+
+    # Edited on disk: shown again within a second.
+    writeLines(c("library(targets)", "list(tar_target(edited, 1))"), "_targets.R")
+    session$elapse(1000)
+    expect_match(output$code$html, "tar_target(edited, 1)", fixed = TRUE)
+
+    # Another script loaded.
+    script("other.R")
+    session$flushReact()
+    expect_match(output$code$html, "other.R", fixed = TRUE)
+    expect_no_match(output$code$html, "edited", fixed = TRUE)
+
+    # Gone: says so.
+    script("missing.R")
+    session$flushReact()
+    expect_match(output$code$html, "can't be read", fixed = TRUE)
   })
 })

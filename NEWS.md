@@ -2,6 +2,12 @@
 
 ## New features
 
+* A Script tab: the script the board has loaded, as it is on disk, read
+  only and coloured as R, with a Copy button; above it, where things are:
+  the script, the project folder, the data store and its metadata,
+  progress, values and workspaces, the `_targets.yaml` in use and the
+  active `TAR_PROJECT`, each path copied with a click. It follows Load and
+  edits to the files (#123).
 * An outdated target says why: hovered on the board, and above its value
   in the preview. Its command changed, which function or object changed
   (`f` changed), what upstream is outdated, no record in the store, its

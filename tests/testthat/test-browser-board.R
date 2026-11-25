@@ -415,4 +415,12 @@ test_that("in dark mode, the tables, the toolbar and the buttons stay readable",
   app$wait_for_js("document.querySelector('#board-meta-table .rt-td') !== null")
   expect_gte(contrast("#board-meta-table .rt-td"), 4.5)
   expect_gte(contrast("#board-meta-table .rt-th"), 4.5)
+  # The Script tab: the script coloured, where things are readable.
+  tab("script")
+  app$wait_for_js("document.querySelector('.tb-script-view pre.language-r[data-highlighted]') !== null")
+  expect_match(app$get_js("document.querySelector('.tb-script-view pre').innerText"), "tar_target", fixed = TRUE)
+  expect_gte(contrast(".tb-script-view .tb-paths th"), 4.5)
+  expect_gte(contrast(".tb-script-view .tb-paths caption"), 4.5)
+  expect_gte(contrast(".tb-script-view .tb-paths .tb-copy-path code"), 4.5)
+  expect_gte(contrast(".tb-script-view .tb-path-missing .tb-copy-path code"), 4.5)
 })
