@@ -105,7 +105,8 @@ app_theme <- function(name = board_theme_option()) {
 #   the page's text read under 2 in some themes.
 # - The warning mark and an errored branch's badge as the running and
 #   errored targets; the spinner as a running target's text.
-# - Edges: 75% of the text over the page; a selected one, the strongest
+# - Edges: 80% of the text over the page (75% read 2.8 in Solarized's
+#   light mode); a selected one, the strongest
 #   text. Into a running target: the running colour.
 # - Selection, the focus ring: primary halfway to the strongest text (a
 #   theme's primary alone vanished on Lux's dark canvas).
@@ -133,10 +134,10 @@ preset_rules <- "
   --tb-theme-warning-text: var(--tb-theme-status-running-text);
   --tb-theme-danger: var(--tb-theme-status-errored);
   --tb-theme-danger-text: var(--tb-theme-status-errored-text);
-  --tb-theme-node-border: color-mix(in srgb, var(--bs-body-color) 75%, var(--bs-body-bg));
+  --tb-theme-node-border: color-mix(in srgb, var(--bs-body-color) 80%, var(--bs-body-bg));
   --tb-theme-handle: var(--tb-theme-node-border);
   --tb-theme-handle-border: var(--bs-body-bg);
-  --tb-theme-edge: color-mix(in srgb, var(--bs-body-color) 75%, var(--bs-body-bg));
+  --tb-theme-edge: color-mix(in srgb, var(--bs-body-color) 80%, var(--bs-body-bg));
   --tb-theme-edge-selected: var(--bs-emphasis-color);
   --tb-theme-edge-running: var(--tb-theme-status-running-text);
   --tb-theme-edge-running-selected: var(--bs-emphasis-color);
