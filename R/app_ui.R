@@ -1,7 +1,8 @@
 #' The board's UI
 #'
-#' The top bar (chrome_ui()) holds only the title, the dark mode switch and
-#' the power button, which turns the board off. The sidebar holds the board's
+#' The top bar (chrome_ui()) holds only the title, the theme picker
+#' (theme_ui()), the dark mode switch and the power button, which turns the
+#' board off. The sidebar holds the board's
 #' run controls, and the page the board: its script bar above its card of
 #' tabs (board_ui()).
 #'
@@ -15,7 +16,7 @@ app_ui <- function(metadata, script = targets::tar_config_get("script"), layout 
   shiny::tagList(
     add_external_resources(),
     page_sidebar(
-      title = chrome_ui("chrome"),
+      title = chrome_ui("chrome", theme_ui("theme")),
       theme = app_theme(),
       fillable = TRUE,
       sidebar = sidebar(

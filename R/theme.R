@@ -13,21 +13,22 @@
 
 # The board's themes: the picker's list, in its order. "Targets board" is
 # the board's own look and the default; the others are Bootswatch presets
-# that pass the contrast checks in test-browser-themes.R, in both modes:
-# all of Bootswatch 5's but cyborg and slate (faint text in light mode),
-# journal (its buttons), morph (its light mode) and spacelab (text just
-# under 4.5).
+# that pass the contrast checks in test-browser-themes.R, in both modes, or
+# in dark mode for a dark-only one (the page keeps it in dark mode): all of
+# Bootswatch 5's but journal (its buttons), morph (its light mode) and
+# spacelab (text just under 4.5).
 # `dark_only`: the preset is dark in light mode too.
 board_themes <- function() {
   presets <- c(
-    "brite", "cerulean", "cosmo", "darkly", "flatly", "litera", "lumen",
-    "lux", "materia", "minty", "pulse", "quartz", "sandstone", "simplex",
-    "sketchy", "solar", "superhero", "united", "vapor", "yeti", "zephyr"
+    "brite", "cerulean", "cosmo", "cyborg", "darkly", "flatly", "litera",
+    "lumen", "lux", "materia", "minty", "pulse", "quartz", "sandstone",
+    "simplex", "sketchy", "slate", "solar", "superhero", "united", "vapor",
+    "yeti", "zephyr"
   )
   data.frame(
     name = c("Targets board", tools::toTitleCase(presets)),
     preset = c(NA, presets),
-    dark_only = c(FALSE, presets %in% c("darkly", "solar", "superhero", "vapor"))
+    dark_only = c(FALSE, presets %in% c("cyborg", "darkly", "slate", "solar", "superhero", "vapor"))
   )
 }
 

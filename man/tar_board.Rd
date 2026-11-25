@@ -103,8 +103,10 @@ when asked; set the limit with \code{options(targetsboard.preview_bytes = )}.
 
 The board's look is the "Targets board" theme. A few Bootstrap themes
 from Bootswatch, checked for readable text in light and dark mode, can
-replace it: set \code{options(targetsboard.theme = )} to one of their names,
-e.g. \code{"Cosmo"}, before starting the board.
+replace it: pick one in the top bar, and the browser remembers it. A dark
+theme, such as Darkly, keeps the page in dark mode and hides the switch.
+To start the board with a theme, whatever the browser remembers, set
+\code{options(targetsboard.theme = )} to its name, e.g. \code{"Cosmo"}.
 }
 
 \examples{

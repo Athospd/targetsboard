@@ -185,3 +185,22 @@ new_app_driver <- function(...) {
   chrome$default_timeout <- 60
   shinytest2::AppDriver$new(...)
 }
+
+# Waits until no CSS transition runs on the page: a colour measured mid-fade
+# (a mode switch fades Bootstrap's buttons over 0.15s) is neither mode's.
+# Spinners are animations, not transitions: they don't count.
+wait_for_settled <- function(app, timeout = 10000) {
+  app$wait_for_js(
+    "document.getAnimations().filter(a => a instanceof CSSTransition).length === 0",
+    timeout = timeout
+  )
+}
+
+# Waits until the widget follows the page's mode: it learns it from the
+# server, a round trip after the page's switch.
+wait_for_widget_mode <- function(app, mode, timeout = 10000) {
+  app$wait_for_js(sprintf(
+    "document.querySelector('.reactflow-wrapper').classList.contains('tb-dark') === %s",
+    if (mode == "dark") "true" else "false"
+  ), timeout = timeout)
+}

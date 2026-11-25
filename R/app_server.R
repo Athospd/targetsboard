@@ -1,7 +1,8 @@
 #' The board's server
 #'
-#' A few module calls: the top bar (chrome_server()) and the board
-#' (board_server()), which wires the board's own modules together.
+#' A few module calls: the top bar (chrome_server()), the theme picker
+#' (theme_server()) and the board (board_server()), which wires the board's
+#' own modules together.
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
 #' @param script Path to the targets script.
 #' @param targets_only Show only targets, without functions and globals.
@@ -16,6 +17,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
   function(input, output, session) {
     backend$start_once()
     chrome <- chrome_server("chrome")
+    theme_server("theme")
     board_server(
       "board", backend, metadata, script, scripts, targets_only,
       color_mode = chrome$color_mode

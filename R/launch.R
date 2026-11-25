@@ -35,8 +35,10 @@
 #' @section Themes:
 #' The board's look is the "Targets board" theme. A few Bootstrap themes
 #' from Bootswatch, checked for readable text in light and dark mode, can
-#' replace it: set `options(targetsboard.theme = )` to one of their names,
-#' e.g. `"Cosmo"`, before starting the board.
+#' replace it: pick one in the top bar, and the browser remembers it. A dark
+#' theme, such as Darkly, keeps the page in dark mode and hides the switch.
+#' To start the board with a theme, whatever the browser remembers, set
+#' `options(targetsboard.theme = )` to its name, e.g. `"Cosmo"`.
 #'
 #' @param script Path to the targets script. Defaults to the project's, as
 #'   `targets::tar_config_get("script")` gives it.
@@ -94,6 +96,7 @@ tar_board <- function(script = targets::tar_config_get("script"),
   }
   # Computed here, so that a broken script errors in your session at once.
   if (is.null(metadata)) metadata <- initial_metadata(script, targets_only, ...)
+  board_theme_option() # an unknown theme errors here, not in the board
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
@@ -120,7 +123,7 @@ tar_board <- function(script = targets::tar_config_get("script"),
       dev = board_dev_mode(),
       confirm_nodes = confirm_nodes_limit(),
       preview_bytes = preview_bytes_limit(),
-      theme = board_theme_option()
+      theme = getOption("targetsboard.theme")
     ),
     supervise = TRUE,
     poll_connection = TRUE,
