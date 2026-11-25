@@ -134,8 +134,8 @@ test_that("where_things_are() finds the script, the store and what is in it, and
   paths <- where_things_are("_targets.R")
   expect_equal(
     paths$label,
-    c("Script", "Project folder", "Data store", "Metadata", "Progress", "Values", "Workspaces", "Configuration")
-  )
+    c("Script", "Folder", "Data store", "Metadata", "Progress", "Values", "Workspaces", "Configuration")
+  ) # no Project row: a plain pipeline
   expect_equal(paths$path[paths$label == "Script"], full("_targets.R")) # absolute
   expect_equal(paths$path[paths$label == "Metadata"], full("_targets", "meta", "meta"))
   expect_true(all(paths$exists[1:6]))
@@ -148,7 +148,8 @@ test_that("where_things_are() finds the script, the store and what is in it, and
   paths <- where_things_are("_targets.R")
   expect_equal(paths$path[paths$label == "Data store"], full("other_store"))
   expect_true(paths$exists[paths$label == "Configuration"])
-  expect_equal(paths$path[paths$label == "Project (TAR_PROJECT)"], "other")
+  # The board's project, as the line for the console.
+  expect_equal(paths$path[paths$label == "Project"], 'Sys.setenv(TAR_PROJECT = "other")')
 
   html <- as.character(paths_table(paths))
   expect_match(html, "Where things are", fixed = TRUE)

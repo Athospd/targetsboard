@@ -7,12 +7,13 @@
 #' @param script Path to the targets script.
 #' @param targets_only Show only targets, without functions and globals.
 #' @param scripts Other scripts the Script field offers.
+#' @param project The project of `_targets.yaml` the board starts on.
 #' @noRd
 app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE,
-                       scripts = NULL) {
+                       scripts = NULL, project = active_project()) {
   # One backend per app: the poller, the board's run and the value
   # previews, shared by every browser session (board_backend()).
-  backend <- board_backend(script, targets_only)
+  backend <- board_backend(script, targets_only, project)
 
   function(input, output, session) {
     backend$start_once()

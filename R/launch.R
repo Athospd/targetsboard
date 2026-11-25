@@ -17,6 +17,17 @@
 #' free port, waits until it is up, opens it in your browser and prints its
 #' url.
 #'
+#' @section Projects:
+#' A `_targets.yaml` can define several projects, each with its own script
+#' and store, and the `TAR_PROJECT` environment variable chooses one
+#' (`"main"` unless set): see the targets manual's chapter on projects. The
+#' board starts on that project, or on `project`, and a Project field left of
+#' the Script field switches it, when `_targets.yaml` has more than one
+#' project or the board isn't on `"main"`. Loading another project's script
+#' switches to that project too. The board's project is its own: your R
+#' session's `TAR_PROJECT` is never changed, and the Script tab gives the
+#' line to make it follow.
+#'
 #' @section Large pipelines:
 #' The page keeps every target on the graph in memory, so very large graphs
 #' can make the browser slow or crash the tab. When a script loaded from the
@@ -41,7 +52,7 @@
 #' `options(targetsboard.theme = )` to its name, e.g. `"Cosmo"`.
 #'
 #' @param script Path to the targets script. Defaults to the project's, as
-#'   `targets::tar_config_get("script")` gives it.
+#'   `targets::tar_config_get("script", project = project)` gives it.
 #' @param port Port to serve the board on. Defaults to the `shiny.port` option
 #'   or, without one, a random free port.
 #' @param host Host to serve the board on. Defaults to the `shiny.host` option
@@ -56,6 +67,8 @@
 #' @param scripts Optional: other targets scripts to switch to, offered in the
 #'   board's Script field. The field lists them under `script` and filters
 #'   them as you type; only these can be chosen. Pick one and press Load.
+#' @param project The project of `_targets.yaml` to start on. Defaults to
+#'   the `TAR_PROJECT` environment variable, or `"main"`.
 #' @param ... Passed on to [targets::tar_visnetwork()] for the first render.
 #'
 #' @return `tar_board()`: the background process, a [callr::r_bg()] object,
@@ -79,11 +92,14 @@
 #' }
 #' @importFrom parallelly freePort
 #' @export
-tar_board <- function(script = targets::tar_config_get("script"),
+tar_board <- function(script = targets::tar_config_get("script", project = project),
                       port = getOption("shiny.port", targets::tar_random_port()),
                       targets_only = TRUE, metadata = NULL,
                       host = getOption("shiny.host", "127.0.0.1"),
-                      browse = TRUE, verbose = TRUE, scripts = NULL, ...) {
+                      browse = TRUE, verbose = TRUE, scripts = NULL,
+                      project = Sys.getenv("TAR_PROJECT", "main"), ...) {
+  if (!nzchar(project)) project <- "main"
+  check_project(project) # in your session, before anything starts
   script_choices(script, scripts) # check them in your session
   # Else the background board dies at once on "address already in use" and
   # the page at the port is whatever was there, often an older board.
@@ -95,12 +111,12 @@ tar_board <- function(script = targets::tar_config_get("script"),
     )
   }
   # Computed here, so that a broken script errors in your session at once.
-  if (is.null(metadata)) metadata <- initial_metadata(script, targets_only, ...)
+  if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, ...))
   board_theme_option() # an unknown theme errors here, not in the board
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme) {
+    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme) {
       options(
         targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes,
         targetsboard.preview_bytes = preview_bytes, targetsboard.theme = theme
@@ -108,6 +124,7 @@ tar_board <- function(script = targets::tar_config_get("script"),
       print(targetsboard::tar_board_app(
         script = script,
         scripts = scripts,
+        project = project,
         targets_only = targets_only,
         metadata = metadata,
         options = list(host = host, port = port)
@@ -117,6 +134,7 @@ tar_board <- function(script = targets::tar_config_get("script"),
       metadata = metadata,
       script = script,
       scripts = scripts,
+      project = project,
       host = host,
       port = port,
       targets_only = targets_only,
@@ -228,16 +246,28 @@ port_in_use <- function(port, host = "127.0.0.1") {
 
 #' @rdname tar_board
 #' @export
-tar_board_app <- function(script = targets::tar_config_get("script"), targets_only = TRUE,
-                          metadata = NULL, options = list(), scripts = NULL, ...) {
+tar_board_app <- function(script = targets::tar_config_get("script", project = project), targets_only = TRUE,
+                          metadata = NULL, options = list(), scripts = NULL,
+                          project = Sys.getenv("TAR_PROJECT", "main"), ...) {
+  if (!nzchar(project)) project <- "main"
+  check_project(project)
   script_choices(script, scripts)
-  if (is.null(metadata)) metadata <- initial_metadata(script, targets_only, ...)
+  if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, ...))
 
   shiny::shinyApp(
     # A function of the request: each page load opens the board with the
     # layout saved last, not the one there was when the app started.
     function(request) app_ui(metadata, script, layout = read_board_layout(), scripts = scripts),
-    app_server(metadata, script, targets_only, scripts),
+    app_server(metadata, script, targets_only, scripts, project),
+    # The board's project, in the process that serves it, for as long as it
+    # runs: then TAR_PROJECT is as it was, for a board run in your session.
+    onStart = function() {
+      old <- Sys.getenv("TAR_PROJECT", NA)
+      set_active_project(project)
+      shiny::onStop(function() {
+        if (is.na(old)) Sys.unsetenv("TAR_PROJECT") else Sys.setenv(TAR_PROJECT = old)
+      })
+    },
     options = options
   )
 }

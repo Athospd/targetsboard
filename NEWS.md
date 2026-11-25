@@ -1,3 +1,21 @@
+# targetsboard 0.3.0
+
+## New features
+
+* targets projects: the board follows `_targets.yaml`'s projects (#114).
+  It starts on the project `TAR_PROJECT` names, `"main"` unless set, or on
+  `tar_board(project = )` (also `tar_board_app(project = )`), with that
+  project's script and store. A Project field left of the script bar
+  switches project, store included; it shows only when `_targets.yaml` has
+  more than one project or the board isn't on `"main"`, so a plain pipeline
+  looks as before. Loading another project's script switches to that
+  project; a script no project names stays on the current project's store.
+  The field waits for a run to end, and follows `_targets.yaml` as it
+  changes. The board's project is its own: your R session's `TAR_PROJECT`
+  is never changed, and the Script tab gives the
+  `Sys.setenv(TAR_PROJECT = )` line to make it follow. Copied code (a debug
+  run, `tar_read()` in the preview) names the project's store.
+
 # targetsboard 0.2.0
 
 ## New features

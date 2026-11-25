@@ -1,17 +1,5 @@
 # The script module, on its own: script_server() with the poller's graphs
-# as reactiveVals.
-
-script_args <- function(.env = parent.frame()) {
-  backend <- board_backend("_targets.R", targets_only = TRUE)
-  withr::defer(backend$stop_poller(), envir = .env)
-  list(
-    backend = backend,
-    metadata = list(nodes = fake_nodes(), edges = fake_edges()),
-    script = "_targets.R",
-    poller_board = shiny::reactiveVal(NULL),
-    script_error = shiny::reactiveVal(NULL)
-  )
-}
+# as reactiveVals (script_args(), helper-fixtures.R).
 
 test_that("script_server() checks its arguments", {
   args <- list(

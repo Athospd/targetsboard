@@ -78,7 +78,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     # when the preview methods load again.
     loaded <- script_server(
       "script", backend, metadata, script, scripts, targets_only,
-      poller_board = data$poller_board, script_error = data$script_error
+      poller_board = data$poller_board, script_error = data$script_error,
+      running = data$running
     )
     board <- loaded$board
 

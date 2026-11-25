@@ -1,6 +1,7 @@
 #' The script the board draws: a bar as a browser's address bar
 #'
-#' Refresh, the script's path, and Load, above the board's tabs. The path is
+#' The project, when there are projects (project_picker()), then Refresh,
+#' the script's path, and Load, above the board's tabs. The path is
 #' free text, with the known scripts as suggestions under it: all of them
 #' when it gets the focus, filtered as one types; Enter or a pick loads it. While Load loads another script,
 #' script_loading_ui() covers the Board pane.
@@ -10,6 +11,15 @@
 #' @noRd
 script_ui <- function(id, script, scripts = NULL) {
   ns <- shiny::NS(id)
+  shiny::tags$div(
+    class = "tb-address-bar",
+    project_picker(ns("project"), sprintf("output['%s'] === 'true'", ns("show_projects"))),
+    script_bar(ns, script, scripts)
+  )
+}
+
+# Refresh, the path with its suggestions, and Load, in one input group.
+script_bar <- function(ns, script, scripts) {
   shiny::tags$div(
     class = "input-group input-group-sm tb-address",
     shiny::actionButton(
@@ -27,7 +37,7 @@ script_ui <- function(id, script, scripts = NULL) {
     # updates them.
     shiny::tags$span(
       id = ns("suggestions_list"), class = "shiny-html-output", hidden = NA,
-      script_suggestions(ns("suggestions"), script_choices(script, scripts))
+      script_suggestions(ns("suggestions"), known_scripts(script, scripts))
     )
   )
 }
@@ -55,16 +65,18 @@ script_loading_ui <- function(id) {
 #' @param targets_only Whether the graph shows only targets.
 #' @param poller_board Reactive: each graph the poller recomputes.
 #' @param script_error Reactive: why the script doesn't load, or `NULL`.
+#' @param running Reactive: whether a run is going. The project can't change
+#'   then.
 #' @return A list of reactives: `board`, the graph the board draws, once
 #'   accepted, and `methods`, which changes when the project's preview
 #'   methods are loaded again.
 #' @noRd
 script_server <- function(id, backend, metadata, script, scripts = NULL, targets_only = TRUE,
-                          poller_board, script_error) {
+                          poller_board, script_error, running = shiny::reactive(FALSE)) {
   stopifnot(
     !shiny::is.reactive(backend), !shiny::is.reactive(metadata), !shiny::is.reactive(script),
     !shiny::is.reactive(scripts), !shiny::is.reactive(targets_only),
-    shiny::is.reactive(poller_board), shiny::is.reactive(script_error)
+    shiny::is.reactive(poller_board), shiny::is.reactive(script_error), shiny::is.reactive(running)
   )
   shiny::moduleServer(id, function(input, output, session) {
     poller <- backend$poller
@@ -93,6 +105,15 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
     # memory. Cancel keeps the current graph and goes back to its script.
     pending_board <- shiny::reactiveVal(NULL)
     previous_script <- NULL
+    previous_project <- NULL
+    # Back to the script, and its project, before Load or a project switch.
+    go_back <- function() {
+      if (identical(previous_project, shiny::isolate(backend$project()))) {
+        backend$start_poller(previous_script)
+      } else {
+        backend$switch_project(previous_project, previous_script)
+      }
+    }
     shiny::observeEvent(input$draw_large, {
       shiny::req(pending_board())
       board(pending_board())
@@ -104,7 +125,7 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
       shiny::req(pending_board())
       pending_board(NULL)
       shiny::removeModal()
-      backend$start_poller(previous_script)
+      go_back()
       load_done()
     })
 
@@ -112,6 +133,14 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
     # it turns out not to load. The poller writes a new file for each script,
     # so the first one it writes is that script's graph.
     loading <- shiny::reactiveVal(FALSE)
+    # Load, or a project switch: the spinner over the Board pane, and where
+    # Cancel goes back to.
+    start_loading <- function() {
+      loading(TRUE)
+      shinycssloaders::showSpinner("loading")
+      previous_script <<- poller$script
+      previous_project <<- shiny::isolate(backend$project())
+    }
     load_done <- function() {
       if (!shiny::isolate(loading())) return()
       loading(FALSE)
@@ -144,7 +173,7 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
     # The bar names the script the board draws. The poller is shared, so a
     # tab opened after someone loaded another script, or open while they
     # did, follows it. The scripts loaded join the suggestions.
-    known <- shiny::reactiveVal(script_choices(script, scripts))
+    known <- shiny::reactiveVal(known_scripts(script, scripts))
     shiny::observeEvent(backend$loaded_script(), {
       shown <- backend$loaded_script()
       known(union(shiny::isolate(known()), shown))
@@ -171,10 +200,53 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
         bslib::update_task_button("load", state = "ready")
         return()
       }
-      loading(TRUE)
-      shinycssloaders::showSpinner("loading")
-      previous_script <<- poller$script
-      backend$start_poller(new_script)
+      # Another project's script loads on that project (projects.R).
+      current <- shiny::isolate(backend$project())
+      project <- project_of_script(new_script, current)
+      if (!identical(project, current) && shiny::isolate(running())) {
+        shiny::showNotification(
+          paste0(new_script, " is project ", project, "'s script: load it after the run."),
+          type = "warning"
+        )
+        bslib::update_task_button("load", state = "ready")
+        return()
+      }
+      start_loading()
+      if (identical(project, current)) {
+        backend$start_poller(new_script)
+      } else {
+        backend$switch_project(project, new_script)
+      }
+    })
+
+    # The projects of _targets.yaml, followed as the file changes, and the
+    # Project field on the active one. Their scripts join the suggestions.
+    listed <- watch_changes(listed_projects)
+    # "true" or "false", for the field's conditionalPanel.
+    output$show_projects <- shiny::renderText({
+      tolower(shows_projects(board_projects(backend$project(), listed()), backend$project()))
+    })
+    shiny::outputOptions(output, "show_projects", suspendWhenHidden = FALSE)
+    shiny::observe({
+      active <- backend$project()
+      shiny::updateSelectInput(session, "project", choices = project_choices(active, listed()), selected = active)
+    })
+    shiny::observe({
+      session$sendCustomMessage("tb-disable", list(
+        id = session$ns("project"), disabled = running(),
+        title = if (running()) "Switch project after the run"
+      ))
+    })
+    shiny::observeEvent(listed(), ignoreNULL = FALSE, {
+      active <- shiny::isolate(backend$project())
+      known(union(shiny::isolate(known()), project_scripts(board_projects(active, listed()), active)))
+    })
+    shiny::observeEvent(input$project, {
+      new_project <- input$project
+      if (identical(new_project, shiny::isolate(backend$project()))) return()
+      if (shiny::isolate(running())) return() # disabled meanwhile: a race
+      start_loading()
+      backend$switch_project(new_project)
     })
 
     # The preview methods of the project's _targetsboard.R: at start, and
@@ -199,6 +271,12 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
 
     list(board = shiny::reactive(board()), methods = shiny::reactive(methods()))
   })
+}
+
+# The scripts the bar suggests: the board's, the ones given, and the
+# projects' (projects.R).
+known_scripts <- function(script, scripts = NULL) {
+  unique(c(script_choices(script, scripts), project_scripts()))
 }
 
 #' The script bar's suggestions, a datalist of paths

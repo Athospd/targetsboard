@@ -252,6 +252,16 @@ new MutationObserver((records) => {
 }).observe(document.head, { childList: true });
 
 window.jQuery(document).on('shiny:connected', () => {
+  // A control Shiny can't disable from the server, such as a select: with
+  // the reason as its box's tooltip (the Project field, R/projects.R).
+  window.Shiny.addCustomMessageHandler('tb-disable', ({ id, disabled, title }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = disabled;
+    const box = el.closest('.tb-project') || el;
+    if (title) box.title = title;
+    else box.removeAttribute('title');
+  });
   window.Shiny.addCustomMessageHandler('tb-theme-remember', ({ name }) => {
     storage((s) => s.setItem(THEME_KEY, name));
   });
