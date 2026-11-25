@@ -13,8 +13,8 @@
 
 # The board's themes: the picker's list, in its order, by kind (its groups):
 # - "board": "Targets board", the board's own look and the default.
-# - "editor": the palettes of popular editor themes (board_palettes()), with
-#   a light and a dark variant each.
+# - "own": themes of the board's own, from a palette (board_own_palettes()).
+# - "editor": the palettes of popular editor themes (board_palettes()).
 # - "bootswatch": Bootswatch presets.
 # All pass the contrast checks in test-browser-themes.R, in both modes, or
 # in dark mode for a dark-only one (the page keeps it in dark mode). Of
@@ -22,32 +22,46 @@
 # and spacelab (text just under 4.5); and by choice cyborg, lumen, materia,
 # sandstone, simplex, slate and superhero.
 # `preset`: a Bootswatch preset's name. `dark_only`: the theme is dark in
-# light mode too.
+# light mode too (a palette with no light variant).
 board_themes <- function() {
   presets <- c(
     "brite", "cerulean", "cosmo", "darkly", "flatly", "litera", "lux",
     "minty", "pulse", "quartz", "sketchy", "solar", "united", "vapor", "yeti",
     "zephyr"
   )
+  own <- names(board_own_palettes())
   editors <- names(board_palettes())
+  palettes <- c(board_own_palettes(), board_palettes())
   data.frame(
-    name = c("Targets board", editors, tools::toTitleCase(presets)),
-    kind = rep(c("board", "editor", "bootswatch"), c(1, length(editors), length(presets))),
-    preset = c(NA, rep(NA, length(editors)), presets),
-    dark_only = c(FALSE, rep(FALSE, length(editors)), presets %in% c("darkly", "solar", "vapor"))
+    name = c("Targets board", own, editors, tools::toTitleCase(presets)),
+    kind = rep(
+      c("board", "own", "editor", "bootswatch"),
+      c(1, length(own), length(editors), length(presets))
+    ),
+    preset = c(NA, rep(NA, length(palettes)), presets),
+    dark_only = c(
+      FALSE, vapply(palettes, function(p) is.null(p$light), logical(1)),
+      presets %in% c("darkly", "solar", "vapor")
+    ),
+    row.names = NULL
   )
 }
 
-# The picker's choices: the themes in groups, "Targets board" first, alone.
+# The picker's choices: the themes in groups. "Targets board" and the
+# board's own themes first, not in a group.
 board_theme_choices <- function(themes = board_themes()) {
+  own <- themes$name[themes$kind %in% c("board", "own")]
   c(
-    list("Targets board" = "Targets board"),
+    as.list(stats::setNames(own, own)),
     list(
       "Editor themes" = themes$name[themes$kind == "editor"],
       "Bootswatch" = themes$name[themes$kind == "bootswatch"]
     )
   )
 }
+
+# A palette theme's palette, by name: the board's own or an editor's.
+theme_palette <- function(name) c(board_own_palettes(), board_palettes())[[name]]
 
 #' The app's Bootstrap theme
 #'
@@ -68,7 +82,7 @@ app_theme <- function(name = board_theme_option()) {
   check_board_theme(name)
   theme <- themes[themes$name == name, ]
   if (theme$kind == "board") return(bslib::bs_theme(version = 5))
-  if (theme$kind == "editor") return(palette_theme(board_palettes()[[name]]))
+  if (theme$kind %in% c("own", "editor")) return(palette_theme(theme_palette(name)))
   preset <- theme$preset
   bslib::bs_theme(
     version = 5, preset = preset,
@@ -91,7 +105,8 @@ app_theme <- function(name = board_theme_option()) {
 #   the page's text read under 2 in some themes.
 # - The warning mark and an errored branch's badge as the running and
 #   errored targets; the spinner as a running target's text.
-# - Edges: 75% of the text over the page; a selected one, the strongest
+# - Edges: 80% of the text over the page (75% read 2.8 in Solarized's
+#   light mode); a selected one, the strongest
 #   text. Into a running target: the running colour.
 # - Selection, the focus ring: primary halfway to the strongest text (a
 #   theme's primary alone vanished on Lux's dark canvas).
@@ -119,10 +134,10 @@ preset_rules <- "
   --tb-theme-warning-text: var(--tb-theme-status-running-text);
   --tb-theme-danger: var(--tb-theme-status-errored);
   --tb-theme-danger-text: var(--tb-theme-status-errored-text);
-  --tb-theme-node-border: color-mix(in srgb, var(--bs-body-color) 75%, var(--bs-body-bg));
+  --tb-theme-node-border: color-mix(in srgb, var(--bs-body-color) 80%, var(--bs-body-bg));
   --tb-theme-handle: var(--tb-theme-node-border);
   --tb-theme-handle-border: var(--bs-body-bg);
-  --tb-theme-edge: color-mix(in srgb, var(--bs-body-color) 75%, var(--bs-body-bg));
+  --tb-theme-edge: color-mix(in srgb, var(--bs-body-color) 80%, var(--bs-body-bg));
   --tb-theme-edge-selected: var(--bs-emphasis-color);
   --tb-theme-edge-running: var(--tb-theme-status-running-text);
   --tb-theme-edge-running-selected: var(--bs-emphasis-color);
@@ -143,20 +158,53 @@ preset_rules <- "
 }
 "
 
-# Editor themes: four palettes of popular editor themes (vscodethemes.com,
-# by installs), each with a light and a dark variant, so the board's two
-# modes both get the theme's own colours. Hex values from each theme's
-# official source:
+# The board's own palette themes:
+# - Flow: React Flow's website (reactflow.dev): its pink, hsl(333 100% 50%),
+#   on its white and near-black pages, with its slate text, and its
+#   Tailwind accents (600 or 500 in light mode, 400 in dark), from its
+#   stylesheets' --primary, --foreground, --muted-foreground, --border.
+# As board_palettes(), below.
+board_own_palettes <- function() {
+  list(
+    "Flow" = list(
+      light = c(
+        bg = "#ffffff", fg = "#0f172a", surface = "#f1f5f9", border = "#e2e8f0",
+        muted = "#64748b", primary = "#ff0073", success = "#00a544", info = "#3080ff",
+        warning = "#fe6e00", danger = "#fb2c36",
+        link = "shade-color(#ff0073, 20%)"
+      ),
+      dark = c(
+        bg = "#111111", fg = "#ffffff", surface = "#171717", border = "#333333",
+        muted = "#97a3b4", primary = "#ff0073", success = "#05df72", info = "#54a2ff",
+        warning = "#ff8b1a", danger = "#ff6568"
+      )
+    )
+  )
+}
+
+# Editor themes: palettes of popular editor themes (vscodethemes.com), each
+# with a light and a dark variant, so the board's two modes both get the
+# theme's own colours, or a dark one only, and the theme is dark-only. Hex
+# values from each theme's official source:
 # - Catppuccin: Latte and Mocha (github.com/catppuccin/palette, MIT).
 # - Tokyo Night: Light and Night (github.com/enkia/tokyo-night-vscode-theme).
 # - Nord: Snow Storm and Polar Night, with Frost and Aurora
 #   (github.com/nordtheme/nord, MIT).
 # - Gruvbox: light (faded accents) and dark (bright accents)
 #   (github.com/morhetz/gruvbox, MIT/X11).
+# - Solarized: light and dark, Ethan Schoonover's palette, as Ryan Olson's
+#   "Solarized" for VS Code (github.com/ryanolsonx/vscode-solarized-theme,
+#   MIT). Its text: base01 on light, base1 on dark, a step stronger than
+#   the editor's body text, for small text on the board.
+# - Glow Night: dark only (genta.glow-night, the VS Code extension's theme
+#   file; github.com/gentabelardi/GlowNight): its page and pink, and its
+#   syntax colours as the accents.
 # Per mode: bg, fg (text), surface (secondary background), border, muted
 # (secondary text), and the accents; a value left out is Bootstrap's own,
-# from bg and fg. `link`: the light mode's link colour, a Sass expression,
-# when its primary is too light for text on its bg.
+# from bg and fg. `link`: the mode's link colour, a Sass expression, when
+# its primary is too faint for text on its bg. `emphasis_tint` (dark only):
+# how much lighter than the accents their emphasis is, as a status's label,
+# for mid-tone accents.
 board_palettes <- function() {
   list(
     "Catppuccin" = list(
@@ -207,6 +255,28 @@ board_palettes <- function() {
         muted = "#a89984", primary = "#83a598", success = "#b8bb26", info = "#8ec07c",
         warning = "#fabd2f", danger = "#fb4934"
       )
+    ),
+    "Solarized" = list(
+      light = c(
+        bg = "#fdf6e3", fg = "#586e75", surface = "#eee8d5", border = "#ddd6c1",
+        muted = "#657b83", primary = "#268bd2", success = "#859900", info = "#2aa198",
+        warning = "#b58900", danger = "#dc322f",
+        link = "shade-color(#268bd2, 25%)"
+      ),
+      dark = c(
+        bg = "#002b36", fg = "#93a1a1", surface = "#073642", border = "#586e75",
+        muted = "#839496", primary = "#268bd2", success = "#859900", info = "#2aa198",
+        warning = "#b58900", danger = "#dc322f",
+        link = "tint-color(#268bd2, 25%)", emphasis_tint = "40%"
+      )
+    ),
+    "Glow Night" = list(
+      dark = c(
+        bg = "#070425", fg = "#58c4c4", surface = "#0d0935", border = "#484291",
+        muted = "#65737e", primary = "#e4097e", success = "#c3e88d", info = "#89ddff",
+        warning = "#ffcb6b", danger = "#ff5370", link = "#ff068b",
+        emphasis_tint = "25%"
+      )
     )
   )
 }
@@ -214,12 +284,25 @@ board_palettes <- function() {
 # A palette's theme: Bootstrap 5 with its light colours as the theme's, its
 # dark colours as Bootstrap 5.3's dark mode's (the *-dark Sass variables), and
 # its dark accents as rules: Bootstrap compiles the accents for light mode
-# only. With the presets' rules: the canvas from its own colours.
+# only. With the presets' rules: the canvas from its own colours. A dark-only
+# palette's light mode, never shown, keeps Bootstrap's own page with its
+# accents: bslib derives the dark mode's greys (the default button's) from
+# the light mode's bg and fg, which a dark bg turns dark.
 palette_theme <- function(palette) {
-  light <- palette$light
   dark <- palette$dark
+  light <- palette$light
+  if (is.null(light)) {
+    light <- c(bg = "#ffffff", fg = "#212529", surface = "#f8f9fa", muted = "#6c757d",
+      dark[c("primary", "success", "info", "warning", "danger")])
+  }
   accents <- c("primary", "success", "info", "warning", "danger")
   optional <- function(colours, name) if (name %in% names(colours)) colours[[name]]
+  # Dark mode's emphasis of an accent (a status's label): the accent, or
+  # lighter by `emphasis_tint` for mid-tone accents on a dark page.
+  emphasis_dark <- dark[accents]
+  if ("emphasis_tint" %in% names(dark)) {
+    emphasis_dark <- sprintf("tint-color(%s, %s)", emphasis_dark, dark[["emphasis_tint"]])
+  }
   vars <- c(
     list(
       version = 5, bg = light[["bg"]], fg = light[["fg"]],
@@ -238,11 +321,11 @@ palette_theme <- function(palette) {
       "body-secondary-bg-dark" = dark[["surface"]],
       "body-tertiary-bg-dark" = dark[["surface"]],
       "border-color-dark" = optional(dark, "border"),
-      "link-color-dark" = dark[["primary"]],
+      "link-color-dark" = if ("link" %in% names(dark)) dark[["link"]] else dark[["primary"]],
       "link-hover-color-dark" = dark[["fg"]]
     ),
     as.list(light[accents]),
-    stats::setNames(as.list(dark[accents]), paste0(accents, "-text-emphasis-dark"))
+    stats::setNames(as.list(emphasis_dark), paste0(accents, "-text-emphasis-dark"))
   )
   vars <- vars[!vapply(vars, is.null, logical(1))]
   dark_accents <- vapply(accents, function(accent) {

@@ -8,8 +8,10 @@
   the board with one with `options(targetsboard.theme = )`, e.g. `"Cosmo"`.
   A Bootswatch theme also colours the canvas and the minimap from its own
   colours, and a dark one keeps the page in dark mode and hides the switch.
-  Four editor themes, Catppuccin, Tokyo Night, Nord and Gruvbox, bring their
-  own palettes, light and dark, to the page and the canvas.
+  Six editor themes, Catppuccin, Tokyo Night, Nord, Gruvbox, Solarized and
+  Glow Night (dark only), bring their own palettes, light and dark, to the
+  page and the canvas; and "Flow", the board's own, takes React Flow's
+  website's pink and slate.
   A theme other than "Targets board" colours the whole canvas from its own
   colours: the targets by status (its success, info, danger and warning),
   their outlines and labels, edges and running edges, the focus ring and
