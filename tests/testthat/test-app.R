@@ -188,8 +188,9 @@ test_that("the script bar suggests the scripts, with the launch script first and
   expect_match(html, 'data-tb-suggest="board-script-suggestions" data-tb-enter="board-script-load"', fixed = TRUE)
   expect_match(html, 'id="board-script-path".*id="board-view"')
   expect_no_match(as.character(chrome_ui("chrome")), "script-path", fixed = TRUE)
-  options <- regmatches(html, gregexpr('<option value="[^"]*"', html))[[1]]
-  options <- setdiff(options, paste0('<option value="', board_themes()$name, '"')) # the theme picker's
+  # The suggestions' datalist, not the theme picker's or the Project field's options.
+  datalist <- regmatches(html, regexpr('<datalist id="board-script-suggestions">.*?</datalist>', html))
+  options <- regmatches(datalist, gregexpr('<option value="[^"]*"', datalist))[[1]]
   expect_equal(options, paste0('<option value="', c("b.R", "a.R", "c.R"), '"'))
   expect_error(app_ui(metadata, "b.R", scripts = 1), "must be a character vector")
 })

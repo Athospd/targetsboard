@@ -565,17 +565,37 @@ pre.hljs {
 }
 
 /* The script bar, as a browser's address bar: above the board's tabs, its
-   own height, not filling the page. Room for a long path, but not the whole
+   own height, not filling the page. The Project field first, when there
+   are projects (R/projects.R). Room for a long path, but not the whole
    width: at most 40rem or 40% of the board, at least 22rem. */
-.tb-address {
+.tb-address-bar {
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  /* In line with the first tab, below the page's header. */
+  margin: 0.5rem var(--bs-card-cap-padding-x, 1rem) 0;
+}
+.tb-address {
+  flex: 1 1 auto;
   width: 100%;
   min-width: 22rem;
   max-width: min(40rem, 40%);
   flex-wrap: nowrap;
-  /* In line with the first tab, below the page's header. */
-  margin: 0.5rem var(--bs-card-cap-padding-x, 1rem) 0;
 }
+/* The Project field: its label beside it, as the bar's height. */
+.tb-project .form-group {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+}
+.tb-project .control-label {
+  margin: 0;
+  font-size: var(--tb-font-size-sm);
+  white-space: nowrap;
+}
+.tb-project .form-select { width: auto; }
 .tb-address {
   position: relative;
 }
