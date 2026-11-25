@@ -183,3 +183,12 @@ test_that("script_view_server() shows the loaded script as it is on disk, and fo
     expect_match(output$code$html, "can't be read", fixed = TRUE)
   })
 })
+
+test_that("absolute_path() gives a path not created yet as the system names its folders", {
+  local_pipeline()
+  here <- normalizePath(getwd(), winslash = "/")
+  expect_equal(absolute_path("not/made/yet"), paste0(here, "/not/made/yet"))
+  expect_equal(absolute_path(file.path(getwd(), "store")), paste0(here, "/store"))
+  expect_equal(absolute_path("_targets.R"), paste0(here, "/_targets.R"))
+  expect_false(startsWith(absolute_path("~/x"), here)) # a home path is already absolute
+})

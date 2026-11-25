@@ -68,13 +68,7 @@ script_view_state <- function(script) {
 #'   (1 for what is inside the store).
 #' @noRd
 where_things_are <- function(script) {
-  # Absolute even when not created yet: normalizePath() leaves those
-  # relative on Linux and macOS.
-  full <- function(path) {
-    relative <- !grepl("^(/|~|[A-Za-z]:|\\\\)", path)
-    path[relative] <- file.path(getwd(), path[relative])
-    normalizePath(path, winslash = "/", mustWork = FALSE)
-  }
+  full <- function(path) unname(vapply(path, absolute_path, ""))
   store <- targets::tar_config_get("store")
   config <- Sys.getenv("TAR_CONFIG", "_targets.yaml")
   project <- Sys.getenv("TAR_PROJECT")
@@ -122,4 +116,18 @@ paths_table <- function(paths) {
     shiny::tags$caption(class = "caption-top", "Where things are"),
     shiny::tags$tbody(rows)
   )
+}
+
+# A path made absolute, as the system names it, even when it doesn't exist
+# yet: normalizePath() only resolves what exists (on Windows it keeps short
+# names, RUNNER~1; on macOS a link, /var for /private/var; on Linux it stays
+# relative). So the deepest folder that exists is resolved, and the rest
+# added to it.
+absolute_path <- function(path) {
+  # Relative unless it starts at a root, a drive, a home (~) or a share (\\).
+  if (!grepl("^([/~]|[A-Za-z]:|[\\\\])", path)) path <- file.path(getwd(), path)
+  if (file.exists(path)) return(normalizePath(path, winslash = "/"))
+  parent <- dirname(path)
+  if (identical(parent, path)) return(path)
+  file.path(absolute_path(parent), basename(path))
 }
