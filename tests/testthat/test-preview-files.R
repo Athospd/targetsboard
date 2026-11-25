@@ -112,13 +112,15 @@ test_that("a CSV or TSV file's line gives its rows and columns, not its size and
   html <- as.character(file_section_view(csv, target))
   expect_match(html, "<span>1,500 rows x 3 columns</span>", fixed = TRUE)
   expect_no_match(html, "modified", fixed = TRUE)
-  expect_no_match(html, "KB", fixed = TRUE)
+  expect_no_match(html, "<span>[0-9.]+ [kMG]?B</span>") # a size, as "3 kB"
   expect_match(as.character(file_section_view(tsv, target)), "<span>1 row x 2 columns</span>", fixed = TRUE)
 
   # Other files keep their size and time.
   log <- file.path(dir, "run.log")
   writeLines("done", log)
-  expect_match(as.character(file_section_view(log, target)), "modified ", fixed = TRUE)
+  log_html <- as.character(file_section_view(log, target))
+  expect_match(log_html, "modified ", fixed = TRUE)
+  expect_match(log_html, "<span>[0-9.]+ [kMG]?B</span>")
 })
 
 # A session that only serves data objects, keeping each one's filter.

@@ -46,9 +46,11 @@ test_that("every board theme keeps the board readable, in both modes", {
       if (!themes$dark_only[i]) { # else hidden
         expect_gte(got$switch, 3, label = paste(label, "dark mode button")) # an icon
       }
-      if (is.na(themes$preset[i])) {
-        expected <- if (mode == "light") "rgb(240, 229, 215)" else "rgb(20, 20, 20)"
-        expect_equal(got$canvas, expected, label = paste(label, "canvas"))
+      board_canvas <- if (mode == "light") "rgb(240, 229, 215)" else "rgb(20, 20, 20)"
+      if (themes$kind[i] == "board") {
+        expect_equal(got$canvas, board_canvas, label = paste(label, "canvas"))
+      } else {
+        expect_false(identical(got$canvas, board_canvas), label = paste(label, "canvas is its own"))
       }
     }
     app$stop()

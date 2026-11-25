@@ -8,6 +8,8 @@
   the board with one with `options(targetsboard.theme = )`, e.g. `"Cosmo"`.
   A Bootswatch theme also colours the canvas and the minimap from its own
   colours, and a dark one keeps the page in dark mode and hides the switch.
+  Four editor themes, Catppuccin, Tokyo Night, Nord and Gruvbox, bring their
+  own palettes, light and dark, to the page and the canvas.
 * The script the board draws is chosen in a bar above the board's tabs, as
   a browser's address bar: Refresh, the script's path, and Load. The path is
   free text. Focused, it lists the known scripts, filtered as one types;
