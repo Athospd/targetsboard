@@ -93,9 +93,9 @@ where_things_are <- function(script) {
   rows
 }
 
-# The paths as a table, each whole and copied with a click, in neutral
-# colours (the red copy buttons are for a target's code); one not there yet
-# says so.
+# The paths as a table: each the value preview's copy button, cut short
+# with an ellipsis when narrow, whole on hover and when copied; one not
+# there yet says so.
 paths_table <- function(paths) {
   missing_note <- function(label) {
     if (label == "Configuration") "none: targets' defaults" else "not created yet"
@@ -103,12 +103,12 @@ paths_table <- function(paths) {
   rows <- lapply(seq_len(nrow(paths)), function(i) {
     row <- paths[i, ]
     shiny::tags$tr(
-      class = if (!row$exists) "tb-path-missing",
       shiny::tags$th(scope = "row", class = if (row$depth > 0) "ps-4 fw-normal", row$label),
-      shiny::tags$td(
-        htmltools::tagAppendAttributes(copy_code_button(row$path), class = "tb-copy-path"),
-        if (!row$exists) shiny::tags$span(class = "text-muted small ms-2", missing_note(row$label))
-      )
+      shiny::tags$td(shiny::tags$div(
+        class = "tb-path",
+        copy_code_button(row$path),
+        if (!row$exists) shiny::tags$span(class = "tb-path-note text-muted small", missing_note(row$label))
+      ))
     )
   })
   shiny::tags$table(
