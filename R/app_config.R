@@ -19,7 +19,7 @@ add_external_resources <- function() {
 
   shiny::tags$head(
     shiny::tags$title("Targets board"),
-    # The brand's mark on an ink tile (dev/logo/make_logo.py).
+    # The brand's mark on an ink tile (made on the logo-concepts branch).
     shiny::tags$link(rel = "icon", type = "image/svg+xml", href = "www/favicon.svg"),
     shiny::tags$link(rel = "icon", type = "image/png", href = "www/favicon.png"),
     shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/index.css"),
