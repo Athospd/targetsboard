@@ -89,6 +89,9 @@
 
 ## Minor changes
 
+* The Value pane's button that copies the `targets::tar_read()` call is in
+  the theme's red, its danger colour, so it stands out; readable in every
+  theme and mode (#104).
 * The board's look is evened out: one type scale (`--tb-font-size-*`),
   Bootstrap's radii, sizes in rem, one button style in two sizes (the
   page's, bslib's default; the canvas's, the toolbar's, which Tidy now
