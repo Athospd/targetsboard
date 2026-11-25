@@ -487,9 +487,9 @@ test_that("the graph follows the page's dark mode switch", {
 
   shiny::testServer(server, {
     backend_of(server)$stop_poller()
-    session$setInputs(`chrome-dark_mode` = "dark")
+    session$setInputs(`theme-dark_mode` = "dark")
     expect_equal(sent[[length(sent)]], list(inputId = "flow", color_mode = "dark"))
-    session$setInputs(`chrome-dark_mode` = "light")
+    session$setInputs(`theme-dark_mode` = "light")
     expect_equal(sent[[length(sent)]]$color_mode, "light")
   })
 })

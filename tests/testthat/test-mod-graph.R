@@ -40,11 +40,7 @@ test_that("the graph shows a target asked for, each time, and follows the page's
   })
 })
 
-test_that("the top bar's switch is the page's mode", {
-  shiny::testServer(chrome_server, {
-    session$setInputs(dark_mode = "dark")
-    expect_equal(session$returned$color_mode(), "dark")
-  })
+test_that("the top bar holds the power button", {
   html <- as.character(chrome_ui("chrome"))
   expect_match(html, 'id="chrome-turn_off"', fixed = TRUE)
 })

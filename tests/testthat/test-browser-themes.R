@@ -31,7 +31,7 @@ test_that("every board theme keeps the board readable, in both modes", {
     app$click(selector = ".react-flow__node[data-id='b']")
     app$wait_for_js("document.querySelector('.tb-node-toolbar button') !== null")
     modes <- if (themes$dark_only[i]) "dark" else c("light", "dark")
-    expect_equal(app$get_js("document.querySelector('.tb-mode-button').hidden"), themes$dark_only[i])
+    expect_equal(app$get_js("document.querySelector('.tb-mode-button').offsetParent === null"), themes$dark_only[i])
     for (mode in modes) {
       app$run_js(sprintf("document.querySelector('bslib-input-dark-mode').setAttribute('mode', '%s')", mode))
       app$wait_for_js(sprintf("document.documentElement.dataset.bsTheme === '%s'", mode))
