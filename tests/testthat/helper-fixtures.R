@@ -66,14 +66,15 @@ wait_for <- function(condition, timeout = 30) {
 # The real board in headless Chrome, for the pipeline in `dir`: or, with
 # `app`, the lines of another app.R. Skips when Chrome or shinytest2 is
 # missing. Uses the installed targetsboard.
-local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", .env = parent.frame()) {
+# `...` goes to the driver, e.g. `width = 700` for a narrow window.
+local_board_app <- function(dir, name, app = "targetsboard::tar_board_app()", ..., .env = parent.frame()) {
   skip_on_cran()
   skip_if_not_installed("shinytest2")
   skip_if_not_installed("chromote")
   skip_if(is.null(chromote::find_chrome()), "Chrome not found")
   writeLines(app, file.path(dir, "app.R"))
   # Slow CI runners can take over a minute to start Chrome and the app.
-  app <- new_app_driver(dir, name = name, load_timeout = 120 * 1000)
+  app <- new_app_driver(dir, name = name, load_timeout = 120 * 1000, ...)
   withr::defer(app$stop(), envir = .env)
   app
 }

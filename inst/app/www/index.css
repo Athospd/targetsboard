@@ -6,6 +6,10 @@
   --tb-font-size-xs: 0.8125rem;  /* tables, code, facts */
   --tb-font-size-xxs: 0.75rem;   /* captions, pagination, badges */
   --tb-font-size-display: 2rem;  /* a single value, shown large */
+  /* bslib keeps the page's main area at least 576px wide while the sidebar
+     is open, which pushes the board past a narrow window's right edge
+     (#125). The board's content shrinks on its own: no minimum. */
+  --bslib-page-main-min-width: 0;
 }
 
 
