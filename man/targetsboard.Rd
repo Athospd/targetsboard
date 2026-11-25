@@ -37,7 +37,8 @@ update_targetsboard_status(
   inputId,
   statuses = character(),
   warnings = NULL,
-  branches = NULL
+  branches = NULL,
+  reasons = NULL
 )
 
 update_targetsboard_focus(session, inputId, node = NULL)
@@ -103,6 +104,11 @@ branch counts on patterns as they are; otherwise a data frame as
 \code{targets::tar_progress_branches()} returns, and the patterns it lists
 show how many of their branches are done (e.g. "3/6"). The others show
 none, so a data frame without rows clears them all.}
+
+\item{reasons}{For \code{update_targetsboard_status()}: \code{NULL} leaves the
+targets' tooltips as they are; else a named character vector, every
+target's text shown on hovering it (why it is outdated), the others
+showing none.}
 
 \item{node}{For \code{update_targetsboard_focus()}: the id of the target to
 focus and select alone, as a click does, or \code{NULL} to clear the focus

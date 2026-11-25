@@ -85,7 +85,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     shown <- shiny::reactiveVal(NULL)
     graph <- graph_server(
       "graph", board, data$progress, data$running, data$warned_targets,
-      show = shiny::reactive(shown()), color_mode = color_mode
+      show = shiny::reactive(shown()), color_mode = color_mode, outdated = data$outdated
     )
 
     # The tabs beside the board. The tables' clicks show a target on it.
@@ -108,7 +108,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
       focused = graph$focused,
       open_request = shiny::reactive(if (preview_request() > 0) preview_request()),
       board = board, running = data$running, tar_meta = data$tar_meta,
-      methods = loaded$methods
+      methods = loaded$methods, outdated = data$outdated
     )
 
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.

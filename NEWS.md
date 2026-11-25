@@ -2,6 +2,12 @@
 
 ## New features
 
+* An outdated target says why: hovered on the board, and above its value
+  in the preview. Its command changed, which function or object changed
+  (`f` changed), what upstream is outdated, no record in the store, its
+  cue, file, format or seed: targets' cues (`tar_sitrep()`), with what
+  changed named from `tar_network()`. Computed in the background after the
+  graph, which doesn't wait for it.
 * Themes: the board's look is the "Targets board" theme, and a few
   Bootswatch themes, checked for readable text in light and dark mode, can
   replace it: pick one in the top bar, and the browser remembers it, or start

@@ -21,6 +21,12 @@ NULL
 #' written next to it, to `poller_error_path(tar_vis_path)`, and removed by
 #' the next recompute that works: the app shows it.
 #'
+#' After the graph, the process writes why its outdated targets are outdated
+#' to `poller_reasons_path(tar_vis_path)` (outdated_reasons()): the cues of
+#' `tar_sitrep()`, and `tar_network(targets_only = FALSE)` to name what
+#' changed. They hash the pipeline again, so they come after the graph, which
+#' doesn't wait for them.
+#'
 #' @param script Path to the targets script.
 #' @param interval Seconds between two checks; checks are cheap file stats.
 #' @param settle Seconds without progress before a run counts as ended.
@@ -102,6 +108,28 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
           computed_code <- code
           computed_progress <- progress_mtime
         }
+        if (!is.null(widget) && written) {
+          reasons_path <- sub("[.]rds$", "_reasons.rds", tar_vis_path) # poller_reasons_path()
+          reasons <- tryCatch({
+            network <- targets::tar_network(script = script, targets_only = FALSE)
+            meta <- targets::tar_meta(fields = "parent", targets_only = TRUE)
+            list(
+              sitrep = as.data.frame(targets::tar_sitrep(script = script)),
+              vertices = as.data.frame(network$vertices[, c("name", "type", "status")]),
+              edges = as.data.frame(network$edges),
+              parents = as.data.frame(meta[!is.na(meta$parent), c("name", "parent")]),
+              progress_mtime = progress_mtime
+            )
+          }, error = function(e) {
+            message("Why outdated failed: ", conditionMessage(e))
+            NULL
+          })
+          if (!is.null(reasons)) {
+            tmp <- paste0(reasons_path, ".tmp")
+            saveRDS(reasons, file = tmp)
+            if (!file.rename(tmp, reasons_path)) unlink(tmp)
+          }
+        }
       }
       Sys.sleep(interval)
     }
@@ -123,6 +151,9 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
 
 # Where the poller writes why its last recompute failed: see tar_visnetwork_bg().
 poller_error_path <- function(tar_vis_path) sub("[.]rds$", ".error", tar_vis_path)
+
+# Where the poller writes why outdated targets are: see tar_visnetwork_bg().
+poller_reasons_path <- function(tar_vis_path) sub("[.]rds$", "_reasons.rds", tar_vis_path)
 
 #' Why the script doesn't load, for the board's notification
 #'

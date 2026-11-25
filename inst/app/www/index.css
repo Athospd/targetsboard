@@ -29,6 +29,11 @@ body {
 .tb-problem { padding: 0.75rem; font-size: var(--tb-font-size-sm); }
 .tb-problem-title { color: var(--bs-danger); margin-bottom: 0.5rem; }
 .tb-problem pre { white-space: pre-wrap; word-break: break-word; font-size: var(--tb-font-size-xs); margin-bottom: 0.5rem; }
+/* Why the focused target is outdated, above its value: in the outdated
+   status's colour, info. */
+.tb-why { padding: 0.75rem 0.75rem 0; font-size: var(--tb-font-size-sm); }
+.tb-why-title { color: var(--bs-info-text-emphasis); font-weight: 600; margin-bottom: 0.25rem; }
+.tb-why ul { margin-bottom: 0; padding-left: 1.25rem; }
 .tb-problem-error { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); padding: 0.5rem; border-radius: var(--bs-border-radius-sm); }
 .tb-problem-warnings { color: var(--bs-warning-text-emphasis); padding-left: 1.2rem; }
 .tb-traceback-own pre { border-left: 3px solid var(--bs-primary); padding-left: 0.5rem; }
