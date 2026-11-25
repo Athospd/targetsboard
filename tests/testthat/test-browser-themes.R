@@ -21,6 +21,24 @@ test_that("every board theme keeps the board readable, in both modes", {
     "  switch: ct('.tb-mode-button'),",
     "  canvas: getComputedStyle(document.querySelector('.react-flow')).backgroundColor }; })()"
   )
+  # The canvas's colours, as the widget resolves its tokens: a status's text
+  # on its fill, and the marks (outline, edges, focus ring) on the canvas.
+  canvas_js <- paste(
+    "(() => { const wrap = document.querySelector('.reactflow-wrapper'); const probe = document.createElement('div'); wrap.appendChild(probe);",
+    "const rgb = css => { probe.style.color = css; const c = getComputedStyle(probe).color;",
+    "  let v = c.match(/color\\(srgb ([-0-9.e]+) ([-0-9.e]+) ([-0-9.e]+)/); if (v) return v.slice(1, 4).map(x => +x * 255);",
+    "  return c.match(/[0-9.]+/g).slice(0, 3).map(Number); };",
+    "const lum = c => { const [r, g, b] = c.map(v => { v /= 255;",
+    "  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });",
+    "  return 0.2126 * r + 0.7152 * g + 0.0722 * b; };",
+    "const ratio = (a, b) => { const [x, y] = [lum(rgb(a)), lum(rgb(b))]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };",
+    "const r = {}; for (const s of ['uptodate', 'outdated', 'errored', 'running']) {",
+    "  r[s] = ratio(`var(--tb-status-${s})`, `var(--tb-status-${s}-text)`);",
+    "  r[s + '_border'] = ratio(`var(--tb-status-${s}-border)`, 'var(--tb-canvas-bg)'); }",
+    "r.edge = ratio('var(--tb-edge)', 'var(--tb-canvas-bg)'); r.edge_running = ratio('var(--tb-edge-running)', 'var(--tb-canvas-bg)');",
+    "r.focus_ring = ratio('var(--tb-focus-ring)', 'var(--tb-canvas-bg)');",
+    "probe.remove(); return r; })()"
+  )
   for (i in seq_len(nrow(themes))) {
     name <- themes$name[i]
     app <- local_board_app(dir, paste0("theme-", i), c(
@@ -43,6 +61,19 @@ test_that("every board theme keeps the board readable, in both modes", {
         expect_gte(got[[part]], 4.5, label = paste(label, part))
       }
       expect_gte(got$tab, 3, label = paste(label, "inactive tab")) # bold, large-ish
+      if (themes$kind[i] != "board") { # the board's own: its look, from before themes
+        canvas <- app$get_js(canvas_js)
+        for (status in c("uptodate", "outdated", "errored", "running")) {
+          expect_gte(canvas[[status]], 4.5, label = paste(label, status, "target's label"))
+        }
+        # Quartz's light page is a mid-tone purple: only near-white or
+        # near-black marks reach 3 on its canvas. Its marks (2.3 to 2.8)
+        # stay visible and its targets stand out, so it keeps its light mode.
+        marks_min <- if (name == "Quartz" && mode == "light") 2.2 else 3
+        for (mark in c(paste0(c("uptodate", "outdated", "errored", "running"), "_border"), "edge", "edge_running", "focus_ring")) {
+          expect_gte(canvas[[mark]], marks_min, label = paste(label, mark, "on the canvas"))
+        }
+      }
       if (!themes$dark_only[i]) { # else hidden
         expect_gte(got$switch, 3, label = paste(label, "dark mode button")) # an icon
       }

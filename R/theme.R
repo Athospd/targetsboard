@@ -93,15 +93,62 @@ app_theme <- function(name = board_theme_option()) {
     bslib::bs_add_rules(preset_rules)
 }
 
-# A preset's board colours. The widget's tokens read --tb-theme-* when a
-# theme sets them (targetsboardCustomCSS.css), in both modes: derived from
-# --bs-*, they follow the mode themselves.
+# A theme's board colours, for a Bootswatch or an editor theme. The widget's
+# tokens read --tb-theme-* when a theme sets them (targetsboardCustomCSS.css),
+# in both modes: derived from --bs-*, they follow the mode themselves. The
+# mixes were measured in every theme and mode (test-browser-themes.R checks
+# them):
+# - A status takes a theme colour: up to date success, outdated info,
+#   errored danger, running warning. Its fill: 15% of it over Bootstrap's
+#   subtle background of it; its text and outline: Bootstrap's emphasis of
+#   it, 25% of the way to the page's strongest text. A solid accent with
+#   the page's text read under 2 in some themes.
+# - The warning mark and an errored branch's badge as the running and
+#   errored targets; the spinner as a running target's text.
+# - Edges: 75% of the text over the page; a selected one, the strongest
+#   text. Into a running target: the running colour.
+# - Selection, the focus ring: primary halfway to the strongest text (a
+#   theme's primary alone vanished on Lux's dark canvas).
+# - The controls: the page's surfaces, as the Tidy buttons.
 preset_rules <- "
 :root {
   --tb-theme-canvas-bg: color-mix(in srgb, var(--bs-body-bg) 92%, var(--bs-primary));
   --tb-theme-canvas-marks: color-mix(in srgb, var(--bs-body-color) 35%, transparent);
   --tb-theme-minimap-bg: var(--bs-body-bg);
   --tb-theme-minimap-mask: color-mix(in srgb, var(--bs-body-color) 12%, transparent);
+  --tb-theme-status-uptodate: color-mix(in srgb, var(--bs-success) 15%, var(--bs-success-bg-subtle));
+  --tb-theme-status-uptodate-text: color-mix(in srgb, var(--bs-success-text-emphasis) 75%, var(--bs-emphasis-color));
+  --tb-theme-status-uptodate-border: var(--tb-theme-status-uptodate-text);
+  --tb-theme-status-outdated: color-mix(in srgb, var(--bs-info) 15%, var(--bs-info-bg-subtle));
+  --tb-theme-status-outdated-text: color-mix(in srgb, var(--bs-info-text-emphasis) 75%, var(--bs-emphasis-color));
+  --tb-theme-status-outdated-border: var(--tb-theme-status-outdated-text);
+  --tb-theme-status-errored: color-mix(in srgb, var(--bs-danger) 15%, var(--bs-danger-bg-subtle));
+  --tb-theme-status-errored-text: color-mix(in srgb, var(--bs-danger-text-emphasis) 75%, var(--bs-emphasis-color));
+  --tb-theme-status-errored-border: var(--tb-theme-status-errored-text);
+  --tb-theme-status-running: color-mix(in srgb, var(--bs-warning) 15%, var(--bs-warning-bg-subtle));
+  --tb-theme-status-running-text: color-mix(in srgb, var(--bs-warning-text-emphasis) 75%, var(--bs-emphasis-color));
+  --tb-theme-status-running-border: var(--tb-theme-status-running-text);
+  --tb-theme-spinner: var(--tb-theme-status-running-text);
+  --tb-theme-warning: var(--tb-theme-status-running);
+  --tb-theme-warning-text: var(--tb-theme-status-running-text);
+  --tb-theme-danger: var(--tb-theme-status-errored);
+  --tb-theme-danger-text: var(--tb-theme-status-errored-text);
+  --tb-theme-node-border: color-mix(in srgb, var(--bs-body-color) 75%, var(--bs-body-bg));
+  --tb-theme-handle: var(--tb-theme-node-border);
+  --tb-theme-handle-border: var(--bs-body-bg);
+  --tb-theme-edge: color-mix(in srgb, var(--bs-body-color) 75%, var(--bs-body-bg));
+  --tb-theme-edge-selected: var(--bs-emphasis-color);
+  --tb-theme-edge-running: var(--tb-theme-status-running-text);
+  --tb-theme-edge-running-selected: var(--bs-emphasis-color);
+  --tb-theme-focus-ring: color-mix(in srgb, var(--bs-primary) 50%, var(--bs-emphasis-color));
+  --tb-theme-node-selected-border: var(--tb-theme-focus-ring);
+  --tb-theme-selection-bg: color-mix(in srgb, var(--tb-theme-focus-ring) 10%, transparent);
+  --tb-theme-selection-border: var(--tb-theme-focus-ring);
+  --tb-theme-controls-bg: var(--bs-body-bg);
+  --tb-theme-controls-bg-hover: var(--bs-tertiary-bg);
+  --tb-theme-controls-color: var(--bs-body-color);
+  --tb-theme-controls-color-hover: var(--bs-emphasis-color);
+  --tb-theme-controls-border: var(--bs-border-color);
 }
 /* A preset's link colour can be faint on its page; the tabs take its text. */
 #board-view .nav-link:not(.active) {

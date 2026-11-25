@@ -12,6 +12,10 @@
   Glow Night (dark only), bring their own palettes, light and dark, to the
   page and the canvas; and "Flow", the board's own, takes React Flow's
   website's pink and slate.
+  A theme other than "Targets board" colours the whole canvas from its own
+  colours: the targets by status (its success, info, danger and warning),
+  their outlines and labels, edges and running edges, the focus ring and
+  selection, and the zoom controls, checked for contrast in both modes.
 * The script the board draws is chosen in a bar above the board's tabs, as
   a browser's address bar: Refresh, the script's path, and Load. The path is
   free text. Focused, it lists the known scripts, filtered as one types;
