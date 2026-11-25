@@ -11,24 +11,41 @@
 # of index.css. Buttons: one style, bslib's default (`btn-default`), in two
 # sizes, the sidebar's and `btn-sm`; on the canvas, the toolbar's button.
 
-# The board's themes: the picker's list, in its order. "Targets board" is
-# the board's own look and the default; the others are Bootswatch presets
-# that pass the contrast checks in test-browser-themes.R, in both modes, or
-# in dark mode for a dark-only one (the page keeps it in dark mode): all of
-# Bootswatch 5's but journal (its buttons), morph (its light mode) and
-# spacelab (text just under 4.5), and, left out by choice, cyborg, lumen,
-# materia, sandstone, simplex, slate and superhero.
-# `dark_only`: the preset is dark in light mode too.
+# The board's themes: the picker's list, in its order, by kind (its groups):
+# - "board": "Targets board", the board's own look and the default.
+# - "editor": the palettes of popular editor themes (board_palettes()), with
+#   a light and a dark variant each.
+# - "bootswatch": Bootswatch presets.
+# All pass the contrast checks in test-browser-themes.R, in both modes, or
+# in dark mode for a dark-only one (the page keeps it in dark mode). Of
+# Bootswatch 5's, left out: journal (its buttons), morph (its light mode)
+# and spacelab (text just under 4.5); and by choice cyborg, lumen, materia,
+# sandstone, simplex, slate and superhero.
+# `preset`: a Bootswatch preset's name. `dark_only`: the theme is dark in
+# light mode too.
 board_themes <- function() {
   presets <- c(
     "brite", "cerulean", "cosmo", "darkly", "flatly", "litera", "lux",
     "minty", "pulse", "quartz", "sketchy", "solar", "united", "vapor", "yeti",
     "zephyr"
   )
+  editors <- names(board_palettes())
   data.frame(
-    name = c("Targets board", tools::toTitleCase(presets)),
-    preset = c(NA, presets),
-    dark_only = c(FALSE, presets %in% c("darkly", "solar", "vapor"))
+    name = c("Targets board", editors, tools::toTitleCase(presets)),
+    kind = rep(c("board", "editor", "bootswatch"), c(1, length(editors), length(presets))),
+    preset = c(NA, rep(NA, length(editors)), presets),
+    dark_only = c(FALSE, rep(FALSE, length(editors)), presets %in% c("darkly", "solar", "vapor"))
+  )
+}
+
+# The picker's choices: the themes in groups, "Targets board" first, alone.
+board_theme_choices <- function(themes = board_themes()) {
+  c(
+    list("Targets board" = "Targets board"),
+    list(
+      "Editor themes" = themes$name[themes$kind == "editor"],
+      "Bootswatch" = themes$name[themes$kind == "bootswatch"]
+    )
   )
 }
 
@@ -39,7 +56,9 @@ board_themes <- function() {
 #' as rules. "Targets board" sets none of them: the widget's tokens keep
 #' their own values (the beige canvas). A Bootswatch preset sets the canvas
 #' from its colours, so a dark preset gets a dark canvas, asks Bootstrap for
-#' readable text on its buttons, and darkens its inactive tabs' text.
+#' readable text on its buttons, and darkens its inactive tabs' text. An
+#' editor theme does the same with its palette's colours, in each mode
+#' (palette_theme()).
 #' @param name The theme's name: the `targetsboard.theme` option, or
 #'   "Targets board".
 #' @return A [bslib::bs_theme()].
@@ -47,8 +66,10 @@ board_themes <- function() {
 app_theme <- function(name = board_theme_option()) {
   themes <- board_themes()
   check_board_theme(name)
-  preset <- themes$preset[themes$name == name]
-  if (is.na(preset)) return(bslib::bs_theme(version = 5))
+  theme <- themes[themes$name == name, ]
+  if (theme$kind == "board") return(bslib::bs_theme(version = 5))
+  if (theme$kind == "editor") return(palette_theme(board_palettes()[[name]]))
+  preset <- theme$preset
   bslib::bs_theme(
     version = 5, preset = preset,
     # Bootswatch lowers it, and some presets then put white text on light
@@ -74,6 +95,119 @@ preset_rules <- "
   --bs-nav-link-hover-color: var(--bs-emphasis-color);
 }
 "
+
+# Editor themes: four palettes of popular editor themes (vscodethemes.com,
+# by installs), each with a light and a dark variant, so the board's two
+# modes both get the theme's own colours. Hex values from each theme's
+# official source:
+# - Catppuccin: Latte and Mocha (github.com/catppuccin/palette, MIT).
+# - Tokyo Night: Light and Night (github.com/enkia/tokyo-night-vscode-theme).
+# - Nord: Snow Storm and Polar Night, with Frost and Aurora
+#   (github.com/nordtheme/nord, MIT).
+# - Gruvbox: light (faded accents) and dark (bright accents)
+#   (github.com/morhetz/gruvbox, MIT/X11).
+# Per mode: bg, fg (text), surface (secondary background), border, muted
+# (secondary text), and the accents; a value left out is Bootstrap's own,
+# from bg and fg. `link`: the light mode's link colour, a Sass expression,
+# when its primary is too light for text on its bg.
+board_palettes <- function() {
+  list(
+    "Catppuccin" = list(
+      light = c(
+        bg = "#eff1f5", fg = "#4c4f69", surface = "#e6e9ef", border = "#ccd0da",
+        muted = "#6c6f85", primary = "#1e66f5", success = "#40a02b", info = "#209fb5",
+        warning = "#df8e1d", danger = "#d20f39"
+      ),
+      dark = c(
+        bg = "#1e1e2e", fg = "#cdd6f4", surface = "#181825", border = "#45475a",
+        muted = "#a6adc8", primary = "#89b4fa", success = "#a6e3a1", info = "#74c7ec",
+        warning = "#f9e2af", danger = "#f38ba8"
+      )
+    ),
+    "Tokyo Night" = list(
+      light = c(
+        bg = "#e6e7ed", fg = "#343b58", surface = "#d6d8df",
+        muted = "#707280", primary = "#2959aa", success = "#385f0d", info = "#006c86",
+        warning = "#8f5e15", danger = "#8c4351"
+      ),
+      dark = c(
+        bg = "#1a1b26", fg = "#c0caf5", surface = "#16161e", border = "#414868",
+        muted = "#9aa5ce", primary = "#7aa2f7", success = "#9ece6a", info = "#7dcfff",
+        warning = "#e0af68", danger = "#f7768e"
+      )
+    ),
+    "Nord" = list(
+      light = c(
+        bg = "#eceff4", fg = "#2e3440", surface = "#e5e9f0", border = "#d8dee9",
+        muted = "#4c566a", primary = "#5e81ac", success = "#a3be8c", info = "#88c0d0",
+        warning = "#ebcb8b", danger = "#bf616a",
+        link = "shade-color(#5e81ac, 25%)"
+      ),
+      dark = c(
+        bg = "#2e3440", fg = "#eceff4", surface = "#3b4252", border = "#4c566a",
+        muted = "#d8dee9", primary = "#88c0d0", success = "#a3be8c", info = "#8fbcbb",
+        warning = "#ebcb8b", danger = "#bf616a"
+      )
+    ),
+    "Gruvbox" = list(
+      light = c(
+        bg = "#fbf1c7", fg = "#3c3836", surface = "#f2e5bc", border = "#d5c4a1",
+        muted = "#7c6f64", primary = "#076678", success = "#79740e", info = "#427b58",
+        warning = "#b57614", danger = "#9d0006"
+      ),
+      dark = c(
+        bg = "#282828", fg = "#ebdbb2", surface = "#32302f", border = "#504945",
+        muted = "#a89984", primary = "#83a598", success = "#b8bb26", info = "#8ec07c",
+        warning = "#fabd2f", danger = "#fb4934"
+      )
+    )
+  )
+}
+
+# A palette's theme: Bootstrap 5 with its light colours as the theme's, its
+# dark colours as Bootstrap 5.3's dark mode's (the *-dark Sass variables), and
+# its dark accents as rules: Bootstrap compiles the accents for light mode
+# only. With the presets' rules: the canvas from its own colours.
+palette_theme <- function(palette) {
+  light <- palette$light
+  dark <- palette$dark
+  accents <- c("primary", "success", "info", "warning", "danger")
+  optional <- function(colours, name) if (name %in% names(colours)) colours[[name]]
+  vars <- c(
+    list(
+      version = 5, bg = light[["bg"]], fg = light[["fg"]],
+      "min-contrast-ratio" = 4.5,
+      # bslib mixes the text from fg and bg: the palette's own, exactly.
+      "body-color" = light[["fg"]],
+      "body-secondary-color" = light[["muted"]],
+      "body-secondary-bg" = light[["surface"]],
+      "body-tertiary-bg" = light[["surface"]],
+      "border-color" = optional(light, "border"),
+      "link-color" = optional(light, "link"),
+      "body-bg-dark" = dark[["bg"]],
+      "body-color-dark" = dark[["fg"]],
+      "body-emphasis-color-dark" = dark[["fg"]],
+      "body-secondary-color-dark" = dark[["muted"]],
+      "body-secondary-bg-dark" = dark[["surface"]],
+      "body-tertiary-bg-dark" = dark[["surface"]],
+      "border-color-dark" = optional(dark, "border"),
+      "link-color-dark" = dark[["primary"]],
+      "link-hover-color-dark" = dark[["fg"]]
+    ),
+    as.list(light[accents]),
+    stats::setNames(as.list(dark[accents]), paste0(accents, "-text-emphasis-dark"))
+  )
+  vars <- vars[!vapply(vars, is.null, logical(1))]
+  dark_accents <- vapply(accents, function(accent) {
+    rgb <- paste(grDevices::col2rgb(dark[[accent]])[, 1], collapse = ", ")
+    sprintf("  --bs-%s: %s;\n  --bs-%s-rgb: %s;", accent, dark[[accent]], accent, rgb)
+  }, character(1))
+  do.call(bslib::bs_theme, vars) |>
+    bslib::bs_add_rules(c(
+      preset_rules,
+      paste0("[data-bs-theme=\"dark\"] {\n", paste(dark_accents, collapse = "\n"), "\n}")
+    ))
+}
 
 # The theme the board starts with: the `targetsboard.theme` option, checked.
 board_theme_option <- function() {

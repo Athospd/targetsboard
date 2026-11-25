@@ -27,7 +27,7 @@ theme_ui <- function(id, theme = board_theme_option()) {
     class = "tb-theme d-flex align-items-center gap-2",
     shiny::selectInput(
       ns("pick"), "Theme",
-      choices = themes$name, selected = theme, selectize = FALSE, width = "auto"
+      choices = board_theme_choices(themes), selected = theme, selectize = FALSE, width = "auto"
     ),
     # Shown unless the theme is dark-only.
     shiny::conditionalPanel(
