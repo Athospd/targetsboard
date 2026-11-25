@@ -68,7 +68,13 @@ script_view_state <- function(script) {
 #'   (1 for what is inside the store).
 #' @noRd
 where_things_are <- function(script) {
-  full <- function(path) normalizePath(path, winslash = "/", mustWork = FALSE)
+  # Absolute even when not created yet: normalizePath() leaves those
+  # relative on Linux and macOS.
+  full <- function(path) {
+    relative <- !grepl("^(/|~|[A-Za-z]:|\\\\)", path)
+    path[relative] <- file.path(getwd(), path[relative])
+    normalizePath(path, winslash = "/", mustWork = FALSE)
+  }
   store <- targets::tar_config_get("store")
   config <- Sys.getenv("TAR_CONFIG", "_targets.yaml")
   project <- Sys.getenv("TAR_PROJECT")
