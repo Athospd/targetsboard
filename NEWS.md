@@ -16,6 +16,12 @@
   `Sys.setenv(TAR_PROJECT = )` line to make it follow. Copied code (a debug
   run, `tar_read()` in the preview) names the project's store.
 
+## Bug fixes
+
+* In a narrow window with the sidebar open, the board fits the window:
+  its card no longer runs off the right edge on every tab, and the tab bar
+  wraps (#125).
+
 # targetsboard 0.2.0
 
 ## New features
