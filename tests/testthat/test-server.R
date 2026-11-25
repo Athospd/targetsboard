@@ -283,11 +283,12 @@ test_that("the actions of a selected group cover every target of it", {
     expect_equal(targets::tar_meta(targets_only = TRUE)$name, "b")
 
     # A long list is cut short in the confirmation, but all are invalidated.
-    many <- paste0("t", 1:12)
+    many <- paste0("t", 1:55)
     session$setInputs(`board-graph-flow_node_action` = list(action = "invalidate", node = "t1", nodes = many))
-    expect_match(modal, "<code>t10</code>", fixed = TRUE)
-    expect_no_match(modal, "<code>t11</code>", fixed = TRUE)
-    expect_match(modal, "and 2 more", fixed = TRUE)
+    expect_match(modal, "Invalidate 55 targets?", fixed = TRUE)
+    expect_match(modal, "<code>t50</code>", fixed = TRUE)
+    expect_no_match(modal, "<code>t51</code>", fixed = TRUE)
+    expect_match(modal, "and 5 more", fixed = TRUE)
   })
 })
 

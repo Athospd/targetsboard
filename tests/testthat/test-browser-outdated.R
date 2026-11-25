@@ -32,7 +32,7 @@ test_that("an outdated target says why, on hover and in the preview", {
   # In the preview, above the value: the same, with b as code.
   mouse_event(app, "c", "dblclick")
   app$wait_for_js("document.querySelector('.tb-why') !== null", timeout = preview_timeout)
-  expect_equal(app$get_js("document.querySelector('.tb-why li').innerHTML"), "Upstream, <code>b</code> is outdated.")
+  expect_equal(app$get_js("document.querySelector('.tb-why-reason').innerText.trim()"), "Upstream, b is outdated.")
 
   # Built again: the reasons go.
   withr::with_dir(dir, targets::tar_make(reporter = "silent"))

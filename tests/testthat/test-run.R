@@ -208,7 +208,7 @@ test_that("the board invalidates targets once confirmed", {
 
   shiny::testServer(server, {
     session$setInputs(`board-graph-flow_node_action` = list(action = "invalidate", node = "b", nodes = c("b", "c")))
-    expect_match(modal, "Invalidate targets?", fixed = TRUE)
+    expect_match(modal, "Invalidate 2 targets?", fixed = TRUE)
     expect_match(modal, "<code>b</code>", fixed = TRUE)
     expect_true(all(c("b", "c") %in% targets::tar_meta(targets_only = TRUE)$name)) # not yet
 
@@ -242,4 +242,16 @@ test_that("the board refuses to invalidate while a run is going", {
     expect_null(invalidated)
     expect_match(notes, "stop it before invalidating", all = FALSE)
   })
+})
+
+test_that("the invalidation modal counts the targets, lists up to 50, and closes on Escape", {
+  one <- as.character(invalidate_modal("a"))
+  expect_match(one, "Invalidate 1 target?", fixed = TRUE)
+  expect_match(one, "fa-eraser", fixed = TRUE)
+  expect_no_match(one, 'data-bs-backdrop="static"', fixed = TRUE) # Escape or a click outside cancels
+  many <- as.character(invalidate_modal(paste0("t", 1:60)))
+  expect_match(many, "Invalidate 60 targets?", fixed = TRUE)
+  expect_match(many, "<code>t50</code>", fixed = TRUE)
+  expect_no_match(many, "<code>t51</code>", fixed = TRUE)
+  expect_match(many, "and 10 more", fixed = TRUE)
 })

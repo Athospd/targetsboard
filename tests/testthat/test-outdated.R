@@ -37,11 +37,11 @@ test_that("each outdated target says why: its command, what changed, upstream, n
   ), "_targets.R")
   reasons <- outdated_reasons(poller_reasons())
   expect_setequal(names(reasons), c("b", "c", "d", "e", "p"))
-  expect_equal(reasons$b, "`f` changed.")
-  expect_equal(reasons$c, "Upstream, `b` is outdated.")
-  expect_equal(reasons$e, "Its command changed.")
+  expect_equal(reasons$b, c(depend = "`f` changed."))
+  expect_equal(reasons$c, c(upstream = "Upstream, `b` is outdated."))
+  expect_equal(reasons$e, c(command = "Its command changed."))
   expect_match(reasons$d, "no record in the store", fixed = TRUE)
-  expect_equal(reasons$p, "Its command changed.")
+  expect_equal(reasons$p, c(command = "Its command changed."))
 })
 
 test_that("outdated_reasons() falls back to plain words, and handles no data", {
@@ -53,17 +53,20 @@ test_that("outdated_reasons() falls back to plain words, and handles no data", {
     parents = NULL
   )
   got <- outdated_reasons(reasons)
-  expect_equal(got$x, "Its cue is \"always\": it runs every time.")
-  expect_equal(got$y, "Something it depends on changed.") # what changed isn't outdated any more
-  expect_equal(got$z, "Something upstream changed.") # no row of its own
+  expect_equal(got$x, c(always = "Its cue is \"always\": it runs every time."))
+  expect_equal(got$y, c(depend = "Something it depends on changed.")) # what changed isn't outdated any more
+  expect_equal(got$z, c(upstream = "Something upstream changed.")) # no row of its own
 })
 
 test_that("names are listed in words, and the reasons read as a tooltip and in the pane", {
   expect_equal(backticked("a"), "`a`")
   expect_equal(backticked(c("a", "b", "c")), "`a`, `b` and `c`")
   expect_equal(reasons_tooltip(c("`f` changed.", "Its command changed.")), "Outdated: f changed. Its command changed.")
-  html <- as.character(reasons_ui(c("`f` and `g` changed.")))
+  html <- as.character(reasons_ui(c(depend = "`f` and `g` changed.", upstream = "Upstream, `b` is outdated.")))
   expect_match(html, "Why it is outdated", fixed = TRUE)
-  expect_match(html, "<li><code>f</code> and <code>g</code> changed.</li>", fixed = TRUE)
+  expect_match(html, "<span><code>f</code> and <code>g</code> changed.</span>", fixed = TRUE)
+  expect_match(html, 'data-kind="depend"', fixed = TRUE)
+  expect_match(html, "fa-arrow-turn-up", fixed = TRUE) # upstream's icon
+  expect_match(html, "fa-pen", fixed = TRUE) # depend's
   expect_null(reasons_ui(NULL))
 })

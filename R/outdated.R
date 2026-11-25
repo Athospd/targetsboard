@@ -12,8 +12,9 @@
 #'   vertices, edges, parents)`, with `parents` the branches' patterns
 #'   (`tar_meta()`'s `name` and `parent`).
 #' @return A named list: for each outdated target, its reasons, sentences
-#'   with names in backticks. Empty when nothing is outdated, or the poller
-#'   hasn't written them yet.
+#'   with names in backticks, named by their kind (the cue, or `upstream`),
+#'   which picks their icon (reason_icons). Empty when nothing is outdated,
+#'   or the poller hasn't written them yet.
 #' @noRd
 outdated_reasons <- function(reasons) {
   if (is.null(reasons) || is.null(reasons$vertices)) return(list())
@@ -35,26 +36,26 @@ outdated_reasons <- function(reasons) {
     changed <- setdiff(intersect(inputs, outdated), targets) # functions, objects
     upstream <- intersect(intersect(inputs, outdated), targets)
     why <- c(
-      if (cue("meta")) "It has no record in the store: it is new, was invalidated, or never finished.",
-      if (cue("always")) "Its cue is \"always\": it runs every time.",
-      if (cue("command")) "Its command changed.",
-      if (cue("depend")) {
+      meta = if (cue("meta")) "It has no record in the store: it is new, was invalidated, or never finished.",
+      always = if (cue("always")) "Its cue is \"always\": it runs every time.",
+      command = if (cue("command")) "Its command changed.",
+      depend = if (cue("depend")) {
         if (length(changed)) {
           sprintf("%s changed.", backticked(changed))
         } else {
           "Something it depends on changed."
         }
       },
-      if (cue("format")) "Its storage format changed.",
-      if (cue("repository")) "Its repository changed.",
-      if (cue("iteration")) "Its iteration changed.",
-      if (cue("file")) "Its file changed, or is missing.",
-      if (cue("seed")) "Its seed changed.",
-      if (length(upstream)) {
+      format = if (cue("format")) "Its storage format changed.",
+      repository = if (cue("repository")) "Its repository changed.",
+      iteration = if (cue("iteration")) "Its iteration changed.",
+      file = if (cue("file")) "Its file changed, or is missing.",
+      seed = if (cue("seed")) "Its seed changed.",
+      upstream = if (length(upstream)) {
         sprintf("Upstream, %s %s outdated.", backticked(upstream), if (length(upstream) == 1) "is" else "are")
       }
     )
-    if (!length(why)) why <- "Something upstream changed."
+    if (!length(why)) why <- c(upstream = "Something upstream changed.")
     result[[name]] <- why
   }
   result
@@ -73,21 +74,42 @@ reasons_tooltip <- function(reasons) {
   paste("Outdated:", gsub("`", "", paste(reasons, collapse = " ")))
 }
 
+# The Font Awesome icon of each kind of reason (outdated_reasons()).
+reason_icons <- c(
+  meta = "database", always = "rotate", command = "code", depend = "pen",
+  format = "box-archive", repository = "box-archive", iteration = "layer-group",
+  file = "file", seed = "dice", upstream = "arrow-turn-up"
+)
+
 #' A target's reasons, for the value preview
 #'
+#' A card in the outdated status's colour, info, above the value's: a
+#' reason per row, with its kind's icon.
 #' @param reasons The target's sentences, from outdated_reasons().
 #' @return A tag, or `NULL` without reasons.
 #' @noRd
 reasons_ui <- function(reasons) {
   if (!length(reasons)) return(NULL)
+  kinds <- names(reasons) %||% rep("", length(reasons))
   # Names in backticks become code, inline in the escaped sentence.
-  sentence <- function(text) {
+  row <- function(text, kind) {
     html <- gsub("`([^`]*)`", "<code>\\1</code>", htmltools::htmlEscape(text))
-    shiny::tags$li(shiny::HTML(html))
+    icon <- if (kind %in% names(reason_icons)) reason_icons[[kind]] else "circle-info"
+    shiny::tags$li(
+      class = "list-group-item tb-why-reason", `data-kind` = kind,
+      shiny::tags$span(class = "tb-why-icon", shiny::icon(icon)),
+      shiny::tags$span(shiny::HTML(html))
+    )
   }
-  shiny::tags$div(
-    class = "tb-why",
-    shiny::tags$p(class = "tb-why-title", "Why it is outdated"),
-    shiny::tags$ul(lapply(reasons, sentence))
+  bslib::card(
+    class = "tb-why border-info-subtle",
+    bslib::card_header(
+      class = "tb-why-title bg-info-subtle text-info-emphasis border-info-subtle",
+      shiny::icon("clock-rotate-left"), "Why it is outdated"
+    ),
+    bslib::card_body(
+      padding = 0,
+      shiny::tags$ul(class = "list-group list-group-flush", unname(Map(row, unname(reasons), kinds)))
+    )
   )
 }

@@ -29,11 +29,32 @@ body {
 .tb-problem { padding: 0.75rem; font-size: var(--tb-font-size-sm); }
 .tb-problem-title { color: var(--bs-danger); margin-bottom: 0.5rem; }
 .tb-problem pre { white-space: pre-wrap; word-break: break-word; font-size: var(--tb-font-size-xs); margin-bottom: 0.5rem; }
-/* Why the focused target is outdated, above its value: in the outdated
-   status's colour, info. */
-.tb-why { padding: 0.75rem 0.75rem 0; font-size: var(--tb-font-size-sm); }
-.tb-why-title { color: var(--bs-info-text-emphasis); font-weight: 600; margin-bottom: 0.25rem; }
-.tb-why ul { margin-bottom: 0; padding-left: 1.25rem; }
+/* Why the focused target is outdated: a card above its value's, in the
+   outdated status's colour, info, a reason per row with its icon. */
+.tb-why { margin: 0 0 0.5rem; font-size: var(--tb-font-size-sm); }
+.tb-why .tb-why-title {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: var(--tb-font-size-sm); font-weight: 600;
+}
+.tb-why .list-group-item {
+  display: flex; align-items: baseline; gap: 0.6rem;
+  padding: 0.4rem 0.75rem; background: transparent;
+}
+.tb-why-icon {
+  flex: 0 0 1rem; text-align: center;
+  color: var(--bs-info-text-emphasis); opacity: 0.8;
+}
+
+/* Modals: a compact title with its icon, in the app's type sizes, and
+   dividers, as in the cards. */
+.modal-header { padding: 0.85rem 1rem; border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent); }
+.modal-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem; font-weight: 600; margin: 0; }
+.modal-body { font-size: var(--tb-font-size-sm); }
+.modal-body > :last-child { margin-bottom: 0; }
+.modal-footer { padding: 0.6rem 1rem; border-top: var(--bs-border-width) solid var(--bs-border-color-translucent); }
+/* A list of names in a modal: scrolls past a dozen. */
+.tb-modal-list { max-height: 14rem; overflow-y: auto; }
+.tb-modal-list .list-group-item { padding: 0.3rem 0.75rem; }
 .tb-problem-error { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); padding: 0.5rem; border-radius: var(--bs-border-radius-sm); }
 .tb-problem-warnings { color: var(--bs-warning-text-emphasis); padding-left: 1.2rem; }
 .tb-traceback-own pre { border-left: 3px solid var(--bs-primary); padding-left: 0.5rem; }
