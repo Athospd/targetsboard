@@ -372,19 +372,7 @@ test_that("in dark mode, the tables, the toolbar and the buttons stay readable",
   dir <- local_pipeline(make = TRUE)
   app <- local_board_app(dir, "dark")
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
-  # WCAG's contrast ratio of an element's text on the background it shows on.
-  app$run_js(paste(
-    "const rgba = c => { const v = c.match(/[0-9.]+/g).map(Number); return v.length < 4 ? [...v, 1] : v; };",
-    "const lum = c => { const [r, g, b] = c.slice(0, 3).map(v => { v /= 255;",
-    "  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });",
-    "  return 0.2126 * r + 0.7152 * g + 0.0722 * b; };",
-    "const bg = el => { for (; el; el = el.parentElement) { const c = rgba(getComputedStyle(el).backgroundColor);",
-    "  if (c[3] > 0.5) return c; } return [255, 255, 255, 1]; };",
-    "window.tbContrast = sel => { const el = document.querySelector(sel); const b = bg(el);",
-    "  const f = rgba(getComputedStyle(el).color); const t = f.slice(0, 3).map((v, i) => v * f[3] + b[i] * (1 - f[3]));",
-    "  const [x, y] = [lum(t), lum(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };"
-  ))
-  contrast <- function(selector) app$get_js(sprintf("tbContrast(\"%s\")", selector))
+  contrast <- contrast_in(app) # helper-browser.R
   tab <- function(value) {
     app$click(selector = sprintf("#board-view .nav-link[data-value='%s']", value))
     Sys.sleep(0.5)
@@ -415,4 +403,12 @@ test_that("in dark mode, the tables, the toolbar and the buttons stay readable",
   app$wait_for_js("document.querySelector('#board-meta-table .rt-td') !== null")
   expect_gte(contrast("#board-meta-table .rt-td"), 4.5)
   expect_gte(contrast("#board-meta-table .rt-th"), 4.5)
+  # The Script tab: the script coloured, where things are readable.
+  tab("script")
+  app$wait_for_js("document.querySelector('.tb-script-view pre.language-r[data-highlighted]') !== null")
+  expect_match(app$get_js("document.querySelector('.tb-script-view pre').innerText"), "tar_target", fixed = TRUE)
+  expect_gte(contrast(".tb-script-view .tb-paths th"), 4.5)
+  expect_gte(contrast(".tb-script-view .tb-paths caption"), 4.5)
+  expect_gte(contrast(".tb-script-view .tb-paths .tb-copy-code"), 4.5)
+  expect_gte(contrast(".tb-script-view .tb-path-note"), 4.5)
 })

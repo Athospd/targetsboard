@@ -150,3 +150,29 @@ local_group_pipeline <- function(.env = parent.frame()) {
   targets::tar_make(reporter = "silent")
   dir
 }
+
+# WCAG's contrast ratio of an element's text on the background it shows on,
+# in the page: window.tbContrast(selector, prop = 'color', inner = null),
+# `inner` a selector in the element's shadow root. Colours as the browser
+# computes them, color-mix() ones included (color(srgb 0-1)), see-through
+# ones blended on what is behind them. Installed by contrast_in().
+contrast_lib_js <- paste(
+  "window.tbContrast = (() => { const rgba = c => { const v = c.match(/[0-9.e-]+/g).map(Number);",
+  "  if (c.startsWith('color(srgb')) { v.splice(0, 3, ...v.slice(0, 3).map(x => x * 255)); }",
+  "  return v.length < 4 ? [...v, 1] : v; };",
+  "const lum = c => { const [r, g, b] = c.slice(0, 3).map(v => { v /= 255;",
+  "  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });",
+  "  return 0.2126 * r + 0.7152 * g + 0.0722 * b; };",
+  "const bg = el => { for (; el; el = el.parentElement) { const c = rgba(getComputedStyle(el).backgroundColor);",
+  "  if (c[3] > 0.5) return c; } return [255, 255, 255, 1]; };",
+  "return (sel, prop = 'color', inner = null) => { const el = document.querySelector(sel); const b = bg(el);",
+  "  const f = rgba(getComputedStyle(inner ? el.shadowRoot.querySelector(inner) : el)[prop]); const t = f.slice(0, 3).map((v, i) => v * f[3] + b[i] * (1 - f[3]));",
+  "  const [x, y] = [lum(t), lum(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }; })();"
+)
+
+# Installs tbContrast in the app's page, and returns a function of a
+# selector giving its element's contrast ratio.
+contrast_in <- function(app) {
+  app$run_js(contrast_lib_js)
+  function(selector) app$get_js(sprintf("tbContrast(\"%s\")", selector))
+}

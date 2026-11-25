@@ -61,6 +61,19 @@ body {
 .tb-traceback-packages summary { color: var(--bs-secondary-color); cursor: pointer; font-size: var(--tb-font-size-xs); }
 .tb-code { margin-top: 0.75rem; }
 .tb-code pre { background: var(--bs-tertiary-bg); padding: 0.5rem; border-radius: var(--bs-border-radius-sm); }
+/* The Script tab (R/mod_script_view.R): where things are, then the script.
+   The table only as wide as its paths; the script scrolls in the card. */
+/* The paths: the copy buttons of the value preview, shrinking with the
+   window as there; the table spans the card, its labels one fixed column,
+   so the paths have a width to shrink into. */
+.tb-script-view .tb-paths { table-layout: fixed; margin-bottom: 0.5rem; }
+.tb-script-view .tb-paths caption { font-weight: 600; color: var(--bs-emphasis-color); }
+.tb-script-view .tb-paths th { width: 10rem; font-weight: 500; }
+.tb-path { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.tb-path .tb-copy-code { max-width: 100%; }
+.tb-path-note { flex: none; }
+.tb-script-view .tb-code { margin-top: 0; }
+.tb-script-view .tb-code pre { overflow: auto; }
 .tb-problem-branch { border-top: 1px solid var(--bs-border-color); padding: 0.5rem 0; }
 .tb-problem-branch summary { cursor: pointer; }
 

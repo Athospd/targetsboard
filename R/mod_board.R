@@ -4,7 +4,8 @@
 #' board_ui() its script bar, as a browser's address bar, above its card of
 #' tabs: Board, the graph with the value preview beside it;
 #' Problems, what errored or warned, with a count in its title; Log, the
-#' output of the board's latest run; tar_visnetwork(), the graph as that
+#' output of the board's latest run; Script, the script as it is on disk and
+#' where things are; tar_visnetwork(), the graph as that
 #' function draws it; and tar_meta(). With `options(targetsboard.dev =
 #' TRUE)`, an Internals tab shows the board's own inputs. Each tab's `value`
 #' is its snake_case id.
@@ -52,6 +53,7 @@ board_tabs_ui <- function(ns, metadata, layout) {
       problems_ui(ns("problems"))
     ),
     bslib::nav_panel("Log", value = "log", log_ui(ns("log"))),
+    bslib::nav_panel("Script", value = "script", script_view_ui(ns("script_view"))),
     bslib::nav_panel("tar_visnetwork()", value = "tar_visnetwork", visnetwork_ui(ns("visnetwork"))),
     bslib::nav_panel("tar_meta()", value = "tar_meta", meta_ui(ns("meta"))),
     if (board_dev_mode()) {
@@ -91,6 +93,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     # The tabs beside the board. The tables' clicks show a target on it.
     problem_clicked <- problems_server("problems", board, data$tar_meta)
     log_server("log", backend)
+    script_view_server("script_view", backend$loaded_script)
     visnetwork_server("visnetwork", board, color_mode)
     meta_clicked <- meta_server("meta", data$tar_meta)
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
