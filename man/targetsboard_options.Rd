@@ -8,6 +8,7 @@ targetsboard_options(
   color_mode = c("light", "dark", "system"),
   minimap = TRUE,
   controls = TRUE,
+  legend = TRUE,
   background = c("dots", "lines", "cross", "none"),
   edge_type = c("default", "smoothstep", "step", "straight", "simplebezier"),
   only_render_visible = FALSE,
@@ -25,6 +26,9 @@ browser's preference. The board's own beige background is for light mode.}
 \item{minimap}{Show the minimap, with targets coloured by status.}
 
 \item{controls}{Show the zoom controls.}
+
+\item{legend}{Show the status legend under the Tidy buttons: each status's
+colour, with how many targets have it; a click selects them.}
 
 \item{background}{The background pattern: \code{"dots"}, \code{"lines"}, \code{"cross"}
 or \code{"none"}.}

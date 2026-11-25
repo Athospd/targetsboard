@@ -1,3 +1,11 @@
+/* The canvas's top-right panel: the Tidy buttons, the status legend under
+   them, right-aligned. */
+.tb-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
 /* The Tidy buttons: placed here; drawn as the canvas's one button, the
    focused target's toolbar's, in targetsboardCustomCSS.css. */
 .tb-layout-buttons {

@@ -86,7 +86,7 @@ test_that("targetsboard_options() has defaults and checks its values", {
   options <- targetsboard_options()
   expect_s3_class(options, "targetsboard_options")
   expect_equal(unclass(options), list(
-    color_mode = "light", minimap = TRUE, controls = TRUE, background = "dots",
+    color_mode = "light", minimap = TRUE, controls = TRUE, legend = TRUE, background = "dots",
     edge_type = "default", only_render_visible = FALSE, node_actions = list(),
     toolbar_actions = list(), node_group_actions = list(), toolbar_group_actions = list(),
     download_image = FALSE
@@ -95,6 +95,7 @@ test_that("targetsboard_options() has defaults and checks its values", {
   expect_error(targetsboard_options(color_mode = "blue"), "color_mode")
   expect_error(targetsboard_options(background = "stripes"), "background")
   expect_error(targetsboard_options(minimap = "yes"), "`minimap` must be TRUE or FALSE")
+  expect_error(targetsboard_options(legend = NA), "`legend` must be TRUE or FALSE")
 })
 
 test_that("targetsboard() sends its options; update_targetsboard() keeps them by default", {

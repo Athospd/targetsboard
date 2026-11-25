@@ -8,6 +8,7 @@ import {
   BackgroundVariant,
   Controls,
   ControlButton,
+  Panel,
   getNodesBounds,
   applyNodeChanges,
   applyEdgeChanges,
@@ -19,6 +20,7 @@ import { copyText } from './clipboard';
 import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
+import StatusLegend from './StatusLegend';
 import { layoutGraph } from './layout';
 import { NodeActionsContext, GroupToolbar, groupLabel } from './NodeActions';
 
@@ -32,15 +34,18 @@ const nodeTypes = Object.fromEntries(
   STATUSES.map((status) => [status, (props) => <BaseNode {...props} status={status} />]),
 );
 
-// A target's colour in the minimap: its status's token.
-const minimapColor = (node) =>
-  `var(--tb-status-${STATUSES.includes(node.type) ? node.type : 'outdated'})`;
+// A status's colour: its token, as the nodes have it. For the minimap and
+// the status legend.
+const statusColor = (status) =>
+  `var(--tb-status-${STATUSES.includes(status) ? status : 'outdated'})`;
+const minimapColor = (node) => statusColor(node.type);
 
 // Display options, as targetsboard_options() sets them in R.
 const DEFAULT_OPTIONS = {
   color_mode: 'light',
   minimap: true,
   controls: true,
+  legend: true, // the status legend, under the Tidy buttons
   background: 'dots',
   edge_type: 'default',
   only_render_visible: false,
@@ -758,7 +763,12 @@ function Flow({ configuration }) {
             )}
           </Controls>
         )}
-        <LayoutButtons onLayout={onLayout} />
+        <Panel position="top-right" className="tb-top-right">
+          <LayoutButtons onLayout={onLayout} />
+          {options.legend && (
+            <StatusLegend nodes={nodes} statuses={STATUSES} statusColor={statusColor} onSelect={selectOnly} />
+          )}
+        </Panel>
         <GroupToolbar
           ids={group}
           node={group?.includes(focusId) ? focusId : group?.[0]}

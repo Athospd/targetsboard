@@ -1,3 +1,13 @@
+# targetsboard (development version)
+
+## New features
+
+* A status legend on the canvas, under the Tidy buttons: each status's
+  colour, the nodes' own in every theme and mode, with how many targets
+  have it. A click on one selects those targets, for the group's Run and
+  Invalidate. It folds away, and the browser remembers; hide it with
+  `targetsboard_options(legend = FALSE)` (#102).
+
 # targetsboard 0.3.0
 
 ## New features
