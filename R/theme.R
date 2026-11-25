@@ -16,19 +16,19 @@
 # that pass the contrast checks in test-browser-themes.R, in both modes, or
 # in dark mode for a dark-only one (the page keeps it in dark mode): all of
 # Bootswatch 5's but journal (its buttons), morph (its light mode) and
-# spacelab (text just under 4.5).
+# spacelab (text just under 4.5), and, left out by choice, cyborg, lumen,
+# materia, sandstone, simplex, slate and superhero.
 # `dark_only`: the preset is dark in light mode too.
 board_themes <- function() {
   presets <- c(
-    "brite", "cerulean", "cosmo", "cyborg", "darkly", "flatly", "litera",
-    "lumen", "lux", "materia", "minty", "pulse", "quartz", "sandstone",
-    "simplex", "sketchy", "slate", "solar", "superhero", "united", "vapor",
-    "yeti", "zephyr"
+    "brite", "cerulean", "cosmo", "darkly", "flatly", "litera", "lux",
+    "minty", "pulse", "quartz", "sketchy", "solar", "united", "vapor", "yeti",
+    "zephyr"
   )
   data.frame(
     name = c("Targets board", tools::toTitleCase(presets)),
     preset = c(NA, presets),
-    dark_only = c(FALSE, presets %in% c("cyborg", "darkly", "slate", "solar", "superhero", "vapor"))
+    dark_only = c(FALSE, presets %in% c("darkly", "solar", "vapor"))
   )
 }
 

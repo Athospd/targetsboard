@@ -201,54 +201,15 @@ document.addEventListener('keydown', (event) => {
   document.getElementById(input.dataset.tbEnter)?.click();
 });
 
-// The theme picker. The pick is remembered in this browser and restored on
-// load, unless the targetsboard.theme option chose the theme. A dark-only
-// theme forces dark mode and hides the switch; leaving it gives back the mode
-// the page had before.
+// The theme picker (R/mod_theme.R): the browser remembers the pick, which
+// the server stores here (tb-theme-remember) and asks for on load
+// (tb-theme-saved: sent back as the given input). Shiny keeps nothing in
+// the browser itself.
 const THEME_KEY = 'targetsboard.theme';
-
-// The dark mode button (R/mod_chrome.R) and bslib's switch, hidden, that it
-// flips: the switch sets the page's mode and sends it to the server.
-function modeButton() {
-  return document.querySelector('[data-tb-mode-toggle]');
-}
-
-function darkSwitch() {
-  const button = modeButton();
-  return button && document.getElementById(button.dataset.tbModeToggle);
-}
-
-document.addEventListener('click', (event) => {
-  const button = event.target.closest?.('[data-tb-mode-toggle]');
-  const dark = button && darkSwitch();
-  if (!dark) return;
-  dark.setAttribute('mode', dark.getAttribute('mode') === 'dark' ? 'light' : 'dark');
-});
-
-function themeMode(darkOnly) {
-  const button = modeButton();
-  const dark = darkSwitch();
-  if (!dark) return;
-  if (darkOnly) {
-    if (!button.hidden) button.dataset.tbMode = dark.getAttribute('mode') || 'light';
-    dark.setAttribute('mode', 'dark');
-    button.hidden = true;
-  } else if (button.hidden) {
-    button.hidden = false;
-    dark.setAttribute('mode', button.dataset.tbMode || 'light');
-    delete button.dataset.tbMode;
-  }
-}
 
 function storage(fn) {
   try { return fn(window.localStorage); } catch (e) { return null; }
 }
-
-document.addEventListener('change', (event) => {
-  const picker = event.target;
-  if (!picker.matches?.('select[data-tb-theme]')) return;
-  storage((s) => s.setItem(THEME_KEY, picker.value));
-});
 
 // A theme set while the page is open (session$setCurrentTheme()) appends
 // its CSS to <head>, after ours. Some of our rules win by coming after
@@ -292,11 +253,11 @@ new MutationObserver((records) => {
 }).observe(document.head, { childList: true });
 
 window.jQuery(document).on('shiny:connected', () => {
-  window.Shiny.addCustomMessageHandler('tb-theme', (message) => themeMode(message.dark_only));
-  const picker = document.querySelector('select[data-tb-theme="remember"]');
-  const saved = storage((s) => s.getItem(THEME_KEY));
-  if (!picker || !saved || saved === picker.value) return;
-  if (![...picker.options].some((o) => o.value === saved)) return;
-  picker.value = saved;
-  window.jQuery(picker).trigger('change');
+  window.Shiny.addCustomMessageHandler('tb-theme-remember', ({ name }) => {
+    storage((s) => s.setItem(THEME_KEY, name));
+  });
+  window.Shiny.addCustomMessageHandler('tb-theme-saved', ({ input }) => {
+    const saved = storage((s) => s.getItem(THEME_KEY));
+    if (saved) window.Shiny.setInputValue(input, saved);
+  });
 });

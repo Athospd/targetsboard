@@ -19,7 +19,7 @@ wait_or_show <- function(app, js, timeout = 20000) {
       "wrapper: document.querySelector('.reactflow-wrapper').className,",
       "bsTheme: document.documentElement.dataset.bsTheme,",
       "themeCanvas: getComputedStyle(document.querySelector('.reactflow-wrapper')).getPropertyValue('--tb-theme-canvas-bg'),",
-      "picker: document.querySelector('[data-tb-theme]').value,",
+      "picker: document.querySelector('#theme-pick').value,",
       "css: [...document.head.querySelectorAll('link[rel=stylesheet], style')].map(el => el.href ? el.href.split('/').slice(-2).join('/') : 'style') })"
     ))
     testthat::fail(paste0("Timed out waiting for ", js, "
@@ -46,15 +46,15 @@ test_that("a pick restyles the board, and dark-only themes take the switch", {
   pick_theme(app, "Pulse")
   app$wait_for_js(sprintf("%s !== '%s'", canvas_js, beige), timeout = 20000)
   expect_equal(app$get_js("localStorage.getItem('targetsboard.theme')"), "Pulse")
-  expect_false(app$get_js("document.querySelector('.tb-mode-button').hidden"))
+  expect_true(app$get_js("document.querySelector('.tb-mode-button').offsetParent !== null"))
 
   pick_theme(app, "Darkly")
-  app$wait_for_js("document.querySelector('.tb-mode-button').hidden", timeout = 20000)
+  app$wait_for_js("document.querySelector('.tb-mode-button').offsetParent === null", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'")
   wait_for_widget_mode(app, "dark")
 
   pick_theme(app, "Targets board")
-  app$wait_for_js("!document.querySelector('.tb-mode-button').hidden", timeout = 20000)
+  app$wait_for_js("document.querySelector('.tb-mode-button').offsetParent !== null", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'light'") # the mode before Darkly
   wait_for_widget_mode(app, "light")
   wait_or_show(app, sprintf("%s === '%s'", canvas_js, beige))
@@ -64,7 +64,7 @@ test_that("a pick restyles the board, and dark-only themes take the switch", {
   pick_theme(app, "Pulse")
   pick_theme(app, "Vapor")
   pick_theme(app, "Targets board")
-  wait_or_show(app, "!document.querySelector('.tb-mode-button').hidden")
+  wait_or_show(app, "document.querySelector('.tb-mode-button').offsetParent !== null")
   wait_or_show(app, sprintf("%s === '%s'", canvas_js, beige))
   wait_or_show(app, paste(
     "[...document.head.querySelectorAll('link[href*=\"bootstrap.min.css\"]')].length === 1"
@@ -78,7 +78,7 @@ test_that("the browser remembers the pick, unless the option chose the theme", {
   app$run_js("localStorage.setItem('targetsboard.theme', 'Vapor')")
   app$run_js("location.reload()")
   app$wait_for_js("document.querySelector('#theme-pick')?.value === 'Vapor'", timeout = 20000)
-  app$wait_for_js("document.querySelector('.tb-mode-button').hidden", timeout = 20000)
+  app$wait_for_js("document.querySelector('.tb-mode-button').offsetParent === null", timeout = 20000)
   app$run_js("localStorage.removeItem('targetsboard.theme')")
 
   dir2 <- local_pipeline(make = TRUE)
@@ -90,6 +90,6 @@ test_that("the browser remembers the pick, unless the option chose the theme", {
   app2$run_js("location.reload()")
   Sys.sleep(3)
   app2$wait_for_js("document.querySelector('#theme-pick')?.value === 'Cosmo'", timeout = 20000)
-  expect_false(app2$get_js("document.querySelector('.tb-mode-button').hidden"))
+  expect_true(app2$get_js("document.querySelector('.tb-mode-button').offsetParent !== null"))
   app2$run_js("localStorage.removeItem('targetsboard.theme')")
 })
