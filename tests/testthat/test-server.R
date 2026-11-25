@@ -371,8 +371,8 @@ test_that("a run's progress reaches the widget as status-only updates", {
   server <- local_app_server()
 
   sent <- list()
-  local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses, ...) {
-    if (length(statuses)) sent[[length(sent) + 1]] <<- statuses # not only branch counts
+  local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses = character(), ...) {
+    if (length(statuses)) sent[[length(sent) + 1]] <<- statuses # not only branch counts or reasons
   })
 
   shiny::testServer(server, {
@@ -559,7 +559,7 @@ test_that("during a run, patterns show their branch counts; they go when it stop
   server <- local_app_server()
   sent <- list()
   local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses = character(),
-                                                              warnings = NULL, branches = NULL) {
+                                                              warnings = NULL, branches = NULL, reasons = NULL) {
     if (!is.null(branches)) sent[[length(sent) + 1]] <<- branches
   })
 
