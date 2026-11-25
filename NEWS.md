@@ -116,6 +116,10 @@
 
 ## Bug fixes
 
+* Copy buttons copy in IDE viewers, such as Positron's and RStudio's, which
+  show the board in an iframe that the clipboard API refuses: the board
+  falls back to copying a selected text (#118). The same goes for copying
+  targets' names from the canvas.
 * Dark mode: the Problems and `tar_meta()` tables use the value preview's
   colours, so their text no longer sits light on white; the focused target's
   toolbar and the right-click menu take the page's dark surfaces; the

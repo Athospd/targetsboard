@@ -81,6 +81,27 @@ test_that("the preview's buttons and links work in the browser", {
   app$wait_for_js("document.querySelector('.tb-preview-header .tb-copy-code').classList.contains('tb-copied')")
   app$wait_for_js("!document.querySelector('.tb-preview-header .tb-copy-code').classList.contains('tb-copied')")
 
+  # In an IDE viewer the clipboard API refuses: the selected text is copied
+  # instead (#118). And when that fails too, the button says so.
+  app$run_js(
+    "window.__copied = null;
+     Object.defineProperty(navigator, 'clipboard', {configurable: true,
+       value: {writeText: t => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'))}});
+     window.__exec = document.execCommand.bind(document);
+     document.execCommand = cmd => { if (cmd !== 'copy') return window.__exec(cmd);
+       window.__copied = document.activeElement.value; return window.__copy_works !== false; };"
+  )
+  app$click(selector = ".tb-preview-header .tb-copy-code")
+  app$wait_for_js("window.__copied === 'targets::tar_read(squares)'")
+  app$wait_for_js("document.querySelector('.tb-preview-header .tb-copy-code').classList.contains('tb-copied')")
+  expect_equal(app$get_js("document.querySelectorAll('textarea[readonly]').length"), 0) # cleaned up
+  app$wait_for_js("!document.querySelector('.tb-preview-header .tb-copy-code').classList.contains('tb-copied')")
+  app$run_js("window.__copy_works = false;")
+  app$click(selector = ".tb-preview-header .tb-copy-code")
+  app$wait_for_js("document.querySelector('.tb-preview-header .tb-copy-code').classList.contains('tb-copy-failed')")
+  app$run_js("document.execCommand = window.__exec;")
+  stub_clipboard(app)
+
   # File sections: the second one read when opened, and 50 more shown.
   open_preview(app, "many_files")
   sections <- "document.querySelectorAll('.tb-preview-file')"
