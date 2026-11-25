@@ -1,6 +1,6 @@
 Package: targetsboard
 Title: Watch and Run 'targets' Pipelines with More Control
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: c(
     person("Athos", "Damiani", , "athos.damiani@gmail.com", role = c("aut", "cre", "cph")),
     person("Ivan", "Sagalaev", role = "cph",

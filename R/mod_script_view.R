@@ -2,8 +2,9 @@
 #'
 #' The script the board has loaded, as it is on disk, read only, and where
 #' things are: the script, the project folder, the data store and what is in
-#' it, the `_targets.yaml` in use and the active `TAR_PROJECT`. Each path
-#' copies with a click. It follows Load, and the files as they change: it
+#' it, the `_targets.yaml` in use and, when the board shows projects, the
+#' line that puts your console on the board's (`Sys.setenv(TAR_PROJECT = )`).
+#' Each copies with a click. It follows Load, and the files as they change: it
 #' looks again every second, and shows again only when something changed.
 #'
 #' @param id The module's id.
@@ -24,12 +25,7 @@ script_view_ui <- function(id) {
 script_view_server <- function(id, script) {
   stopifnot(shiny::is.reactive(script))
   shiny::moduleServer(id, function(input, output, session) {
-    state <- shiny::reactiveVal(NULL)
-    shiny::observe({
-      shiny::invalidateLater(1000)
-      new <- script_view_state(script())
-      if (!identical(new, shiny::isolate(state()))) state(new)
-    })
+    state <- watch_changes(function() script_view_state(script()))
 
     output$paths <- shiny::renderUI({
       shiny::req(state())
@@ -71,10 +67,9 @@ where_things_are <- function(script) {
   full <- function(path) unname(vapply(path, absolute_path, ""))
   store <- targets::tar_config_get("store")
   config <- Sys.getenv("TAR_CONFIG", "_targets.yaml")
-  project <- Sys.getenv("TAR_PROJECT")
   rows <- data.frame(
     label = c(
-      "Script", "Project folder", "Data store",
+      "Script", "Folder", "Data store",
       "Metadata", "Progress", "Values", "Workspaces",
       "Configuration"
     ),
@@ -86,10 +81,13 @@ where_things_are <- function(script) {
     )),
     depth = c(0, 0, 0, 1, 1, 1, 1, 0)
   )
-  if (nzchar(project)) {
-    rows <- rbind(rows, data.frame(label = "Project (TAR_PROJECT)", path = project, depth = 0))
+  rows$exists <- file.exists(rows$path)
+  # The board's project, as the line for the author's console (projects.R).
+  if (shows_projects()) {
+    rows <- rbind(rows, data.frame(
+      label = "Project", path = project_env_code(active_project()), depth = 0, exists = TRUE
+    ))
   }
-  rows$exists <- rows$label == "Project (TAR_PROJECT)" | file.exists(rows$path)
   rows
 }
 

@@ -204,3 +204,33 @@ wait_for_widget_mode <- function(app, mode, timeout = 10000) {
     if (mode == "dark") "true" else "false"
   ), timeout = timeout)
 }
+
+# script_server()'s arguments, with a real backend (its poller stopped at the
+# end) and the poller's graphs, script errors and runs as reactiveVals.
+script_args <- function(script = "_targets.R", .env = parent.frame()) {
+  backend <- board_backend(script, targets_only = TRUE)
+  withr::defer(backend$stop_poller(), envir = .env)
+  list(
+    backend = backend,
+    metadata = list(nodes = fake_nodes(), edges = fake_edges()),
+    script = script,
+    poller_board = shiny::reactiveVal(NULL),
+    script_error = shiny::reactiveVal(NULL),
+    running = shiny::reactiveVal(FALSE)
+  )
+}
+
+# A folder with three projects: main (_targets.R), a (a.R, store_a), and b
+# (b.R, store_b, inheriting a's other settings). TAR_PROJECT unset, and put
+# back as it was at the end.
+local_projects <- function(.env = parent.frame()) {
+  dir <- local_pipeline(.env = .env)
+  writeLines(c("library(targets)", "list(tar_target(a1, 1))"), "a.R")
+  writeLines(c("library(targets)", "list(tar_target(b1, 2), tar_target(b2, b1))"), "b.R")
+  writeLines(
+    c("a:", "  script: a.R", "  store: store_a", "b:", "  inherits: a", "  script: b.R", "  store: store_b"),
+    "_targets.yaml"
+  )
+  withr::local_envvar(TAR_PROJECT = NA, .local_envir = .env)
+  dir
+}

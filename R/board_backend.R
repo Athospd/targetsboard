@@ -7,17 +7,21 @@
 #'
 #' @param script Path to the targets script the poller starts on.
 #' @param targets_only Show only targets, without functions and globals.
+#' @param project The project of `_targets.yaml` it starts on.
 #' @return A list: the `poller` and `runner` environments, the `previews`
-#'   cache, the reactive values `rds_path` (the poller's graph file) and
-#'   `loaded_script`, and functions to start and stop the poller, ask it to
-#'   recompute, and tell whether a run is going.
+#'   cache, the reactive values `rds_path` (the poller's graph file),
+#'   `loaded_script` and `project` (the active project of `_targets.yaml`),
+#'   and functions to start and stop the poller, switch project, ask the
+#'   poller to recompute, and tell whether a run is going.
 #' @noRd
-board_backend <- function(script, targets_only = TRUE) {
+board_backend <- function(script, targets_only = TRUE, project = active_project()) {
   # One background poller, restarted only when someone loads a different
   # script.
   poller <- new.env()
   rds_path <- shiny::reactiveVal(NULL)
   loaded_script <- shiny::reactiveVal(script) # the script the poller draws
+  project <- shiny::reactiveVal(project) # its project (projects.R)
+  previews <- preview_cache()
 
   stop_poller <- function() {
     if (inherits(poller$process, "r_process") && poller$process$is_alive())
@@ -33,6 +37,16 @@ board_backend <- function(script, targets_only = TRUE) {
     loaded_script(script)
     poller$refresh_path <- assets$refresh_path
     rds_path(assets$tar_vis_path)
+  }
+
+  # Another project: this process's TAR_PROJECT, which the poller and the
+  # runs inherit, then the poller on `script`, by default the project's
+  # own. The previews read the old store: gone.
+  switch_project <- function(new_project, script = project_script(new_project)) {
+    set_active_project(new_project)
+    project(new_project)
+    previews$clear()
+    start_poller(script)
   }
 
   # Started by the first session, and stopped with the app.
@@ -60,9 +74,11 @@ board_backend <- function(script, targets_only = TRUE) {
   list(
     poller = poller,
     runner = runner,
-    previews = preview_cache(),
+    previews = previews,
     rds_path = rds_path,
     loaded_script = loaded_script,
+    project = project,
+    switch_project = switch_project,
     start_poller = start_poller,
     stop_poller = stop_poller,
     start_once = start_once,

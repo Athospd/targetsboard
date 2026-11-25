@@ -6,7 +6,7 @@
 \title{Launch the targets board}
 \usage{
 tar_board(
-  script = targets::tar_config_get("script"),
+  script = targets::tar_config_get("script", project = project),
   port = getOption("shiny.port", targets::tar_random_port()),
   targets_only = TRUE,
   metadata = NULL,
@@ -14,21 +14,23 @@ tar_board(
   browse = TRUE,
   verbose = TRUE,
   scripts = NULL,
+  project = Sys.getenv("TAR_PROJECT", "main"),
   ...
 )
 
 tar_board_app(
-  script = targets::tar_config_get("script"),
+  script = targets::tar_config_get("script", project = project),
   targets_only = TRUE,
   metadata = NULL,
   options = list(),
   scripts = NULL,
+  project = Sys.getenv("TAR_PROJECT", "main"),
   ...
 )
 }
 \arguments{
 \item{script}{Path to the targets script. Defaults to the project's, as
-\code{targets::tar_config_get("script")} gives it.}
+\code{targets::tar_config_get("script", project = project)} gives it.}
 
 \item{port}{Port to serve the board on. Defaults to the \code{shiny.port} option
 or, without one, a random free port.}
@@ -49,6 +51,9 @@ or, without one, \code{"127.0.0.1"}: only your own machine can reach it.}
 \item{scripts}{Optional: other targets scripts to switch to, offered in the
 board's Script field. The field lists them under \code{script} and filters
 them as you type; only these can be chosen. Pick one and press Load.}
+
+\item{project}{The project of \verb{_targets.yaml} to start on. Defaults to
+the \code{TAR_PROJECT} environment variable, or \code{"main"}.}
 
 \item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}} for the first render.}
 
@@ -80,6 +85,19 @@ Also like \code{targets::tar_watch()}, \code{tar_board()} serves the board on a 
 free port, waits until it is up, opens it in your browser and prints its
 url.
 }
+\section{Projects}{
+
+A \verb{_targets.yaml} can define several projects, each with its own script
+and store, and the \code{TAR_PROJECT} environment variable chooses one
+(\code{"main"} unless set): see the targets manual's chapter on projects. The
+board starts on that project, or on \code{project}, and a Project field left of
+the Script field switches it, when \verb{_targets.yaml} has more than one
+project or the board isn't on \code{"main"}. Loading another project's script
+switches to that project too. The board's project is its own: your R
+session's \code{TAR_PROJECT} is never changed, and the Script tab gives the
+line to make it follow.
+}
+
 \section{Large pipelines}{
 
 The page keeps every target on the graph in memory, so very large graphs
