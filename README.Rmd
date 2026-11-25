@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# targetsboard <img src="man/figures/logo.png" align="right" height="139" alt="targetsboard hex sticker" />
+# targetsboard <img src="man/figures/logo.png" align="right" height="139" alt="targetsboard hex sticker: a pulse reaching a target" />
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)

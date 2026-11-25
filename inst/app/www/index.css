@@ -117,19 +117,24 @@ body {
   border-radius: var(--bs-border-radius-lg);
   box-shadow: var(--bs-box-shadow);
 }
+/* The spinner is the brand's mark, animated: the line draws, the target
+   pulses (pulse-spinner.svg, made on the logo-concepts branch). A mask, so it
+   takes the theme's primary colour. */
 .tb-loading .load-container .loader {
   grid-row: 1;
   grid-column: 1;
   position: relative;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
   margin: 0;
   font-size: inherit;
-  border: 2.5px solid color-mix(in srgb, var(--bs-primary) 20%, transparent);
-  border-top-color: var(--bs-primary);
-  border-right-color: var(--bs-primary);
-  border-radius: 50%;
-  animation: tb-spin 0.8s linear infinite;
+  border: 0;
+  border-radius: 0;
+  background: var(--bs-primary);
+  -webkit-mask: url(pulse-spinner.svg) center / contain no-repeat;
+  mask: url(pulse-spinner.svg) center / contain no-repeat;
+  animation: none;
+  transform: none;
 }
 .tb-loading .load-container .loader::after {
   content: none;
@@ -154,7 +159,7 @@ body {
   from { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tb-loading .load-container .loader { animation-duration: 2.4s; }
+  /* The spinner slows down by itself (pulse-spinner.svg). */
   .tb-loading .load-container:not(.shiny-spinner-hidden) { animation: none; }
 }
 /* On a narrow window the page no longer fills its height, and the Board
@@ -599,8 +604,15 @@ pre.hljs {
 
 /* The headings: the app's title first, the sidebar's below it. */
 .tb-app-title {
-  font-size: 1.125rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+/* The wordmark, the brand's mark and name, in the title's colour
+   (R/mod_chrome.R); its height the letters' ascender to descender. */
+.tb-wordmark {
+  height: 1.6rem;
+  width: auto;
+  flex: none;
 }
 .bslib-page-sidebar > .bslib-sidebar-layout > .sidebar .sidebar-title {
   font-size: 1rem;

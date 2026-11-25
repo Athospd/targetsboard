@@ -8,7 +8,7 @@ chrome_ui <- function(id, ...) {
   ns <- shiny::NS(id)
   shiny::tags$div(
     class = "d-flex justify-content-between align-items-center w-100",
-    shiny::tags$span(class = "tb-app-title", "Targets board"),
+    shiny::tags$span(class = "tb-app-title", brand_wordmark()),
     shiny::tags$div(
       class = "d-flex align-items-center gap-2",
       ...,
@@ -30,4 +30,17 @@ chrome_server <- function(id) {
 
     list()
   })
+}
+
+#' The brand's mark, inline, in the theme's text colour
+#'
+#' The wordmark, the Pulse mark and the name, the name as outlines
+#' (inst/app/www/wordmark.svg, written by make_logo.py on the logo-concepts
+#' branch): inline rather than an image, so it takes `currentColor` in
+#' every theme and mode. Its
+#' `aria-label` is the name screen readers read.
+#' @noRd
+brand_wordmark <- function() {
+  shiny::HTML(paste(readLines(app_sys("app/www/wordmark.svg"), warn = FALSE), collapse = "
+"))
 }

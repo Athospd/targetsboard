@@ -208,3 +208,16 @@ test_that("tar_board() hands the scripts to the board's background process", {
   expect_equal(args$script, "b.R")
   expect_equal(args$scripts, c("a.R", "b.R"))
 })
+
+test_that("the top bar shows the brand's wordmark, in the theme's colour, and the tab its icon", {
+  html <- as.character(chrome_ui("chrome"))
+  expect_match(html, '<span class="tb-app-title">\\s*<svg')
+  expect_match(html, 'role="img" aria-label="targetsboard"', fixed = TRUE) # read as the name
+  expect_match(html, 'class="tb-wordmark"', fixed = TRUE)
+  expect_match(html, 'stroke="currentColor"', fixed = TRUE) # follows the theme
+  expect_no_match(html, "Targets board", fixed = TRUE)
+  head <- htmltools::renderTags(add_external_resources())$head
+  expect_match(head, 'rel="icon" type="image/svg+xml" href="www/favicon.svg"', fixed = TRUE)
+  expect_match(head, 'href="www/favicon.png"', fixed = TRUE)
+  expect_true(all(file.exists(app_sys("app/www", c("wordmark.svg", "favicon.svg", "favicon.png")))))
+})
