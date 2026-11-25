@@ -4,7 +4,8 @@
 #' and the store. The graph as the poller last recomputed it
 #' (`poller_board`), why the script doesn't load (`script_error`), the run's
 #' live `progress`, whether a run is going (`running`), `tar_meta()`
-#' (`tar_meta`) and the targets that warned (`warned_targets`).
+#' (`tar_meta`), the targets that warned (`warned_targets`) and why the
+#' outdated ones are outdated (`outdated`, outdated_reasons()).
 #'
 #' @param id The module's id.
 #' @param backend `board_backend()`: shared by every session, not reactive.
@@ -73,13 +74,29 @@ graph_data_server <- function(id, backend) {
     # Targets whose last build raised warnings, for the warning marks.
     warned_targets <- shiny::reactive(warned_targets_of(tar_meta_data()))
 
+    # Why the outdated targets are: the poller writes it after the graph.
+    outdated <- shiny::reactivePoll(
+      1000, session,
+      checkFunc = function() {
+        path <- backend$rds_path()
+        if (is.null(path)) NA else file.mtime(poller_reasons_path(path))
+      },
+      valueFunc = function() {
+        path <- backend$rds_path()
+        reasons_path <- if (!is.null(path)) poller_reasons_path(path)
+        if (is.null(reasons_path) || !file.exists(reasons_path)) return(list())
+        outdated_reasons(tryCatch(readRDS(reasons_path), error = function(e) NULL))
+      }
+    )
+
     list(
       poller_board = poller_board,
       script_error = script_error,
       progress = progress,
       running = running,
       tar_meta = tar_meta_data,
-      warned_targets = warned_targets
+      warned_targets = warned_targets,
+      outdated = outdated
     )
   })
 }

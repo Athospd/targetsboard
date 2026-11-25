@@ -608,13 +608,18 @@ function Flow({ configuration }) {
       // shows one, by id; an empty one (which may arrive as []) clears them.
       const counts = message.branches == null ? null
         : (Array.isArray(message.branches) ? {} : message.branches);
+      // `reasons`, when sent, has every target's tooltip (why it is
+      // outdated), by id; an empty one (which may arrive as []) clears them.
+      const reasons = message.reasons == null ? null
+        : (Array.isArray(message.reasons) ? {} : message.reasons);
       setNodes((current) =>
         current.map((node) => {
           const update = updates.get(node.id);
           const warning = warned ? warned.has(node.id) : node.data?.warning;
           const branches = counts ? (counts[node.id] ?? null) : (node.data?.branches ?? null);
           const sameBranches = JSON.stringify(branches) === JSON.stringify(node.data?.branches ?? null);
-          if (!update && warning === node.data?.warning && sameBranches) return node;
+          const why = reasons ? (reasons[node.id] ?? null) : (node.data?.why ?? null);
+          if (!update && warning === node.data?.warning && sameBranches && why === (node.data?.why ?? null)) return node;
           return {
             ...node,
             type: update ? update.type : node.type,
@@ -623,6 +628,7 @@ function Flow({ configuration }) {
               ...(update ? { target_status: update.target_status } : {}),
               warning,
               branches,
+              why,
             },
           };
         }),

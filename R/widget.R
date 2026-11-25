@@ -142,6 +142,10 @@ full_id <- function(session, inputId) {
 #'   ignored.
 #' @param warnings For `update_targetsboard_status()`: `NULL` leaves the warning
 #'   marks as they are; otherwise the ids of all the targets that carry one.
+#' @param reasons For `update_targetsboard_status()`: `NULL` leaves the
+#'   targets' tooltips as they are; else a named character vector, every
+#'   target's text shown on hovering it (why it is outdated), the others
+#'   showing none.
 #' @param branches For `update_targetsboard_status()`: `NULL` leaves the
 #'   branch counts on patterns as they are; otherwise a data frame as
 #'   `targets::tar_progress_branches()` returns, and the patterns it lists
@@ -149,7 +153,7 @@ full_id <- function(session, inputId) {
 #'   none, so a data frame without rows clears them all.
 #' @export
 update_targetsboard_status <- function(session, inputId, statuses = character(), warnings = NULL,
-                                       branches = NULL) {
+                                       branches = NULL, reasons = NULL) {
   stopifnot(is.character(statuses), !is.null(names(statuses)) || length(statuses) == 0)
   message <- list(
     id = full_id(session, inputId),
@@ -160,6 +164,10 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
   )
   if (!is.null(warnings)) message$warnings <- I(as.character(warnings)) # always an array
   if (!is.null(branches)) message$branches <- branch_counts(branches)
+  if (!is.null(reasons)) {
+    # Every target's: one that isn't listed loses its reason.
+    message$reasons <- if (length(reasons)) as.list(reasons) else structure(list(), names = character())
+  }
   session$sendCustomMessage("targetsboard:status", message)
 }
 

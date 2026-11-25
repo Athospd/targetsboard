@@ -1,7 +1,8 @@
 #' The value preview: a sidebar beside the board's graph
 #'
 #' Shows the focused target's value, in a frame of views (preview_frame()),
-#' or its problem first if it errored or warned. Opened on request, it
+#' or its problem first if it errored or warned; and, above, why it is
+#' outdated if it is. Opened on request, it
 #' follows the focus; it closes with the focus, or by its own toggle.
 #' @param id The module's id.
 #' @noRd
@@ -12,6 +13,8 @@ preview_ui <- function(id) {
     width = "40%",
     open = FALSE,
     position = "right",
+    # Apart from the value's output: new reasons don't rebuild the value.
+    shiny::uiOutput(ns("why")),
     # The same spinner card as Load's while a value is read and its preview
     # built, over the previous preview.
     shiny::tags$div(
@@ -35,14 +38,16 @@ preview_ui <- function(id) {
 #' @param tar_meta Reactive: `targets::tar_meta()`, polled.
 #' @param methods Reactive: changes when the project's preview methods are
 #'   loaded again.
+#' @param outdated Reactive: why outdated targets are (outdated_reasons()).
 #' @return A list of reactives: `target_link`, the target a link in the
 #'   problem pane asks to show.
 #' @noRd
-preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods) {
+preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods,
+                           outdated = shiny::reactive(list())) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
-    shiny::is.reactive(methods)
+    shiny::is.reactive(methods), shiny::is.reactive(outdated)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -88,6 +93,11 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       seen_records <<- records
       records_changed(shiny::isolate(records_changed()) + 1)
     }, ignoreNULL = FALSE, ignoreInit = TRUE)
+
+    output$why <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      reasons_ui(outdated()[[focused()]])
+    })
 
     output$content <- shiny::renderUI({
       shiny::req(is_open(), focused())
