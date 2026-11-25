@@ -122,7 +122,7 @@ confirm_nodes_limit <- function() getOption("targetsboard.confirm_nodes", 500)
 large_graph_modal <- function(script, nodes, targets_only = TRUE, ns = identity) {
   what <- if (targets_only) "targets" else "targets, functions and globals"
   shiny::modalDialog(
-    title = "A large pipeline",
+    title = shiny::tagList(shiny::icon("triangle-exclamation"), "A large pipeline"),
     shiny::tags$p(sprintf("%s has %s %s.", script, format(nodes, big.mark = ","), what)),
     shiny::tags$p(sprintf(
       paste(

@@ -2,6 +2,13 @@
 
 ## New features
 
+* An outdated target says why: hovered on the board, and above its value
+  in the preview. Its command changed, which function or object changed
+  (`f` changed), what upstream is outdated, no record in the store, its
+  cue, file, format or seed: targets' cues (`tar_sitrep()`), with what
+  changed named from `tar_network()`. Computed in the background after the
+  graph, which doesn't wait for it. In the preview, the reasons sit in a
+  card in the outdated status's colour, each with an icon of its kind.
 * Themes: the board's look is the "Targets board" theme, and a few
   Bootswatch themes, checked for readable text in light and dark mode, can
   replace it: pick one in the top bar, and the browser remembers it, or start
@@ -89,6 +96,13 @@
 
 ## Minor changes
 
+* The Value pane's button that copies the `targets::tar_read()` call is in
+  the theme's red, its danger colour, so it stands out; readable in every
+  theme and mode (#104).
+* The confirmation before invalidating counts the targets in its title
+  ("Invalidate 5 targets?"), lists up to 50 of them in a list that scrolls,
+  and closes on Escape or a click outside. Modals have a compact title
+  with an icon, and dividers, like the board's cards.
 * The board's look is evened out: one type scale (`--tb-font-size-*`),
   Bootstrap's radii, sizes in rem, one button style in two sizes (the
   page's, bslib's default; the canvas's, the toolbar's, which Tidy now

@@ -154,22 +154,30 @@ run_server <- function(id, backend, board, running, action) {
 #' @param ns The run module's namespace, for its button.
 #' @noRd
 invalidate_modal <- function(names, ns = identity) {
-  shown <- utils::head(names, 10)
+  shown <- utils::head(names, 50)
+  count <- if (length(names) == 1) "1 target" else paste(length(names), "targets")
   shiny::modalDialog(
-    title = "Invalidate targets?",
+    title = shiny::tagList(shiny::icon("eraser"), paste0("Invalidate ", count, "?")),
     shiny::p(
+      class = "text-body-secondary",
       "The next run will build these targets again, and what depends on them.",
       "Until then, their values can no longer be read."
     ),
+    # A list that scrolls past a dozen names.
     shiny::tags$ul(
-      lapply(shown, \(name) shiny::tags$li(shiny::tags$code(name))),
+      class = "list-group tb-modal-list",
+      lapply(shown, \(name) shiny::tags$li(class = "list-group-item", shiny::tags$code(name))),
       if (length(names) > length(shown)) {
-        shiny::tags$li(paste("and", length(names) - length(shown), "more"))
+        shiny::tags$li(
+          class = "list-group-item text-body-secondary",
+          paste("and", length(names) - length(shown), "more")
+        )
       }
     ),
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("invalidate_confirm"), "Invalidate", class = "btn-danger")
-    )
+      shiny::actionButton(ns("invalidate_confirm"), "Invalidate", icon = shiny::icon("eraser"), class = "btn-danger")
+    ),
+    easyClose = TRUE
   )
 }

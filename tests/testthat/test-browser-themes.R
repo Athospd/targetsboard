@@ -7,7 +7,9 @@ test_that("every board theme keeps the board readable, in both modes", {
   dir <- local_pipeline(make = TRUE)
   themes <- board_themes()
   contrast_js <- paste(
-    "(() => { const rgba = c => { const v = c.match(/[0-9.]+/g).map(Number); return v.length < 4 ? [...v, 1] : v; };",
+    "(() => { const rgba = c => { const v = c.match(/[0-9.e-]+/g).map(Number);",
+    "  if (c.startsWith('color(srgb')) { v.splice(0, 3, ...v.slice(0, 3).map(x => x * 255)); }", # color-mix() computes to color(srgb 0-1)
+    "  return v.length < 4 ? [...v, 1] : v; };",
     "const lum = c => { const [r, g, b] = c.slice(0, 3).map(v => { v /= 255;",
     "  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });",
     "  return 0.2126 * r + 0.7152 * g + 0.0722 * b; };",
@@ -18,7 +20,9 @@ test_that("every board theme keeps the board readable, in both modes", {
     "  const [x, y] = [lum(t), lum(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };",
     "return { heading: ct('.sidebar-title'), run_all: ct('#board-run-all'), refresh: ct('#board-script-refresh'),",
     "  tab: ct('#board-view .nav-link:not(.active)'), toolbar: ct('.tb-node-toolbar button'), picker: ct('#theme-pick'),",
-    "  switch: ct('.tb-mode-button'),",
+    "  switch: ct('.tb-mode-button'), copy: (() => { const p = document.createElement('button');",
+    "    p.className = 'tb-copy-code'; p.id = 'tb-probe-copy'; p.textContent = 'targets::tar_read(b)';",
+    "    document.body.appendChild(p); const r = ct('#tb-probe-copy'); p.remove(); return r; })(),",
     "  canvas: getComputedStyle(document.querySelector('.react-flow')).backgroundColor }; })()"
   )
   # The canvas's colours, as the widget resolves its tokens: a status's text
@@ -57,7 +61,7 @@ test_that("every board theme keeps the board readable, in both modes", {
       wait_for_settled(app)
       got <- app$get_js(contrast_js)
       label <- sprintf("%s, %s mode", name, mode)
-      for (part in c("heading", "run_all", "refresh", "toolbar", "picker")) {
+      for (part in c("heading", "run_all", "refresh", "toolbar", "picker", "copy")) {
         expect_gte(got[[part]], 4.5, label = paste(label, part))
       }
       expect_gte(got$tab, 3, label = paste(label, "inactive tab")) # bold, large-ish

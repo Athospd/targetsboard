@@ -271,6 +271,20 @@ test_that("update_targetsboard_status() sends pattern branch counts, and clears 
   expect_null(sent$branches) # left as they are
 })
 
+test_that("update_targetsboard_status() sends every target's reason, and clears them", {
+  sent <- NULL
+  session <- list(sendCustomMessage = function(type, message) sent <<- message)
+  update_targetsboard_status(session, "dag", reasons = c(model = "Outdated: its command changed."))
+  expect_equal(sent$reasons, list(model = "Outdated: its command changed."))
+  expect_null(sent$branches) # left alone
+
+  update_targetsboard_status(session, "dag", reasons = character())
+  expect_equal(as.character(jsonlite::toJSON(sent$reasons, auto_unbox = TRUE)), "{}")
+
+  update_targetsboard_status(session, "dag", c(raw = "completed"))
+  expect_null(sent$reasons) # left as they are
+})
+
 test_that("the widget's updates find it inside a module, by its namespaced id", {
   sent <- list()
   session <- list(

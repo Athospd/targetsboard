@@ -56,10 +56,10 @@ test_that("the graph's Invalidate asks first, with the run's namespace on its bu
     expect_match(modal, 'id="proxy1-invalidate_confirm"', fixed = TRUE)
 
     # A long list is cut short in the confirmation, but all are invalidated.
-    many <- paste0("t", 1:12)
+    many <- paste0("t", 1:55)
     args$action(list(action = "invalidate", node = "t1", nodes = many))
     session$flushReact()
-    expect_match(modal, "and 2 more", fixed = TRUE)
+    expect_match(modal, "and 5 more", fixed = TRUE)
     session$setInputs(invalidate_confirm = 1)
     expect_equal(invalidated, many)
   })
