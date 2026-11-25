@@ -6,7 +6,9 @@
  
 /* The board's colour tokens. Every colour of the graph is read from these, so
    a new look, or a better dark mode, is a change here only. Light values on
-   the wrapper; the widget adds tb-dark to it in dark mode. */
+   the wrapper; the widget adds tb-dark to it in dark mode. A theme of the app
+   may set any of them as --tb-theme-<name> (R/theme.R); else the board's own
+   value, after the comma. */
 .reactflow-wrapper {
   /* The canvas, the marks drawn on it and the minimap: a theme of the app
      may set them (--tb-theme-*, R/theme.R); else the board's own. */
@@ -15,31 +17,46 @@
   --tb-minimap-bg: var(--tb-theme-minimap-bg, #fff);
   --tb-minimap-mask: var(--tb-theme-minimap-mask, rgba(240, 240, 240, 0.6));
   /* A target, by status: its fill and its label. */
-  --tb-status-uptodate: #354823;
-  --tb-status-uptodate-text: #d3f0b7;
-  --tb-status-outdated: #78b7c5;
-  --tb-status-outdated-text: #10363f;
-  --tb-status-errored: #c93312;
-  --tb-status-errored-text: #ffb6a6;
-  --tb-status-running: #d49536;
-  --tb-status-running-text: #3f2f11;
-  --tb-spinner: #fff; /* on a running target */
+  --tb-status-uptodate: var(--tb-theme-status-uptodate, #354823);
+  --tb-status-uptodate-text: var(--tb-theme-status-uptodate-text, #d3f0b7);
+  --tb-status-outdated: var(--tb-theme-status-outdated, #78b7c5);
+  --tb-status-outdated-text: var(--tb-theme-status-outdated-text, #10363f);
+  --tb-status-errored: var(--tb-theme-status-errored, #c93312);
+  --tb-status-errored-text: var(--tb-theme-status-errored-text, #ffb6a6);
+  --tb-status-running: var(--tb-theme-status-running, #d49536);
+  --tb-status-running-text: var(--tb-theme-status-running-text, #3f2f11);
+  --tb-spinner: var(--tb-theme-spinner, #fff); /* on a running target */
   /* A target's outline and its handles, where edges meet it. */
-  --tb-node-border: #1a192b;
-  --tb-handle: #1a192b;
-  --tb-handle-border: #fff;
+  --tb-node-border: var(--tb-theme-node-border, #1a192b);
+  /* A selected target: its outline and a tint over its status's fill, by
+     default none (React Flow marks selection only on its own kinds of node).
+     A selected target is focused too, so it has the focus ring: a
+     box-shadow, which a theme may make a glow. And a glow around any other
+     target, a box-shadow too. */
+  --tb-node-selected-border: var(--tb-theme-node-selected-border, var(--tb-node-border));
+  --tb-node-selected-tint: var(--tb-theme-node-selected-tint, transparent);
+  --tb-node-focus-shadow: var(--tb-theme-node-focus-shadow, 0 0 0 3px var(--tb-focus-ring));
+  --tb-node-glow: var(--tb-theme-node-glow, none);
+  --tb-handle: var(--tb-theme-handle, #1a192b);
+  --tb-handle-border: var(--tb-theme-handle-border, #fff);
   /* The edges, and a selected one. */
-  --tb-edge: #b1b1b7;
-  --tb-edge-selected: #555;
+  --tb-edge: var(--tb-theme-edge, #b1b1b7);
+  --tb-edge-selected: var(--tb-theme-edge-selected, #555);
+  /* An edge into a running target, drawn moving, and a selected one: by
+     default as the others. A glow: a filter, as drop-shadow(), on every edge;
+     costly on a big graph, so none by default. */
+  --tb-edge-running: var(--tb-theme-edge-running, var(--tb-edge));
+  --tb-edge-running-selected: var(--tb-theme-edge-running-selected, var(--tb-edge-selected));
+  --tb-edge-glow: var(--tb-theme-edge-glow, none);
   /* The box drawn to select a group: the page's primary colour. */
-  --tb-selection-bg: rgba(var(--bs-primary-rgb, 0, 89, 220), 0.08);
-  --tb-selection-border: rgba(var(--bs-primary-rgb, 0, 89, 220), 0.8);
+  --tb-selection-bg: var(--tb-theme-selection-bg, rgba(var(--bs-primary-rgb, 0, 89, 220), 0.08));
+  --tb-selection-border: var(--tb-theme-selection-border, rgba(var(--bs-primary-rgb, 0, 89, 220), 0.8));
   /* Marks on a target: warnings, branches that errored, the focus ring. */
-  --tb-warning: #f2c94c;
-  --tb-warning-text: #3f2f11;
-  --tb-danger: #c62828;
-  --tb-danger-text: #fff;
-  --tb-focus-ring: #2f223d;
+  --tb-warning: var(--tb-theme-warning, #f2c94c);
+  --tb-warning-text: var(--tb-theme-warning-text, #3f2f11);
+  --tb-danger: var(--tb-theme-danger, #c62828);
+  --tb-danger-text: var(--tb-theme-danger-text, #fff);
+  --tb-focus-ring: var(--tb-theme-focus-ring, #2f223d);
   /* Menus, toolbars, buttons and badges over the canvas: in the app, the
      page's Bootstrap surfaces, as its dropdowns; alone, their values. */
   --tb-surface: var(--bs-body-bg, #fff);
@@ -60,15 +77,15 @@
   --tb-canvas-marks: var(--tb-theme-canvas-marks, #777);
   --tb-minimap-bg: var(--tb-theme-minimap-bg, #141414);
   --tb-minimap-mask: var(--tb-theme-minimap-mask, rgba(60, 60, 60, 0.6));
-  --tb-focus-ring: #d6c7ea;
-  --tb-node-border: #3c3c3c;
-  --tb-handle: #bebebe;
-  --tb-handle-border: #1e1e1e;
+  --tb-focus-ring: var(--tb-theme-focus-ring, #d6c7ea);
+  --tb-node-border: var(--tb-theme-node-border, #3c3c3c);
+  --tb-handle: var(--tb-theme-handle, #bebebe);
+  --tb-handle-border: var(--tb-theme-handle-border, #1e1e1e);
   /* Lighter than React Flow's #3e3e3e, which nearly vanished on the canvas. */
-  --tb-edge: #6c6c6c;
-  --tb-edge-selected: #a0a0a0;
-  --tb-selection-bg: rgba(200, 200, 220, 0.08);
-  --tb-selection-border: rgba(200, 200, 220, 0.8);
+  --tb-edge: var(--tb-theme-edge, #6c6c6c);
+  --tb-edge-selected: var(--tb-theme-edge-selected, #a0a0a0);
+  --tb-selection-bg: var(--tb-theme-selection-bg, rgba(200, 200, 220, 0.08));
+  --tb-selection-border: var(--tb-theme-selection-border, rgba(200, 200, 220, 0.8));
   --tb-surface: var(--bs-body-bg, #212529);
   --tb-surface-text: var(--bs-body-color, #dee2e6);
   --tb-surface-hover: var(--bs-tertiary-bg, #2b3035);
@@ -90,6 +107,29 @@
   --xy-handle-border-color: var(--tb-handle-border);
   --xy-selection-background-color: var(--tb-selection-bg);
   --xy-selection-border: 1px dotted var(--tb-selection-border);
+  /* The controls (zoom, fit, lock, download): React Flow's own, per mode,
+     unless a theme sets them. Set here, where React Flow's defaults are. */
+  --xy-controls-button-background-color: var(--tb-theme-controls-bg, var(--xy-controls-button-background-color-default));
+  --xy-controls-button-background-color-hover: var(--tb-theme-controls-bg-hover, var(--xy-controls-button-background-color-hover-default));
+  --xy-controls-button-color: var(--tb-theme-controls-color, var(--xy-controls-button-color-default));
+  --xy-controls-button-color-hover: var(--tb-theme-controls-color-hover, var(--xy-controls-button-color-hover-default));
+  --xy-controls-button-border-color: var(--tb-theme-controls-border, var(--xy-controls-button-border-color-default));
+  --xy-controls-box-shadow: var(--tb-theme-controls-shadow, var(--xy-controls-box-shadow-default));
+}
+
+/* Edges: their glow, and those into a running target, selected or not. */
+.reactflow-wrapper .react-flow__edge-path {
+  filter: var(--tb-edge-glow);
+}
+
+.reactflow-wrapper .react-flow__edge.animated .react-flow__edge-path {
+  stroke: var(--tb-edge-running);
+}
+
+.reactflow-wrapper .react-flow__edge.animated.selected .react-flow__edge-path,
+.reactflow-wrapper .react-flow__edge.animated.selectable:focus .react-flow__edge-path,
+.reactflow-wrapper .react-flow__edge.animated.selectable:focus-visible .react-flow__edge-path {
+  stroke: var(--tb-edge-running-selected);
 }
 
 /* A target's colours, by status. */
@@ -107,6 +147,7 @@
   text-align: center;
   border: var(--xy-node-border, var(--xy-node-border-default));
   background-color: var(--xy-node-background-color, var(--xy-node-background-color-default));
+  box-shadow: var(--tb-node-glow);
 }
 
 .providerflow {
@@ -174,8 +215,14 @@
   opacity: 0.2;
 }
 
+/* A selected target: its outline and tint. */
+.react-flow__node.selected .base-node {
+  border-color: var(--tb-node-selected-border);
+  background-image: linear-gradient(var(--tb-node-selected-tint), var(--tb-node-selected-tint));
+}
+
 .react-flow__node.tb-focused .base-node {
-  box-shadow: 0 0 0 3px var(--tb-focus-ring);
+  box-shadow: var(--tb-node-focus-shadow);
 }
 
 /* The right-click menu of a target. */
