@@ -195,7 +195,8 @@ body {
   overflow-wrap: anywhere;
 }
 /* The code a button copies, with a copy icon, as GitHub's for a branch's
-   name; a check once it's copied. */
+   name; a check once it's copied. In the theme's red (danger, its subtle
+   shades), so the way to read the value in R stands out. */
 .tb-copy-code {
   display: inline-flex;
   align-items: center;
@@ -203,15 +204,17 @@ body {
   min-width: 0;
   max-width: 60%;
   padding: 0.125rem 0.375rem 0.125rem 0.5rem;
-  border: 1px solid var(--bs-border-color);
+  border: 1px solid var(--bs-danger-border-subtle);
   border-radius: var(--bs-border-radius);
-  background: var(--bs-tertiary-bg);
-  color: var(--bs-body-color);
+  background: var(--bs-danger-bg-subtle);
+  /* As an errored target's label: some emphasis colour keeps it readable
+     where a theme's red is light (Nord dark). */
+  color: color-mix(in srgb, var(--bs-danger-text-emphasis) 75%, var(--bs-emphasis-color));
   font-size: var(--tb-font-size-xxs);
   line-height: 1.5;
 }
 .tb-copy-code:hover {
-  border-color: var(--bs-secondary-color);
+  border-color: var(--bs-danger);
 }
 .tb-copy-code code {
   overflow: hidden;
@@ -224,7 +227,8 @@ body {
 .tb-copy-code .tb-copy-icon,
 .tb-copy-code .tb-copied-icon {
   flex: none;
-  color: var(--bs-secondary-color);
+  color: inherit;
+  opacity: 0.8;
 }
 .tb-copy-code .tb-copied-icon,
 .tb-copy-code.tb-copied .tb-copy-icon {
@@ -232,10 +236,11 @@ body {
 }
 .tb-copy-code.tb-copied .tb-copied-icon {
   display: inline-block;
-  color: var(--bs-success);
+  color: var(--bs-success-text-emphasis);
+  opacity: 1;
 }
 .tb-copy-code.tb-copy-failed .tb-copy-icon {
-  color: var(--bs-danger);
+  opacity: 1;
 }
 .tb-preview-facts {
   display: flex;

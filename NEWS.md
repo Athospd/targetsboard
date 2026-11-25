@@ -96,6 +96,9 @@
 
 ## Minor changes
 
+* The Value pane's button that copies the `targets::tar_read()` call is in
+  the theme's red, its danger colour, so it stands out; readable in every
+  theme and mode (#104).
 * The confirmation before invalidating counts the targets in its title
   ("Invalidate 5 targets?"), lists up to 50 of them in a list that scrolls,
   and closes on Escape or a click outside. Modals have a compact title
