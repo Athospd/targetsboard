@@ -14,6 +14,8 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #' @param board Reactive: the graph to draw (script_server()).
 #' @param progress,running,warned_targets Reactives: the polled progress,
 #'   whether a run goes, and the targets with a warning (graph_data_server()).
+#' @param outdated Reactive: why outdated targets are (outdated_reasons()),
+#'   shown on hovering them.
 #' @param show Reactive event: `list(name)`, a target to focus and bring into
 #'   view with what it depends on and what depends on it directly.
 #' @param color_mode Reactive: `"light"` or `"dark"`, the page's mode.
@@ -21,10 +23,12 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #'   target; `double_clicked`, a target double-clicked; and `node_action`, an
 #'   action chosen in a menu or toolbar.
 #' @noRd
-graph_server <- function(id, board, progress, running, warned_targets, show, color_mode) {
+graph_server <- function(id, board, progress, running, warned_targets, show, color_mode,
+                         outdated = shiny::reactive(list())) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(progress), shiny::is.reactive(running),
-    shiny::is.reactive(warned_targets), shiny::is.reactive(show), shiny::is.reactive(color_mode)
+    shiny::is.reactive(warned_targets), shiny::is.reactive(show), shiny::is.reactive(color_mode),
+    shiny::is.reactive(outdated)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # A new graph: send it whole, with the live statuses on top.
@@ -42,6 +46,15 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
         warnings = shiny::isolate(warned_targets())
       )
     })
+
+    # Why outdated targets are, on hovering them: sent when the reasons
+    # change, and after a new graph, which comes without them.
+    send_reasons <- function() {
+      reasons <- vapply(outdated(), reasons_tooltip, character(1))
+      update_targetsboard_status(session, "flow", reasons = reasons)
+    }
+    shiny::observeEvent(outdated(), send_reasons())
+    shiny::observeEvent(board(), shiny::isolate(send_reasons()), priority = -1)
 
     # New metadata can add or clear warning marks: send just those.
     shiny::observeEvent(warned_targets(), {
