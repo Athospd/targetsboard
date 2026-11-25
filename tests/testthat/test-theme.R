@@ -42,7 +42,7 @@ test_that("a palette has a dark variant, and a light one unless the theme is dar
     expect_named(palette, if (dark_only) "dark" else c("light", "dark"))
     for (mode in palette) {
       expect_true(all(c("bg", "fg", "muted", "primary", "success", "info", "warning", "danger") %in% names(mode)))
-      colours <- mode[names(mode) != "link"]
+      colours <- mode[!names(mode) %in% c("link", "emphasis_tint")]
       expect_true(all(grepl("^#[0-9a-f]{6}$", colours)), label = name)
     }
   }
@@ -65,12 +65,12 @@ test_that("the picker groups the themes, Targets board first", {
   expect_match(html, '<optgroup label="Bootswatch">', fixed = TRUE)
 })
 
-test_that("a dark-only palette is dark in light mode too, and Flow is the board's own", {
+test_that("a dark-only palette is dark only, and Flow is the board's own", {
   themes <- board_themes()
   expect_true(themes$dark_only[themes$name == "Glow Night"])
   expect_false(themes$dark_only[themes$name == "Flow"])
   vars <- bslib::bs_get_variables(app_theme("Glow Night"), c("body-bg", "body-bg-dark", "link-color-dark"))
-  expect_equal(tolower(unname(vars)), c("#070425", "#070425", "#ff068b"))
+  expect_equal(tolower(unname(vars)), c("#ffffff", "#070425", "#ff068b"))
   expect_equal(names(board_theme_choices())[1:3], c("Targets board", "Flow", "Editor themes"))
   html <- as.character(theme_ui("theme", theme = "Targets board"))
   expect_match(html, '<option value="Flow">Flow</option>\\s*<optgroup label="Editor themes">')

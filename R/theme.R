@@ -154,7 +154,9 @@ board_own_palettes <- function() {
 # Per mode: bg, fg (text), surface (secondary background), border, muted
 # (secondary text), and the accents; a value left out is Bootstrap's own,
 # from bg and fg. `link`: the mode's link colour, a Sass expression, when
-# its primary is too faint for text on its bg.
+# its primary is too faint for text on its bg. `emphasis_tint` (dark only):
+# how much lighter than the accents their emphasis is, as a status's label,
+# for mid-tone accents.
 board_palettes <- function() {
   list(
     "Catppuccin" = list(
@@ -217,14 +219,15 @@ board_palettes <- function() {
         bg = "#002b36", fg = "#93a1a1", surface = "#073642", border = "#586e75",
         muted = "#839496", primary = "#268bd2", success = "#859900", info = "#2aa198",
         warning = "#b58900", danger = "#dc322f",
-        link = "tint-color(#268bd2, 25%)"
+        link = "tint-color(#268bd2, 25%)", emphasis_tint = "40%"
       )
     ),
     "Glow Night" = list(
       dark = c(
         bg = "#070425", fg = "#58c4c4", surface = "#0d0935", border = "#484291",
         muted = "#65737e", primary = "#e4097e", success = "#c3e88d", info = "#89ddff",
-        warning = "#ffcb6b", danger = "#ff5370", link = "#ff068b"
+        warning = "#ffcb6b", danger = "#ff5370", link = "#ff068b",
+        emphasis_tint = "25%"
       )
     )
   )
@@ -234,12 +237,24 @@ board_palettes <- function() {
 # dark colours as Bootstrap 5.3's dark mode's (the *-dark Sass variables), and
 # its dark accents as rules: Bootstrap compiles the accents for light mode
 # only. With the presets' rules: the canvas from its own colours. A dark-only
-# palette's dark colours are its light mode's too.
+# palette's light mode, never shown, keeps Bootstrap's own page with its
+# accents: bslib derives the dark mode's greys (the default button's) from
+# the light mode's bg and fg, which a dark bg turns dark.
 palette_theme <- function(palette) {
   dark <- palette$dark
-  light <- if (is.null(palette$light)) dark else palette$light
+  light <- palette$light
+  if (is.null(light)) {
+    light <- c(bg = "#ffffff", fg = "#212529", surface = "#f8f9fa", muted = "#6c757d",
+      dark[c("primary", "success", "info", "warning", "danger")])
+  }
   accents <- c("primary", "success", "info", "warning", "danger")
   optional <- function(colours, name) if (name %in% names(colours)) colours[[name]]
+  # Dark mode's emphasis of an accent (a status's label): the accent, or
+  # lighter by `emphasis_tint` for mid-tone accents on a dark page.
+  emphasis_dark <- dark[accents]
+  if ("emphasis_tint" %in% names(dark)) {
+    emphasis_dark <- sprintf("tint-color(%s, %s)", emphasis_dark, dark[["emphasis_tint"]])
+  }
   vars <- c(
     list(
       version = 5, bg = light[["bg"]], fg = light[["fg"]],
@@ -262,7 +277,7 @@ palette_theme <- function(palette) {
       "link-hover-color-dark" = dark[["fg"]]
     ),
     as.list(light[accents]),
-    stats::setNames(as.list(dark[accents]), paste0(accents, "-text-emphasis-dark"))
+    stats::setNames(as.list(emphasis_dark), paste0(accents, "-text-emphasis-dark"))
   )
   vars <- vars[!vapply(vars, is.null, logical(1))]
   dark_accents <- vapply(accents, function(accent) {
