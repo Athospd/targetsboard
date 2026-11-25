@@ -15,6 +15,7 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import { toPng, toSvg } from 'html-to-image';
+import { copyText } from './clipboard';
 import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
@@ -405,7 +406,7 @@ function Flow({ configuration }) {
     (action, node, nodes = [node]) => {
       setMenu(null);
       if (action === 'copy_name') {
-        navigator.clipboard?.writeText(rNames(nodes)).catch(() => {});
+        copyText(rNames(nodes)).catch(() => {});
         return;
       }
       if (SELECT_ACTIONS[action]) {

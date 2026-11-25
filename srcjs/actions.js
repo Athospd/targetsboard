@@ -24,6 +24,8 @@
 //     does. A browser's own datalist shows only the options matching the
 //     text already there: none, with a whole path in the field.
 
+import { copyText } from './clipboard';
+
 const FEEDBACK_MS = 1500;
 
 function send(id, value) {
@@ -51,13 +53,10 @@ function copied(button, ok) {
   }, FEEDBACK_MS);
 }
 
-// The clipboard needs a secure page, which localhost is.
+// The clipboard API, or the older route where IDE viewers refuse it
+// (clipboard.js).
 function copy(button) {
-  if (!navigator.clipboard) {
-    copied(button, false);
-    return;
-  }
-  navigator.clipboard.writeText(button.dataset.copy).then(
+  copyText(button.dataset.copy).then(
     () => copied(button, true),
     () => copied(button, false)
   );
