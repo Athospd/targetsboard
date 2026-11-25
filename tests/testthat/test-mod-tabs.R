@@ -126,8 +126,11 @@ test_that("the tables' row clicks send their input with the full namespace", {
 })
 
 test_that("where_things_are() finds the script, the store and what is in it, and the configuration", {
-  dir <- local_pipeline(make = TRUE)
-  full <- function(...) normalizePath(file.path(dir, ...), winslash = "/", mustWork = FALSE)
+  local_pipeline(make = TRUE)
+  # From the working directory as R reports it: on macOS the temporary
+  # folder is a link (/var to /private/var).
+  here <- normalizePath(getwd(), winslash = "/")
+  full <- function(...) paste(c(here, ...), collapse = "/")
   paths <- where_things_are("_targets.R")
   expect_equal(
     paths$label,
