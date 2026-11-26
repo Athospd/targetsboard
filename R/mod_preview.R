@@ -17,6 +17,7 @@ preview_ui <- function(id) {
     shiny::uiOutput(ns("description")),
     shiny::uiOutput(ns("rule")),
     shiny::uiOutput(ns("why")),
+    shiny::uiOutput(ns("command")),
     # The same spinner card as Load's while a value is read and its preview
     # built, over the previous preview.
     shiny::tags$div(
@@ -45,11 +46,13 @@ preview_ui <- function(id) {
 #'   problem pane asks to show.
 #' @noRd
 preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods,
-                           outdated = shiny::reactive(list()), rules = shiny::reactive(NULL)) {
+                           outdated = shiny::reactive(list()), commands = shiny::reactive(character()),
+                           rules = shiny::reactive(NULL)) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
-    shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(rules)
+    shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(commands),
+    shiny::is.reactive(rules)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -100,6 +103,13 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     output$description <- shiny::renderUI({
       shiny::req(is_open(), focused())
       description_ui(target_description(board()$x$nodes, focused()))
+    })
+
+    # The command that runs (target_commands()): after tar_map() and friends,
+    # not always what the author wrote.
+    output$command <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      command_ui(commands()[focused()])
     })
 
     # A tarchetypes rerun rule (cue_rules()), whatever the status: a skipped
@@ -206,4 +216,17 @@ target_description <- function(nodes, id) {
 description_ui <- function(text) {
   if (is.null(text)) return(NULL)
   shiny::tags$p(class = "tb-description", text)
+}
+
+#' A target's command, in a section closed at first, highlighted and
+#' copyable, or nothing
+#' @noRd
+command_ui <- function(command) {
+  command <- unname(command)
+  if (length(command) != 1 || is.na(command) || !nzchar(command)) return(NULL)
+  shiny::tags$details(
+    class = "tb-command",
+    shiny::tags$summary("Command"),
+    code_block("As it runs, from tar_manifest()", "command", command)
+  )
 }

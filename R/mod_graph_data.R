@@ -102,6 +102,7 @@ graph_data_server <- function(id, backend) {
     })
     outdated <- shiny::reactive(outdated_reasons(after_graph(), rules()))
     kinds <- shiny::reactive(target_kinds(after_graph()$manifest))
+    commands <- shiny::reactive(target_commands(after_graph()$manifest))
 
     list(
       poller_board = poller_board,
@@ -113,6 +114,7 @@ graph_data_server <- function(id, backend) {
       costs = costs,
       outdated = outdated,
       kinds = kinds,
+      commands = commands,
       rules = rules
     )
   })

@@ -778,6 +778,35 @@ pre.hljs {
   text-align: center;
 }
 
+/* Every reactable table follows the page (board_table_theme()), but
+   reactable's own stylesheet paints them white (.Reactable, its inputs),
+   with the same specificity as the theme's rules: whichever loads last
+   wins, and a live theme switch (setCurrentTheme()) loads reactable's
+   again, after ours. One more level here wins in any order. */
+html .Reactable {
+  background-color: transparent;
+}
+html .Reactable .rt-filter,
+html .Reactable .rt-search,
+html .Reactable .rt-page-jump,
+html .Reactable .rt-page-size-select {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+/* A target's command in the Value pane (command_ui()), closed at first. */
+.tb-command {
+  margin: 0 0 0.5rem;
+  font-size: var(--tb-font-size-sm);
+}
+.tb-command > summary {
+  cursor: pointer;
+  color: var(--bs-secondary-color);
+}
+.tb-command > .tb-code {
+  margin-top: 0.35rem;
+}
+
 /* A tarchetypes rerun rule in the Value pane (rule_ui()). */
 .tb-rule {
   margin: 0 0 0.5rem;
