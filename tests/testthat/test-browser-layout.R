@@ -174,6 +174,39 @@ test_that("a saved layout places new targets next to their neighbours, not on to
   expect_fitted(app)
 })
 
+test_that("a new target doesn't land on a target the author moved (#205)", {
+  dir <- local_pipeline(make = TRUE) # a -> b -> c
+  layout <- file.path(dir, "_targets", "user", "targetsboard_layout.json")
+  dir.create(dirname(layout), showWarnings = FALSE)
+  save_layout <- function(positions) {
+    jsonlite::write_json(list(direction = "LR", viewport = list(x = 0, y = 0, zoom = 1), positions = positions),
+                         layout, auto_unbox = TRUE)
+  }
+  restored <- function(app) {
+    app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+    wait_for(function() isTRUE(node_position(app, "b")[["x"]] == 1000), timeout = 15)
+    Sys.sleep(0.5)
+  }
+  # Where c lands, beside b, when that spot is free.
+  save_layout(list(a = list(x = 0, y = 0), b = list(x = 1000, y = 1000)))
+  app <- local_board_app(dir, "layout_free")
+  restored(app)
+  spot <- node_position(app, "c")
+  app$stop()
+
+  # The author left a there.
+  save_layout(list(a = as.list(spot), b = list(x = 1000, y = 1000)))
+  app <- local_board_app(dir, "layout_taken")
+  restored(app)
+  expect_equal(node_position(app, "a"), spot)
+  overlap <- app$get_js(paste0(
+    "(() => { const r1 = ", node_js("a"), ".getBoundingClientRect(), r2 = ", node_js("c"), ".getBoundingClientRect();",
+    " return r1.left < r2.right && r2.left < r1.right && r1.top < r2.bottom && r2.top < r1.bottom; })()"
+  ))
+  expect_false(overlap)
+  expect_equal(node_position(app, "c")[["x"]], spot[["x"]]) # moved across the flow only
+})
+
 test_that("a saved layout with every target puts them back, and fits the view to them", {
   dir <- local_pipeline(make = TRUE)
   dir.create(file.path(dir, "_targets", "user"), showWarnings = FALSE)

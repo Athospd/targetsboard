@@ -21,7 +21,7 @@ import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
 import StatusLegend, { readCostsShown, writeCostsShown } from './StatusLegend';
-import { layoutGraph } from './layout';
+import { layoutGraph, SIBLING_GAP } from './layout';
 import { NodeActionsContext, GroupToolbar, groupLabel } from './NodeActions';
 
 import BaseNode from './BaseNode';
@@ -162,7 +162,8 @@ const handlePositions = (direction) => ({
 // the author's picture of the graph survives edits to the pipeline. A new
 // target goes where a full layout would put it relative to a neighbour that is
 // already placed; without one, where the full layout would put it, shifted
-// the way the placed targets are.
+// the way the placed targets are. A spot another target has taken (the
+// author moved it there) moves the new one across the flow until it's free.
 const placeNewNodes = (nodes, edges, newIds, direction) => {
   const ideal = new Map(
     layoutGraph(nodes, edges, { direction }).nodes.map((n) => [n.id, n.position]),
@@ -184,6 +185,13 @@ const placeNewNodes = (nodes, edges, newIds, direction) => {
       anchors.set(e.source, e.target);
   });
 
+  const size = (n) => ({ w: n.measured?.width ?? 0, h: n.measured?.height ?? 0 });
+  const taken = placed.map((n) => ({ ...n.position, ...size(n) }));
+  const free = (box) =>
+    !taken.some(
+      (t) => box.x < t.x + t.w && t.x < box.x + box.w && box.y < t.y + t.h && t.y < box.y + box.h,
+    );
+
   return nodes.map((node) => {
     if (!newIds.has(node.id)) return node;
     const own = ideal.get(node.id);
@@ -194,7 +202,14 @@ const placeNewNodes = (nodes, edges, newIds, direction) => {
           y: anchor.position.y + own.y - ideal.get(anchor.id).y,
         }
       : { x: own.x + shift.x, y: own.y + shift.y };
-    return { ...node, position, ...handlePositions(direction) };
+    const box = { ...position, ...size(node) };
+    // Bounded: a spot is free past the targets, at most.
+    for (let i = 0; i <= 2 * taken.length && !free(box); i++) {
+      if (direction === 'LR') box.y += box.h + SIBLING_GAP;
+      else box.x += box.w + SIBLING_GAP;
+    }
+    taken.push(box);
+    return { ...node, position: { x: box.x, y: box.y }, ...handlePositions(direction) };
   });
 };
 

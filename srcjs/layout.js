@@ -5,7 +5,7 @@
 // because its coordinate step aligns targets with their median neighbours.
 
 const LEVEL_GAP = 60;  // between columns, beyond the widest target
-const SIBLING_GAP = 20; // between targets of one column
+export const SIBLING_GAP = 20; // between targets of one column
 const SWEEPS = 8;       // ordering passes to reduce edge crossings
 
 // The level of each target: targets' own `level` when every target has one,

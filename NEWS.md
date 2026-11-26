@@ -95,6 +95,10 @@
 
 ## Bug fixes
 
+* A target new in the pipeline no longer lands on top of a target the
+  author moved to its spot: it moves across the flow until the spot is
+  free (#205).
+
 * Dark mode is remembered: a page reloaded in dark mode stays dark, as
   the theme already did. A dark-only theme's dark isn't taken for yours,
   and with the `targetsboard.theme` option your mode is still remembered
