@@ -95,6 +95,9 @@
 
 ## Bug fixes
 
+* The Problems pane no longer cuts one warning into several at ". ":
+  targets stores a target's warnings joined by ". ", so they are shown as
+  stored (#203).
 * A run the user stopped no longer shows the green "done" dot with its
   canceled targets in the bar's red: the summary says it stopped, with a
   grey dot, and canceled targets have a grey part of the bar (#204).
