@@ -47,9 +47,13 @@ run_server <- function(id, backend, board, running, action) {
     # from the console, is taken as the whole pipeline: its names are
     # unknown here.
     scope <- shiny::reactiveVal(NULL)
+    maker <- shiny::reactiveVal(NULL) # how the board's run runs (#162)
     launched <- FALSE
     shiny::observeEvent(running(), {
-      if (running() && !launched) scope(NULL)
+      if (running() && !launched) {
+        scope(NULL)
+        maker(NULL)
+      }
       launched <<- FALSE
     }, ignoreInit = TRUE)
 
@@ -64,6 +68,7 @@ run_server <- function(id, backend, board, running, action) {
         keep_going = isTRUE(input$keep_going),
         stop_at_warnings = isTRUE(input$stop_at_warnings)
       ))
+      maker(attr(runner$process, "maker"))
       runner$stopped <- FALSE
     }
     shiny::observeEvent(input$all, launch_run())
@@ -159,7 +164,10 @@ run_server <- function(id, backend, board, running, action) {
       )
     })
 
-    list(show_problem = shiny::reactive(input$show_problem), scope = shiny::reactive(scope()))
+    list(
+      show_problem = shiny::reactive(input$show_problem), scope = shiny::reactive(scope()),
+      maker = shiny::reactive(maker())
+    )
   })
 }
 

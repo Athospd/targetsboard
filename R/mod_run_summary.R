@@ -22,14 +22,15 @@ run_summary_ui <- function(id) {
 #' @param scope Reactive: the targets the board's run was asked for, or NULL
 #'   for the whole pipeline (run_server()). Only they and what they depend
 #'   on count as still to go (run_targets()).
+#' @param maker Reactive: run_maker() of the board's run, or NULL (#162).
 #' @return A reactive: run_summary(), or NULL before any run. It ticks every
 #'   second while a run goes.
 #' @noRd
 run_summary_server <- function(id, board, running, progress, tar_meta = shiny::reactive(NULL),
-                               scope = shiny::reactive(NULL)) {
+                               scope = shiny::reactive(NULL), maker = shiny::reactive(NULL)) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(progress),
-    shiny::is.reactive(tar_meta), shiny::is.reactive(scope)
+    shiny::is.reactive(tar_meta), shiny::is.reactive(scope), shiny::is.reactive(maker)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # When the run's process started: tar_process(), read again when the
@@ -55,7 +56,7 @@ run_summary_server <- function(id, board, running, progress, tar_meta = shiny::r
       run_summary(
         this$progress, run_targets(board_targets(nodes), graph$edges, scope()),
         started = this$started, ended = current$mtime, running = is_running,
-        meta = tar_meta(), outdated = outdated_targets(nodes)
+        meta = tar_meta(), outdated = outdated_targets(nodes), how = run_maker_label(maker())
       )
     })
     # The block is drawn once per shape (run_summary_shape()): Running or
@@ -119,7 +120,8 @@ run_targets <- function(targets, edges, names = NULL) {
 #'   `left`, time_left()'s estimate (or NULL).
 #' @noRd
 run_summary <- function(progress, targets = character(), started = NA, ended = NA,
-                        running = FALSE, now = Sys.time(), meta = NULL, outdated = character()) {
+                        running = FALSE, now = Sys.time(), meta = NULL, outdated = character(),
+                        how = NULL) {
   if (is.null(progress) || nrow(progress) == 0) {
     if (!running) return(NULL)
     # A run starting: nothing done yet, all to go.
@@ -143,7 +145,8 @@ run_summary <- function(progress, targets = character(), started = NA, ended = N
     left = if (running) {
       to_go <- intersect(targets[!targets %in% c(progress$name, progress$parent)], outdated)
       time_left(progress, to_go, meta)
-    }
+    },
+    how = how # "tar_make_future(), 2 workers", or NULL for tar_make()
   )
 }
 
@@ -210,7 +213,8 @@ run_summary_tags <- function(summary, elapsed = NULL) {
     shiny::tags$div(class = "tb-run-counts", counts),
     if (!is.null(values$left)) {
       shiny::tags$div(class = "tb-run-left", title = "From the targets' last builds", values$left)
-    }
+    },
+    if (!is.null(summary$how)) shiny::tags$div(class = "tb-run-how", summary$how)
   )
 }
 
@@ -236,7 +240,8 @@ run_summary_shape <- function(summary) {
     ),
     bar = values$total > 0,
     clock = !is.null(values$elapsed),
-    left = !is.null(values$left)
+    left = !is.null(values$left),
+    how = summary$how
   )
 }
 

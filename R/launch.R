@@ -36,6 +36,14 @@
 #' `options(targetsboard.confirm_nodes = )` before starting the board, e.g.
 #' `Inf` never to ask.
 #'
+#' @section Runs:
+#' Run uses [targets::tar_make()], unless the script sets up future
+#' (`future::plan()`) or clustermq (`options(clustermq.scheduler = )`): then
+#' [targets::tar_make_future()] or [targets::tar_make_clustermq()], and the
+#' run summary says which. Their workers are a literal `workers =` in the
+#' `plan()` call, or 1; set them with `options(targetsboard.workers = )`.
+#' The script is read for these calls, never run.
+#'
 #' @section Value previews:
 #' A double-click on a target opens its value in a frame, with a tab per view
 #' of it and a last tab with what `print()` shows. A class gets its own views

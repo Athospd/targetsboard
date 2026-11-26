@@ -38,10 +38,11 @@ environment(active_run) <- baseenv()
 #'   on, the run loads the script through a wrapper that applies them
 #'   (`write_run_wrapper()`).
 #' @return The [callr::r_bg()] process. Its output goes to the file
-#'   `attr(, "log")`.
+#'   `attr(, "log")`; `attr(, "maker")` is run_maker()'s.
 #' @noRd
 start_run <- function(script, names = NULL, modes = list()) {
   log <- tempfile("targetsboard_run_", fileext = ".log")
+  maker <- run_maker(script) # the author's script, not the wrapper
   if (any_run_mode(modes)) {
     script <- write_run_wrapper(
       script,
@@ -49,15 +50,18 @@ start_run <- function(script, names = NULL, modes = list()) {
       stop_at_warnings = isTRUE(modes$stop_at_warnings)
     )
   }
-  process <- rlang::inject(targets::tar_make(
+  make <- getExportedValue("targets", maker$fun)
+  process <- rlang::inject(make(
     names = !!names, # spliced in: the run happens in another process
     script = script,
     reporter = "timestamp",
+    !!!(if (!is.null(maker$workers)) list(workers = maker$workers)),
     callr_function = callr::r_bg,
     callr_arguments = list(stdout = log, stderr = "2>&1", supervise = FALSE)
   ))
   attr(process, "log") <- log
-  attr(process, "header") <- run_header(names, modes)
+  attr(process, "maker") <- maker
+  attr(process, "header") <- run_header(names, modes, maker = maker)
   process
 }
 
@@ -66,10 +70,12 @@ start_run <- function(script, names = NULL, modes = list()) {
 #' The first line of the Log tab. callr writes the log file itself, from
 #' its first byte, so the line is kept with the process instead.
 #' @noRd
-run_header <- function(names = NULL, modes = list(), time = Sys.time()) {
+run_header <- function(names = NULL, modes = list(), time = Sys.time(), maker = NULL) {
   what <- if (is.null(names)) "all targets" else describe_names(names)
+  how <- run_maker_label(maker)
   paste0(
     "Run started ", format(time, "%Y-%m-%d %H:%M:%S"), ": ", what,
+    if (!is.null(how)) paste0(", with ", how),
     if (any_run_mode(modes)) paste0(", ", run_modes_label(modes))
   )
 }

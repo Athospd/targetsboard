@@ -111,6 +111,16 @@ before drawing it, and Cancel keeps the current graph. Set the limit with
 \code{Inf} never to ask.
 }
 
+\section{Runs}{
+
+Run uses \code{\link[targets:tar_make]{targets::tar_make()}}, unless the script sets up future
+(\code{future::plan()}) or clustermq (\code{options(clustermq.scheduler = )}): then
+\code{\link[targets:tar_make_future]{targets::tar_make_future()}} or \code{\link[targets:tar_make_clustermq]{targets::tar_make_clustermq()}}, and the
+run summary says which. Their workers are a literal \verb{workers =} in the
+\code{plan()} call, or 1; set them with \code{options(targetsboard.workers = )}.
+The script is read for these calls, never run.
+}
+
 \section{Value previews}{
 
 A double-click on a target opens its value in a frame, with a tab per view
