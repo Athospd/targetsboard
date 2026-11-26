@@ -1,10 +1,19 @@
 # The run module, on its own: run_server() with its inputs as reactiveVals.
 
+run_args <- function(.env = parent.frame()) {
+  backend <- board_backend("_targets.R", targets_only = TRUE)
+  withr::defer(backend$stop_poller(), envir = .env)
+  list(
+    backend = backend,
+    board = shiny::reactiveVal(list(x = targets::tar_visnetwork(targets_only = TRUE)$x)),
+    running = shiny::reactiveVal(FALSE),
+    action = shiny::reactiveVal(NULL)
+  )
+}
+
 test_that("run_server() checks its arguments", {
-  args <- list(backend = list(), board = shiny::reactive(NULL), running = shiny::reactive(FALSE),
-               progress = shiny::reactive(NULL), action = shiny::reactive(NULL))
+  args <- list(backend = list(), board = shiny::reactive(NULL), running = shiny::reactive(FALSE), action = shiny::reactive(NULL))
   expect_error(do.call(run_server, c("r", utils::modifyList(args, list(action = list())))), "is.reactive")
-  expect_error(do.call(run_server, c("r", utils::modifyList(args, list(progress = list())))), "is.reactive")
   expect_error(do.call(run_server, c("r", utils::modifyList(args, list(backend = shiny::reactive(1))))), "is.reactive")
 })
 

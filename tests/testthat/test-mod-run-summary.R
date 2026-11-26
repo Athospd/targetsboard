@@ -1,4 +1,4 @@
-# The run summary in the Control Panel (#140).
+# The run summary module in the Control Panel (#140).
 
 progress_of <- function(...) {
   rows <- list(...)
@@ -51,34 +51,52 @@ test_that("format_elapsed() reads as a clock", {
   expect_true(is.na(format_elapsed(NA)))
 })
 
-test_that("run_summary_ui() says Running with the clock and what's to go, then Last run", {
+test_that("run_summary_tags() says Running with the clock and what's to go, then Last run", {
   progress <- progress_of(c("a", "stem", "completed"), c("e", "stem", "errored"))
   now <- as.POSIXct("2026-11-25 10:00:42")
-  going <- as.character(run_summary_ui(run_summary(progress, c("a", "e", "z"), started = now - 42, running = TRUE, now = now)))
+  going <- as.character(run_summary_tags(run_summary(progress, c("a", "e", "z"), started = now - 42, running = TRUE, now = now)))
   expect_match(going, "Running")
   expect_match(going, "0:42", fixed = TRUE)
   expect_match(going, "<b>1</b>[[:space:]]*to go")
   expect_match(going, "tb-run-count-errored", fixed = TRUE)
 
-  done <- as.character(run_summary_ui(run_summary(progress, c("a", "e"), started = now - 42, ended = now)))
+  done <- as.character(run_summary_tags(run_summary(progress, c("a", "e"), started = now - 42, ended = now)))
   expect_match(done, "Last run")
   expect_no_match(done, "to go")
   expect_no_match(done, "canceled")
-  expect_null(run_summary_ui(NULL))
+  expect_null(run_summary_tags(NULL))
 })
 
-test_that("the Control Panel shows the last run from the store, with its time", {
+test_that("run_summary_server() checks its arguments", {
+  args <- list(board = shiny::reactive(NULL), running = shiny::reactive(FALSE), progress = shiny::reactive(NULL))
+  for (name in names(args)) {
+    expect_error(do.call(run_summary_server, c("s", utils::modifyList(args, stats::setNames(list(1), name)))), "is.reactive")
+  }
+})
+
+test_that("run_summary_server() shows the last run from the store and returns it", {
   skip_on_cran()
   local_pipeline(make = TRUE)
-  args <- run_args()
-  args$progress(list(
-    mtime = file.mtime(file.path("_targets", "meta", "progress")),
-    data = targets::tar_progress(fields = c("type", "parent", "progress"))
-  ))
-  shiny::testServer(run_server, args = args, {
-    html <- output$summary$html
-    expect_match(html, "Last run")
-    expect_match(html, "built")
-    expect_match(html, "tb-run-elapsed")
+  args <- list(
+    board = shiny::reactiveVal(list(x = targets::tar_visnetwork(targets_only = TRUE)$x)),
+    running = shiny::reactiveVal(FALSE),
+    progress = shiny::reactiveVal(list(mtime = NA, data = NULL))
+  )
+  shiny::testServer(run_summary_server, args = args, {
+    # Before any run: nothing.
+    expect_null(session$returned())
+    expect_null(output$summary$html)
+
+    args$progress(list(
+      mtime = file.mtime(file.path("_targets", "meta", "progress")),
+      data = targets::tar_progress(fields = c("type", "parent", "progress"))
+    ))
+    session$flushReact()
+    summary <- session$returned()
+    expect_false(summary$running)
+    expect_equal(summary$built, 3L)
+    expect_false(is.na(summary$elapsed))
+    expect_match(output$summary$html, "Last run")
+    expect_match(output$summary$html, "tb-run-elapsed")
   })
 })

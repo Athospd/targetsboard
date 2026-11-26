@@ -235,17 +235,3 @@ local_projects <- function(.env = parent.frame()) {
   withr::local_envvar(TAR_PROJECT = NA, .local_envir = .env)
   dir
 }
-
-# run_server()'s arguments, with its inputs as reactiveVals, on the pipeline
-# in the working folder.
-run_args <- function(.env = parent.frame()) {
-  backend <- board_backend("_targets.R", targets_only = TRUE)
-  withr::defer(backend$stop_poller(), envir = .env)
-  list(
-    backend = backend,
-    board = shiny::reactiveVal(list(x = targets::tar_visnetwork(targets_only = TRUE)$x)),
-    running = shiny::reactiveVal(FALSE),
-    progress = shiny::reactiveVal(list(mtime = NA, data = NULL)),
-    action = shiny::reactiveVal(NULL)
-  )
-}

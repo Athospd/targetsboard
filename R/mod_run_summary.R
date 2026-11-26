@@ -1,8 +1,51 @@
+#' The run summary: the run going, or the last one
+#'
+#' Under the run buttons in the Control Panel: while a run goes, its clock
+#' and how many targets it built, skipped, is running, saw error and has
+#' still to go; after it, the last run's time and counts, until the next
+#' run. Counted as `tar_progress_summary()` does, from targets' own files,
+#' so a run started from the console shows too.
+#'
+#' @param id The module's id.
+#' @noRd
+run_summary_ui <- function(id) {
+  shiny::uiOutput(shiny::NS(id, "summary"))
+}
+
+#' @rdname run_summary_ui
+#' @param board Reactive: the graph the board draws, for its targets.
+#' @param running Reactive: whether the pipeline is running.
+#' @param progress Reactive: the progress file's `list(mtime, data)`
+#'   (graph_data_server()).
+#' @return A reactive: run_summary(), or NULL before any run. It ticks every
+#'   second while a run goes.
+#' @noRd
+run_summary_server <- function(id, board, running, progress) {
+  stopifnot(shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(progress))
+  shiny::moduleServer(id, function(input, output, session) {
+    # When the run's process started: tar_process(), read again when the
+    # progress file changes or a run starts or stops (a new run rewrites both).
+    started <- shiny::reactive({
+      progress()$mtime
+      running()
+      run_started()
+    })
+    summary <- shiny::reactive({
+      if (running()) shiny::invalidateLater(1000)
+      current <- progress()
+      run_summary(
+        current$data, board_targets(board()$x$nodes),
+        started = started(), ended = current$mtime, running = running()
+      )
+    })
+    output$summary <- shiny::renderUI(run_summary_tags(summary()))
+    summary
+  })
+}
+
 #' The run as a whole: its counts and how long it took
 #'
-#' What the Control Panel says of the run going, or of the last one, as
-#' `tar_progress_summary()` counts it: stems and branches, not patterns.
-#' From targets' own files, so a run started from the console counts too.
+#' As `tar_progress_summary()` counts: stems and branches, not patterns.
 #'
 #' @param progress `targets::tar_progress(fields = c("type", "parent",
 #'   "progress"))`, or NULL.
@@ -48,7 +91,7 @@ format_elapsed <- function(seconds) {
 #' The summary as the Control Panel shows it
 #' @param summary run_summary(), or NULL.
 #' @noRd
-run_summary_ui <- function(summary) {
+run_summary_tags <- function(summary) {
   if (is.null(summary)) return(NULL)
   title <- if (summary$running) "Running" else "Last run"
   elapsed <- format_elapsed(summary$elapsed)
