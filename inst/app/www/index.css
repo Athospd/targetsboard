@@ -862,3 +862,16 @@ html .Reactable .rt-page-size-select {
 .tb-rule > .fa {
   margin-right: 0.4rem;
 }
+
+/* No targets script yet (no_script_ui(), #190): over the empty canvas. */
+.tb-board-pane { position: relative; }
+.tb-no-script {
+  position: absolute;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: min(36rem, calc(100% - 2rem));
+  font-size: var(--tb-font-size-sm);
+}
+.tb-no-script p:last-child { margin-bottom: 0; }

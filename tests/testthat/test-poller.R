@@ -85,6 +85,8 @@ test_that("the notification of a broken script names it, its error, and what the
   expect_match(text, "last working graph")
   expect_match(text, "object 'x' not found in tar_target()", fixed = TRUE)
   expect_lte(nchar(script_error_text("s.R", strrep("x", 1000))), 450)
+  # targets' messages come with terminal colours (#190).
+  expect_no_match(script_error_text("s.R", "[31mcould not find file[39m"), "", fixed = TRUE)
 })
 
 test_that("a killed run still counts as ended", {

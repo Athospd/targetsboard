@@ -99,6 +99,9 @@
 * The Control Panel's title is set as the tab names are, and the run
   summary's "Last run" or "Running" is small and muted, so its counts lead
   (#177).
+* A folder with no targets script yet: the board says no targets
+  pipeline file was detected, links the targets manual's walkthrough, and
+  draws the pipeline once the script exists. It writes nothing (#190).
 
 ## Bug fixes
 
