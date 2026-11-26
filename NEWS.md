@@ -40,6 +40,11 @@
 * A click on a legend entry with a single target selected it without marking it
   on the canvas: now it focuses it too, as a click on the target does.
 
+* The Problems and Metadata tables could turn white after picking another
+  theme on the board, barely readable in a dark one: reactable's own
+  stylesheet, loaded again by the switch, won over the theme's colours.
+  The board's rules now win whatever the order (#165).
+
 * `tar_board(names = , allow = , exclude = , ...)` kept the subset only for
   the first drawing: the first change to the pipeline brought back the whole
   graph. The board now redraws with them every time, tidyselect expressions
