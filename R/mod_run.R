@@ -42,11 +42,24 @@ run_server <- function(id, backend, board, running, action) {
       )
     })
 
+    # What the board's run was asked for (NULL: the whole pipeline), for the
+    # run summary's count of targets to go. A run the board didn't start,
+    # from the console, is taken as the whole pipeline: its names are
+    # unknown here.
+    scope <- shiny::reactiveVal(NULL)
+    launched <- FALSE
+    shiny::observeEvent(running(), {
+      if (running() && !launched) scope(NULL)
+      launched <<- FALSE
+    }, ignoreInit = TRUE)
+
     launch_run <- function(names = NULL) {
       if (busy()) {
         shiny::showNotification("A run is already going.", type = "warning")
         return()
       }
+      scope(names)
+      launched <<- TRUE
       runner$process <- start_run(backend$poller$script, names, modes = list(
         keep_going = isTRUE(input$keep_going),
         stop_at_warnings = isTRUE(input$stop_at_warnings)
@@ -146,7 +159,7 @@ run_server <- function(id, backend, board, running, action) {
       )
     })
 
-    list(show_problem = shiny::reactive(input$show_problem))
+    list(show_problem = shiny::reactive(input$show_problem), scope = shiny::reactive(scope()))
   })
 }
 

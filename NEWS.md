@@ -57,6 +57,12 @@
 
 ## Bug fixes
 
+* The run summary of a run of a few targets, from the graph's menus or
+  toolbars, counted the rest of the pipeline as still to go ("13 to go"
+  after its three were built), and estimated the time left from it. It now
+  counts only the targets asked for and what they depend on. A run from the
+  console still counts the whole pipeline (#181).
+
 * The run summary still flickered while a run went: each new count or
   estimate drew the whole block again, blanking the clock and restarting the
   running dot. The block is now drawn once and its numbers change in place;

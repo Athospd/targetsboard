@@ -121,3 +121,15 @@ test_that("run_summary_tags() shows a bar of the run's parts, and errored mid-ru
   expect_match(clock, "id=\"clock\"", fixed = TRUE)
   expect_no_match(clock, "0:05", fixed = TRUE)
 })
+
+test_that("run_targets(): those asked for and all they depend on (#181)", {
+  edges <- data.frame(from = c("a", "b", "b", "x"), to = c("b", "c", "d", "y"))
+  targets <- c("a", "b", "c", "d", "x", "y")
+  expect_equal(run_targets(targets, edges), targets)
+  expect_equal(run_targets(targets, edges, "c"), c("a", "b", "c"))
+  expect_equal(run_targets(targets, edges, c("d", "y")), c("a", "b", "d", "x", "y"))
+  # A partial run's summary: nothing outside it to go.
+  progress <- data.frame(name = c("a", "b"), type = "stem", parent = c("a", "b"), progress = c("skipped", "completed"))
+  s <- run_summary(progress, run_targets(targets, edges, "c"), started = Sys.time(), running = TRUE)
+  expect_equal(s$to_go, 1)
+})
