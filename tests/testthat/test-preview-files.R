@@ -251,3 +251,60 @@ test_that("a Quarto or R Markdown file shows the document it was rendered to, wh
   expect_match(out, "<h1>Fuel economy</h1>", fixed = TRUE)
   expect_match(out, "report.html has its own section", fixed = TRUE)
 })
+
+# A website as Quarto renders one: sources, and _site/ with site_libs/.
+local_quarto_site <- function(.env = parent.frame()) {
+  dir <- withr::local_tempdir(.local_envir = .env)
+  site <- file.path(dir, "site")
+  dir.create(file.path(site, "posts"), recursive = TRUE)
+  dir.create(file.path(site, "_site", "posts"), recursive = TRUE)
+  dir.create(file.path(site, "_site", "site_libs"))
+  writeLines(c("project:", "  type: website"), file.path(site, "_quarto.yml"))
+  writeLines("# Home", file.path(site, "index.qmd"))
+  writeLines("# First", file.path(site, "posts", "first.qmd"))
+  writeLines("<p>home</p>", file.path(site, "_site", "index.html"))
+  writeLines("<p>first</p>", file.path(site, "_site", "posts", "first.html"))
+  writeLines("p {}", file.path(site, "_site", "site_libs", "site.css"))
+  site
+}
+
+test_that("a rendered site shows its front page, served from its root", {
+  site <- local_quarto_site()
+  target <- list(name = "site", format = "file", files = c(file.path(site, "_site"), file.path(site, "index.qmd")))
+
+  folder <- as.character(tar_board_preview(board_file(file.path(site, "_site")), target))
+  expect_match(folder, "A folder of 3 files: a site, from its index.html.", fixed = TRUE)
+  expect_match(folder, 'allow="fullscreen"', fixed = TRUE)
+
+  # A page in a subfolder is served from the site's root, so it reaches
+  # ../site_libs/.
+  url <- serve_html_report(file.path(site, "_site", "posts", "first.html"))
+  prefix <- sub("/.*", "", url)
+  expect_equal(url, paste0(prefix, "/posts/first.html"))
+  expect_equal(
+    normalizePath(shiny::resourcePaths()[[prefix]], winslash = "/"),
+    normalizePath(file.path(site, "_site"), winslash = "/")
+  )
+  # A report outside a site is served from its own folder, as before.
+  report <- file.path(withr::local_tempdir(), "report.html")
+  writeLines("<p>report</p>", report)
+  expect_match(serve_html_report(report), "^report_[a-z0-9]+/report[.]html$")
+})
+
+test_that("a source in a Quarto project shows the page it rendered to", {
+  site <- local_quarto_site()
+  target <- list(name = "site", format = "file", files = file.path(site, c("_site", "posts/first.qmd")))
+  page <- as.character(tar_board_preview(board_file(file.path(site, "posts", "first.qmd")), target))
+  expect_match(page, "Rendered as _site/posts/first.html", fixed = TRUE)
+  expect_match(page, "posts/first.html", fixed = TRUE)
+  expect_no_match(page, "Not rendered", fixed = TRUE)
+})
+
+test_that("a Quarto project's output folder comes from its _quarto.yml", {
+  expect_equal(quarto_output_dir(c("project:", "  type: website")), "_site")
+  expect_equal(quarto_output_dir(c("project:", "  type: book")), "_book")
+  expect_equal(quarto_output_dir(c("project:", "  type: website", "  output-dir: \"docs/\"")), "docs")
+  expect_equal(quarto_output_dir(c("project:", "  type: default")), ".")
+  expect_equal(quarto_output_dir(character()), ".")
+  expect_length(project_output(file.path(withr::local_tempdir(), "lone.qmd")), 0)
+})
