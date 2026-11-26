@@ -43,4 +43,31 @@ test_that("the Control Panel counts a run as it goes, then keeps the last run", 
   expect_match(text, "Last run")
   expect_match(text, "3[[:space:]]*built")
   expect_no_match(text, "to go")
+  # A second run, right after: until targets records it, the summary showed
+  # the last run's clock and counts (#183). Sampled every 100 ms from the
+  # click, the clock is never ahead of the time since it, and no count is
+  # the last run's "3 built" before a target could finish.
+  writeLines(c(
+    "library(targets)",
+    "nap <- function(x) { Sys.sleep(1.5); x }",
+    "list(tar_target(a, nap(1)), tar_target(b, nap(a)), tar_target(c, nap(b)))"
+  ), file.path(dir, "_targets.R"))
+  app$wait_for_js("!document.querySelector('#board-run-all').disabled", timeout = 30000)
+  Sys.sleep(1) # the poller sees the new script
+  app$run_js(paste0(
+    "window.tbSamples = []; window.tbClick = Date.now();",
+    "window.tbTimer = setInterval(() => { const s = document.querySelector('.tb-run-summary-running'); if (!s) return;",
+    " const c = s.querySelector('.tb-run-elapsed'); const m = c && c.textContent.trim().match(/^([0-9]+):([0-9]{2})$/);",
+    " window.tbSamples.push({ t: (Date.now() - window.tbClick) / 1000, clock: m ? 60 * +m[1] + +m[2] : null,",
+    " built: +s.querySelector('.tb-run-count b').textContent }); }, 100);",
+    "document.querySelector('#board-run-all').click();"
+  ))
+  Sys.sleep(4)
+  app$run_js("clearInterval(window.tbTimer)")
+  samples <- app$get_js("window.tbSamples")
+  expect_gt(length(samples), 5)
+  for (x in samples) {
+    if (!is.null(x$clock)) expect_lte(x$clock, x$t + 1.5)
+    if (x$t < 1.4) expect_equal(x$built, 0)
+  }
 })
