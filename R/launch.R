@@ -69,7 +69,10 @@
 #'   them as you type; only these can be chosen. Pick one and press Load.
 #' @param project The project of `_targets.yaml` to start on. Defaults to
 #'   the `TAR_PROJECT` environment variable, or `"main"`.
-#' @param ... Passed on to [targets::tar_visnetwork()] for the first render.
+#' @param ... Passed on to [targets::tar_visnetwork()] on every redraw of
+#'   `script`'s graph, e.g. `names = starts_with("model")`, `allow`,
+#'   `exclude`, `shortcut = TRUE`, `degree_from`. tidyselect expressions are
+#'   kept as written. Another script loaded from the board is drawn whole.
 #'
 #' @return `tar_board()`: the background process, a [callr::r_bg()] object,
 #'   invisibly. Use `$is_alive()` and `$kill()` on it, read the board's log
@@ -111,24 +114,26 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
     )
   }
   # Computed here, so that a broken script errors in your session at once.
-  if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, ...))
+  filters <- visnetwork_filters(...)
+  if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, filters))
   board_theme_option() # an unknown theme errors here, not in the board
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme) {
+    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme, filters) {
       options(
         targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes,
         targetsboard.preview_bytes = preview_bytes, targetsboard.theme = theme
       )
-      print(targetsboard::tar_board_app(
+      # The filters as arguments again: values, or expressions for tidyselect.
+      print(do.call(targetsboard::tar_board_app, c(list(
         script = script,
         scripts = scripts,
         project = project,
         targets_only = targets_only,
         metadata = metadata,
         options = list(host = host, port = port)
-      ))
+      ), filters)))
     },
     args = list(
       metadata = metadata,
@@ -141,7 +146,8 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
       dev = board_dev_mode(),
       confirm_nodes = confirm_nodes_limit(),
       preview_bytes = preview_bytes_limit(),
-      theme = getOption("targetsboard.theme")
+      theme = getOption("targetsboard.theme"),
+      filters = filters
     ),
     supervise = TRUE,
     poll_connection = TRUE,
@@ -206,14 +212,25 @@ open_url <- function(url) utils::browseURL(url)
 #' no script yet: the board then waits for one, as `targets::tar_watch()` does.
 #' A script that exists but is broken still errors.
 #' @noRd
-initial_metadata <- function(script, targets_only = TRUE, ...) {
+initial_metadata <- function(script, targets_only = TRUE, filters = list()) {
   if (!file.exists(script)) {
     message("No targets script at ", script, " yet: the board will draw it once it exists.")
     return(empty_metadata())
   }
-  x <- targets::tar_visnetwork(script = script, targets_only = targets_only, ...)$x
+  x <- do.call(targets::tar_visnetwork, c(list(script = script, targets_only = targets_only), filters))$x
   x$nodes <- clear_invalidated_errors(x$nodes, recorded_errors())
   x
+}
+
+# tar_visnetwork()'s filters, as given to tar_board() or tar_board_app():
+# each as its value where it evaluates in the caller (`shortcut = TRUE`,
+# `names = my_names`), else as its expression (`names = starts_with("model")`,
+# `names = c(a, b)`), for tidyselect in each tar_visnetwork() of the poller,
+# another process. A named list, for do.call().
+visnetwork_filters <- function(...) {
+  lapply(rlang::enquos(...), function(quo) {
+    tryCatch(rlang::eval_tidy(quo), error = function(e) rlang::quo_get_expr(quo))
+  })
 }
 
 # The shape of tar_visnetwork()$x, without targets.
@@ -252,13 +269,14 @@ tar_board_app <- function(script = targets::tar_config_get("script", project = p
   if (!nzchar(project)) project <- "main"
   check_project(project)
   script_choices(script, scripts)
-  if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, ...))
+  filters <- visnetwork_filters(...)
+  if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, filters))
 
   shiny::shinyApp(
     # A function of the request: each page load opens the board with the
     # layout saved last, not the one there was when the app started.
     function(request) app_ui(metadata, script, layout = read_board_layout(), scripts = scripts),
-    app_server(metadata, script, targets_only, scripts, project),
+    app_server(metadata, script, targets_only, scripts, project, filters),
     # The board's project, in the process that serves it, for as long as it
     # runs: then TAR_PROJECT is as it was, for a board run in your session.
     onStart = function() {

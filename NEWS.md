@@ -40,6 +40,12 @@
 * A click on a legend entry with a single target selected it without marking it
   on the canvas: now it focuses it too, as a click on the target does.
 
+* `tar_board(names = , allow = , exclude = , ...)` kept the subset only for
+  the first drawing: the first change to the pipeline brought back the whole
+  graph. The board now redraws with them every time, tidyselect expressions
+  such as `names = starts_with("model")` included. Another script loaded
+  from the board is drawn whole (#148).
+
 # targetsboard 0.3.0
 
 ## New features
