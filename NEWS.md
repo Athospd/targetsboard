@@ -8,6 +8,12 @@
   Invalidate. It folds away, and the browser remembers; hide it with
   `targetsboard_options(legend = FALSE)` (#102).
 
+* A run summary in the Control Panel, under the run buttons: while a run
+  goes, its clock and how many targets it built, skipped, is running, saw
+  error and has still to go; after it, the last run's time and counts,
+  until the next one. As `tar_progress_summary()` counts, from targets' own
+  files, so a run started from the console shows too (#140).
+
 # targetsboard 0.3.0
 
 ## New features

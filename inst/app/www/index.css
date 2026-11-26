@@ -83,6 +83,43 @@ body {
 
 /* The Log tab: the latest run's output, scrolled within the card. */
 .tb-run-log { height: 100%; overflow: auto; padding: 0.5rem; }
+
+/* The run summary, under the run buttons: the run going, or the last one. */
+.tb-run-summary {
+  border-top: 1px solid var(--bs-border-color);
+  padding-top: 0.6rem;
+  font-size: var(--tb-font-size-sm, 0.875rem);
+}
+.tb-run-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.tb-run-summary-running .tb-run-summary-title::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--bs-warning);
+  animation: tb-pulse 1.2s ease-in-out infinite;
+}
+@keyframes tb-pulse { 50% { opacity: 0.3; } }
+.tb-run-elapsed {
+  margin-left: auto;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--bs-secondary-color);
+}
+.tb-run-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+  color: var(--bs-secondary-color);
+}
+.tb-run-count b { color: var(--bs-body-color); margin-right: 0.2rem; font-variant-numeric: tabular-nums; }
+.tb-run-count-errored, .tb-run-count-errored b { color: var(--bs-danger-text-emphasis); }
 .tb-run-log pre { white-space: pre-wrap; font-size: var(--tb-font-size-xs); margin: 0; }
 
 /* While Load loads another script: shinycssloaders' spinner over the Board
