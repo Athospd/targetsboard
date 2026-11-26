@@ -10,10 +10,10 @@
 #' @param project The project of `_targets.yaml` the board starts on.
 #' @noRd
 app_server <- function(metadata, script = targets::tar_config_get("script"), targets_only = TRUE,
-                       scripts = NULL, project = active_project()) {
+                       scripts = NULL, project = active_project(), filters = list()) {
   # One backend per app: the poller, the board's run and the value
   # previews, shared by every browser session (board_backend()).
-  backend <- board_backend(script, targets_only, project)
+  backend <- board_backend(script, targets_only, project, filters)
 
   function(input, output, session) {
     backend$start_once()

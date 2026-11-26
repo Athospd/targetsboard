@@ -55,7 +55,10 @@ them as you type; only these can be chosen. Pick one and press Load.}
 \item{project}{The project of \verb{_targets.yaml} to start on. Defaults to
 the \code{TAR_PROJECT} environment variable, or \code{"main"}.}
 
-\item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}} for the first render.}
+\item{...}{Passed on to \code{\link[targets:tar_visnetwork]{targets::tar_visnetwork()}} on every redraw of
+\code{script}'s graph, e.g. \code{names = starts_with("model")}, \code{allow},
+\code{exclude}, \code{shortcut = TRUE}, \code{degree_from}. tidyselect expressions are
+kept as written. Another script loaded from the board is drawn whole.}
 
 \item{options}{Passed on to \code{\link[shiny:shinyApp]{shiny::shinyApp()}}, e.g. \code{list(port = 8080)}.}
 }
