@@ -7,6 +7,17 @@
   build, with when that was. Its cue is named when it changes that:
   `tar_cue(mode = "never")`, or a cue that doesn't check, say, its command
   (#187).
+* Stand-ins from `error = "null"`: a branch or target that errored under
+  `tar_option_set(error = "null")` stored `NULL` in its place, and the Value
+  pane now says so instead of showing `NULL` as its result. All of a
+  pattern's branches together name the branches left out, since
+  `tar_read()` drops their `NULL`s (#151).
+* Quarto websites, books and slide decks in the Value pane. A rendered site's
+  folder (what `tar_quarto()` returns for a project) shows its front page,
+  served from the site's root, so its links work and pages in subfolders keep
+  their styles. Each source shows the page it rendered to in `_site/` or
+  `_book/`, where it used to say "Not rendered". A revealjs deck can go
+  fullscreen (#134, #194).
 
 * A status legend on the canvas, under the Tidy buttons: each status's
   colour, the nodes' own in every theme and mode, with how many targets

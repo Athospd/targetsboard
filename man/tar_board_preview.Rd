@@ -92,7 +92,10 @@ path, of class \verb{tar_board_file_<extension>} (lower case) and
 \code{tar_board_file}. The board's method shows images, PDF and HTML files,
 CSV and TSV files as tables, Markdown, and the first lines of text files,
 with R code in colour. A method for, say, \code{tar_board_file_parquet} adds a
-type.
+type. A rendered website or book (a folder with an \code{index.html}, as
+\code{tarchetypes::tar_quarto()} returns for a Quarto project) shows its front
+page, with its links; a Quarto source shows the page it rendered to, from
+the project's output folder.
 }
 
 \section{Where methods come from}{
