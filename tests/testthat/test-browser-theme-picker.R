@@ -49,12 +49,12 @@ test_that("a pick restyles the board, and dark-only themes take the switch", {
   expect_true(app$get_js("document.querySelector('.tb-mode-button').offsetParent !== null"))
 
   pick_theme(app, "Darkly")
-  app$wait_for_js("document.querySelector('.tb-mode-button').offsetParent === null", timeout = 20000)
+  app$wait_for_js("document.querySelector('.tb-mode-button')?.offsetParent === null", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'", timeout = 20000)
   wait_for_widget_mode(app, "dark")
 
   pick_theme(app, "Targets board")
-  app$wait_for_js("document.querySelector('.tb-mode-button').offsetParent !== null", timeout = 20000)
+  app$wait_for_js("(document.querySelector('.tb-mode-button')?.offsetParent ?? null) !== null", timeout = 20000)
   app$wait_for_js("document.documentElement.dataset.bsTheme === 'light'", timeout = 20000) # the mode before Darkly
   wait_for_widget_mode(app, "light")
   wait_or_show(app, sprintf("%s === '%s'", canvas_js, beige))
@@ -64,7 +64,7 @@ test_that("a pick restyles the board, and dark-only themes take the switch", {
   pick_theme(app, "Pulse")
   pick_theme(app, "Vapor")
   pick_theme(app, "Targets board")
-  wait_or_show(app, "document.querySelector('.tb-mode-button').offsetParent !== null")
+  wait_or_show(app, "(document.querySelector('.tb-mode-button')?.offsetParent ?? null) !== null")
   wait_or_show(app, sprintf("%s === '%s'", canvas_js, beige))
   wait_or_show(app, paste(
     "[...document.head.querySelectorAll('link[href*=\"bootstrap.min.css\"]')].length === 1"
@@ -78,7 +78,8 @@ test_that("the browser remembers the pick, unless the option chose the theme", {
   app$run_js("localStorage.setItem('targetsboard.theme', 'Vapor')")
   app$run_js("location.reload()")
   app$wait_for_js("document.querySelector('#theme-pick')?.value === 'Vapor'", timeout = 20000)
-  app$wait_for_js("document.querySelector('.tb-mode-button').offsetParent === null", timeout = 20000)
+  # The picker can show the theme before the mode button is drawn: ?. waits for it.
+  app$wait_for_js("document.querySelector('.tb-mode-button')?.offsetParent === null", timeout = 20000)
   app$run_js("localStorage.removeItem('targetsboard.theme')")
 
   dir2 <- local_pipeline(make = TRUE)
