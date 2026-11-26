@@ -16,6 +16,8 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #'   whether a run goes, and the targets with a warning (graph_data_server()).
 #' @param outdated Reactive: why outdated targets are (outdated_reasons()),
 #'   shown on hovering them.
+#' @param costs Reactive: each built target's time and size
+#'   (target_costs()), for its badge.
 #' @param kinds Reactive: the targets that are files or reports
 #'   (target_kinds()), for their icons.
 #' @param show Reactive event: `list(name)`, a target to focus and bring into
@@ -27,11 +29,12 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #' @noRd
 graph_server <- function(id, board, progress, running, warned_targets, show, color_mode,
                          outdated = shiny::reactive(list()),
-                         kinds = shiny::reactive(character())) {
+                         kinds = shiny::reactive(character()),
+                         costs = shiny::reactive(list())) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(progress), shiny::is.reactive(running),
     shiny::is.reactive(warned_targets), shiny::is.reactive(show), shiny::is.reactive(color_mode),
-    shiny::is.reactive(outdated), shiny::is.reactive(kinds)
+    shiny::is.reactive(outdated), shiny::is.reactive(kinds), shiny::is.reactive(costs)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # A new graph: send it whole, with the live statuses on top.
@@ -63,6 +66,11 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
     send_kinds <- function() update_targetsboard_status(session, "flow", kinds = kinds())
     shiny::observeEvent(kinds(), send_kinds())
     shiny::observeEvent(board(), shiny::isolate(send_kinds()), priority = -1)
+
+    # Each built target's time and size, for its badge: the same way.
+    send_costs <- function() update_targetsboard_status(session, "flow", costs = costs())
+    shiny::observeEvent(costs(), send_costs())
+    shiny::observeEvent(board(), shiny::isolate(send_costs()), priority = -1)
 
     # New metadata can add or clear warning marks: send just those.
     shiny::observeEvent(warned_targets(), {

@@ -20,7 +20,7 @@ import { copyText } from './clipboard';
 import '@xyflow/react/dist/style.css';
 import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
-import StatusLegend from './StatusLegend';
+import StatusLegend, { readCostsShown, writeCostsShown } from './StatusLegend';
 import { layoutGraph } from './layout';
 import { NodeActionsContext, GroupToolbar, groupLabel } from './NodeActions';
 
@@ -268,13 +268,20 @@ const structureKey = (nodes, edges) =>
 // Merge a fresh node list from R into the current React Flow nodes: keep what
 // React Flow owns (position, measured size, selection), take status and data
 // from R, add new targets and drop removed ones.
+// Fields only the status message sets (why outdated, kind, time and size):
+// a full update doesn't carry them, and can land after the patch that set
+// them, so they are kept until a patch changes them.
+const PATCHED_FIELDS = ['why', 'kind', 'cost'];
 const syncNodes = (currentNodes, incomingNodes) => {
   const byId = new Map(currentNodes.map((n) => [n.id, n]));
   return incomingNodes.map((incoming) => {
     const current = byId.get(incoming.id);
-    return current
-      ? { ...current, type: incoming.type, style: incoming.style, data: incoming.data }
-      : incoming;
+    if (!current) return incoming;
+    const kept = Object.fromEntries(
+      PATCHED_FIELDS.filter((f) => current.data?.[f] != null && incoming.data?.[f] === undefined)
+        .map((f) => [f, current.data[f]]),
+    );
+    return { ...current, type: incoming.type, style: incoming.style, data: { ...incoming.data, ...kept } };
   });
 };
 
@@ -302,6 +309,16 @@ function Flow({ configuration }) {
   const focusRef = useRef(focusId);
   focusRef.current = focusId;
   const [options, setOptions] = useState({ ...DEFAULT_OPTIONS, ...configuration.options });
+  // Which parts of the targets' time and size badges show: the legend's
+  // switches, off at first, as the browser remembers them.
+  const [costsShown, setCostsShown] = useState(readCostsShown);
+  const toggleCostShown = useCallback((part) => {
+    setCostsShown((was) => {
+      const now = { ...was, [part]: !was[part] };
+      writeCostsShown(now);
+      return now;
+    });
+  }, []);
   // Lay out once all nodes have been measured: everything ('all') on first
   // render and when a Tidy button is pressed; only the new targets ('new')
   // when the pipeline's structure changes. With a saved layout, the first
@@ -622,6 +639,10 @@ function Flow({ configuration }) {
       // (target_kinds()), for its icon; the others are neither.
       const kinds = message.kinds == null ? null
         : (Array.isArray(message.kinds) ? {} : message.kinds);
+      // `costs`, when sent, has every built target's time and size badge
+      // (target_costs()), by id; the others show none.
+      const costs = message.costs == null ? null
+        : (Array.isArray(message.costs) ? {} : message.costs);
       setNodes((current) =>
         current.map((node) => {
           const update = updates.get(node.id);
@@ -630,8 +651,10 @@ function Flow({ configuration }) {
           const sameBranches = JSON.stringify(branches) === JSON.stringify(node.data?.branches ?? null);
           const why = reasons ? (reasons[node.id] ?? null) : (node.data?.why ?? null);
           const kind = kinds ? (kinds[node.id] ?? null) : (node.data?.kind ?? null);
+          const cost = costs ? (costs[node.id] ?? null) : (node.data?.cost ?? null);
+          const sameCost = JSON.stringify(cost) === JSON.stringify(node.data?.cost ?? null);
           if (!update && warning === node.data?.warning && sameBranches && why === (node.data?.why ?? null) &&
-            kind === (node.data?.kind ?? null)) return node;
+            kind === (node.data?.kind ?? null) && sameCost) return node;
           return {
             ...node,
             type: update ? update.type : node.type,
@@ -642,6 +665,7 @@ function Flow({ configuration }) {
               branches,
               why,
               kind,
+              cost,
             },
           };
         }),
@@ -721,7 +745,8 @@ function Flow({ configuration }) {
 
   return (
     <div
-      className={`reactflow-wrapper tb-${colorMode}`}
+      className={`reactflow-wrapper tb-${colorMode}` +
+        (costsShown.times ? ' tb-show-times' : '') + (costsShown.sizes ? ' tb-show-sizes' : '')}
       ref={wrapperRef}
       style={{ height: configuration.height, width: configuration.width, position: 'relative' }}
     >
@@ -773,7 +798,10 @@ function Flow({ configuration }) {
         <Panel position="top-right" className="tb-top-right">
           <LayoutButtons onLayout={onLayout} />
           {options.legend && (
-            <StatusLegend nodes={nodes} statuses={STATUSES} statusColor={statusColor} onSelect={selectOnly} />
+            <StatusLegend
+              nodes={nodes} statuses={STATUSES} statusColor={statusColor} onSelect={selectOnly}
+              costsShown={costsShown} onToggleCost={toggleCostShown}
+            />
           )}
         </Panel>
         <GroupToolbar

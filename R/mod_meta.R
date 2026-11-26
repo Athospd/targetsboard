@@ -1,4 +1,4 @@
-#' The tar_meta() tab
+#' The Metadata tab: tar_meta()'s table
 #'
 #' `tar_meta()` as a table. A click on a row asks to show its target on the
 #' board.
@@ -19,9 +19,13 @@ meta_server <- function(id, tar_meta) {
   shiny::moduleServer(id, function(input, output, session) {
     output$table <- reactable::renderReactable({
       shiny::req(tar_meta())
+      meta <- tar_meta()
       reactable::reactable(
-        tar_meta(),
+        meta,
         theme = board_table_theme(),
+        # Readable times and sizes, sorted as numbers: slowest first.
+        columns = meta_columns(meta),
+        defaultSorted = if ("seconds" %in% names(meta)) list(seconds = "desc"),
         wrap = FALSE,
         onClick = row_click_js(session$ns("row_clicked")),
         rowStyle = list(cursor = "pointer")
@@ -30,4 +34,22 @@ meta_server <- function(id, tar_meta) {
 
     shiny::reactive(input$row_clicked)
   })
+}
+
+# The tar_meta() table's seconds and bytes, shown as "42 s" and "1.2 MB".
+meta_columns <- function(meta) {
+  columns <- list()
+  if ("seconds" %in% names(meta)) {
+    columns$seconds <- reactable::colDef(
+      cell = function(value) if (is.na(value)) "" else format_seconds(value),
+      align = "right", defaultSortOrder = "desc"
+    )
+  }
+  if ("bytes" %in% names(meta)) {
+    columns$bytes <- reactable::colDef(
+      cell = function(value) format_bytes(value) %||% "",
+      align = "right", defaultSortOrder = "desc"
+    )
+  }
+  if (length(columns)) columns else NULL
 }

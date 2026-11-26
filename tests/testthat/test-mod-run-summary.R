@@ -100,3 +100,23 @@ test_that("run_summary_server() shows the last run from the store and returns it
     expect_match(output$summary$html, "tb-run-elapsed")
   })
 })
+
+test_that("run_summary_tags() shows a bar of the run's parts, and errored mid-run only once there is one", {
+  progress <- data.frame(
+    name = c("a", "b", "c"), type = "stem", parent = c("a", "b", "c"),
+    progress = c("completed", "skipped", "dispatched")
+  )
+  now <- as.POSIXct("2026-11-26 10:00:10")
+  going <- as.character(run_summary_tags(run_summary(progress, c("a", "b", "c", "d"), started = now - 5, running = TRUE, now = now)))
+  expect_match(going, "tb-run-bar-built\" style=\"width: 25.00%", fixed = TRUE)
+  expect_match(going, "tb-run-bar-running", fixed = TRUE)
+  expect_no_match(going, "errored")
+  done <- as.character(run_summary_tags(run_summary(progress[1:2, ], c("a", "b"), started = now - 5, ended = now)))
+  expect_match(done, "<b>0</b>[[:space:]]*errored")
+  expect_match(done, "tb-run-summary-done", fixed = TRUE)
+  # The server's clock: an output in place of the time as text.
+  clock <- as.character(run_summary_tags(run_summary(progress, "a", started = now - 5, ended = now),
+                                         elapsed = shiny::span(id = "clock")))
+  expect_match(clock, "id=\"clock\"", fixed = TRUE)
+  expect_no_match(clock, "0:05", fixed = TRUE)
+})

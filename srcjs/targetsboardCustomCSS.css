@@ -62,6 +62,12 @@
   --tb-danger: var(--tb-theme-danger, #c62828);
   --tb-danger-text: var(--tb-theme-danger-text, #fff);
   --tb-focus-ring: var(--tb-theme-focus-ring, #2f223d);
+  /* The slowest and largest targets' time and size badges. */
+  --tb-hot: var(--tb-theme-hot, #e8833a);
+  /* Numbers on a target (its time and size): the page's monospace, as the
+     script path's. */
+  --tb-font-mono: var(--tb-theme-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace));
+  --tb-hot-text: var(--tb-theme-hot-text, #2b1405);
   /* Menus, toolbars, buttons and badges over the canvas: in the app, the
      page's Bootstrap surfaces, as its dropdowns; alone, their values. */
   --tb-surface: var(--bs-body-bg, #fff);
@@ -201,11 +207,16 @@
    corner, in its text colour, clear of the warning mark on the corner. */
 .tb-type-icon {
   position: absolute;
+  /* The inner top-right corner, as far from the top as from the side. */
   top: 5px;
-  left: 11px;
+  right: 5px;
   display: flex;
   opacity: 0.85;
   line-height: 0;
+}
+/* A running target's spinner takes that corner. */
+.base-node.tb-status-running .tb-type-icon {
+  display: none;
 }
 .base-node.tb-has-type-icon {
   padding-inline: 1.5rem; /* the label stays clear of the icon */
@@ -350,6 +361,75 @@
 }
 .tb-legend-count {
   font-variant-numeric: tabular-nums;
+}
+
+/* The legend's switches for the time and size badges. */
+.tb-legend-costs {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-top: 1px solid var(--tb-surface-border);
+}
+.tb-legend-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+.tb-legend-switch input {
+  margin: 0;
+  accent-color: var(--bs-primary, #0d6efd);
+}
+
+/* A built target's last build time and stored size (BaseNode.js): small,
+   quiet text in its bottom-left corner, as the legend's switches say. The
+   slowest and largest get a warm dot. */
+.tb-cost {
+  display: none;
+  position: absolute;
+  bottom: 1px;
+  left: 5px; /* clear of a running target's spinner, on the right */
+  gap: 0.25rem;
+  white-space: nowrap;
+  color: inherit;
+  font-family: var(--tb-font-mono);
+  font-size: 0.4375rem; /* 7px */
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+  pointer-events: auto;
+}
+.tb-cost > span {
+  display: none;
+}
+.tb-show-times .tb-cost:has(.tb-cost-time),
+.tb-show-sizes .tb-cost:has(.tb-cost-size) {
+  display: flex;
+}
+.tb-show-times .tb-cost-time,
+.tb-show-sizes .tb-cost-size {
+  display: inline;
+}
+.tb-show-times.tb-show-sizes .tb-cost-size::before {
+  content: "\00b7";
+  margin-right: 0.25rem;
+}
+.tb-cost .tb-cost-hot {
+  font-weight: 700;
+}
+.tb-cost .tb-cost-hot::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--tb-hot);
+  vertical-align: 1px;
+}
+.tb-cost:has(.tb-cost-hot) {
+  opacity: 0.9;
 }
 
 /* A pattern's branches done so far, during a run: "3/6". */
