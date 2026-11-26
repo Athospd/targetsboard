@@ -5,7 +5,8 @@
 #' (`poller_board`), why the script doesn't load (`script_error`), the run's
 #' live `progress`, whether a run is going (`running`), `tar_meta()`
 #' (`tar_meta`), the targets that warned (`warned_targets`) and why the
-#' outdated ones are outdated (`outdated`, outdated_reasons()).
+#' outdated ones are outdated (`outdated`, outdated_reasons()) and the
+#' targets that are files or reports (`kinds`, target_kinds()).
 #'
 #' @param id The module's id.
 #' @param backend `board_backend()`: shared by every session, not reactive.
@@ -74,8 +75,9 @@ graph_data_server <- function(id, backend) {
     # Targets whose last build raised warnings, for the warning marks.
     warned_targets <- shiny::reactive(warned_targets_of(tar_meta_data()))
 
-    # Why the outdated targets are: the poller writes it after the graph.
-    outdated <- shiny::reactivePoll(
+    # What the poller writes after the graph: why the outdated targets are,
+    # and each target's definition, for its icon.
+    after_graph <- shiny::reactivePoll(
       1000, session,
       checkFunc = function() {
         path <- backend$rds_path()
@@ -84,10 +86,12 @@ graph_data_server <- function(id, backend) {
       valueFunc = function() {
         path <- backend$rds_path()
         reasons_path <- if (!is.null(path)) poller_reasons_path(path)
-        if (is.null(reasons_path) || !file.exists(reasons_path)) return(list())
-        outdated_reasons(tryCatch(readRDS(reasons_path), error = function(e) NULL))
+        if (is.null(reasons_path) || !file.exists(reasons_path)) return(NULL)
+        tryCatch(readRDS(reasons_path), error = function(e) NULL)
       }
     )
+    outdated <- shiny::reactive(outdated_reasons(after_graph()))
+    kinds <- shiny::reactive(target_kinds(after_graph()$manifest))
 
     list(
       poller_board = poller_board,
@@ -96,7 +100,8 @@ graph_data_server <- function(id, backend) {
       running = running,
       tar_meta = tar_meta_data,
       warned_targets = warned_targets,
-      outdated = outdated
+      outdated = outdated,
+      kinds = kinds
     )
   })
 }

@@ -618,6 +618,10 @@ function Flow({ configuration }) {
       // outdated), by id; an empty one (which may arrive as []) clears them.
       const reasons = message.reasons == null ? null
         : (Array.isArray(message.reasons) ? {} : message.reasons);
+      // `kinds`, when sent, names every target that is a file or a report
+      // (target_kinds()), for its icon; the others are neither.
+      const kinds = message.kinds == null ? null
+        : (Array.isArray(message.kinds) ? {} : message.kinds);
       setNodes((current) =>
         current.map((node) => {
           const update = updates.get(node.id);
@@ -625,7 +629,9 @@ function Flow({ configuration }) {
           const branches = counts ? (counts[node.id] ?? null) : (node.data?.branches ?? null);
           const sameBranches = JSON.stringify(branches) === JSON.stringify(node.data?.branches ?? null);
           const why = reasons ? (reasons[node.id] ?? null) : (node.data?.why ?? null);
-          if (!update && warning === node.data?.warning && sameBranches && why === (node.data?.why ?? null)) return node;
+          const kind = kinds ? (kinds[node.id] ?? null) : (node.data?.kind ?? null);
+          if (!update && warning === node.data?.warning && sameBranches && why === (node.data?.why ?? null) &&
+            kind === (node.data?.kind ?? null)) return node;
           return {
             ...node,
             type: update ? update.type : node.type,
@@ -635,6 +641,7 @@ function Flow({ configuration }) {
               warning,
               branches,
               why,
+              kind,
             },
           };
         }),

@@ -25,7 +25,8 @@ NULL
 #' to `poller_reasons_path(tar_vis_path)` (outdated_reasons()): the cues of
 #' `tar_sitrep()`, and `tar_network(targets_only = FALSE)` to name what
 #' changed. They hash the pipeline again, so they come after the graph, which
-#' doesn't wait for them.
+#' doesn't wait for them. With them goes `manifest`, each target's format and
+#' command (`tar_manifest()`), for its icon (target_kinds()).
 #'
 #' @param script Path to the targets script.
 #' @param interval Seconds between two checks; checks are cheap file stats.
@@ -124,7 +125,18 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
             message("Why outdated failed: ", conditionMessage(e))
             NULL
           })
-          if (!is.null(reasons)) {
+          # Each target's format and command, for its icon (target_kinds()):
+          # on its own, so a failure elsewhere doesn't lose it.
+          manifest <- tryCatch(
+            as.data.frame(targets::tar_manifest(script = script, fields = c("name", "format", "command"))),
+            error = function(e) {
+              message("tar_manifest() failed: ", conditionMessage(e))
+              NULL
+            }
+          )
+          if (!is.null(reasons) || !is.null(manifest)) {
+            if (is.null(reasons)) reasons <- list(progress_mtime = progress_mtime)
+            reasons$manifest <- manifest
             tmp <- paste0(reasons_path, ".tmp")
             saveRDS(reasons, file = tmp)
             if (!file.rename(tmp, reasons_path)) unlink(tmp)

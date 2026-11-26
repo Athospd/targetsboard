@@ -8,6 +8,11 @@
   Invalidate. It folds away, and the browser remembers; hide it with
   `targetsboard_options(legend = FALSE)` (#102).
 
+* An icon in each target's top-left corner tells its kind: a pattern, a file
+  (`format = "file"`), a Quarto or R Markdown report, a function or an
+  object. A plain target has none. Hover it for its name. The icons take the
+  node's text colour, so they read in every status, theme and mode (#103).
+
 # targetsboard 0.3.0
 
 ## New features

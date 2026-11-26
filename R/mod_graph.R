@@ -16,6 +16,8 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #'   whether a run goes, and the targets with a warning (graph_data_server()).
 #' @param outdated Reactive: why outdated targets are (outdated_reasons()),
 #'   shown on hovering them.
+#' @param kinds Reactive: the targets that are files or reports
+#'   (target_kinds()), for their icons.
 #' @param show Reactive event: `list(name)`, a target to focus and bring into
 #'   view with what it depends on and what depends on it directly.
 #' @param color_mode Reactive: `"light"` or `"dark"`, the page's mode.
@@ -24,11 +26,12 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #'   action chosen in a menu or toolbar.
 #' @noRd
 graph_server <- function(id, board, progress, running, warned_targets, show, color_mode,
-                         outdated = shiny::reactive(list())) {
+                         outdated = shiny::reactive(list()),
+                         kinds = shiny::reactive(character())) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(progress), shiny::is.reactive(running),
     shiny::is.reactive(warned_targets), shiny::is.reactive(show), shiny::is.reactive(color_mode),
-    shiny::is.reactive(outdated)
+    shiny::is.reactive(outdated), shiny::is.reactive(kinds)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # A new graph: send it whole, with the live statuses on top.
@@ -55,6 +58,11 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
     }
     shiny::observeEvent(outdated(), send_reasons())
     shiny::observeEvent(board(), shiny::isolate(send_reasons()), priority = -1)
+
+    # Which targets are files or reports, for their icons: the same way.
+    send_kinds <- function() update_targetsboard_status(session, "flow", kinds = kinds())
+    shiny::observeEvent(kinds(), send_kinds())
+    shiny::observeEvent(board(), shiny::isolate(send_kinds()), priority = -1)
 
     # New metadata can add or clear warning marks: send just those.
     shiny::observeEvent(warned_targets(), {
