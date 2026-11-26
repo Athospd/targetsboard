@@ -32,6 +32,10 @@
   `tarchetypes::tar_map(descriptions = )`'s) shows when hovering it on the
   canvas, before why it is outdated, and at the top of its Value pane (#143).
 
+* The board redraws when a function changes in any file the script sources:
+  the literal paths of its `tar_source()` and `source()` calls (a folder, or
+  a file), not only `R/` (#152).
+
 ## Bug fixes
 
 * A redraw of the graph could drop an outdated target's hover text (why it
