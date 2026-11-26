@@ -2,6 +2,12 @@
 
 ## New features
 
+* A function's code where the board names it: under "Why it is
+  outdated", each changed function has a section with its code, as
+  written, and the file and line it's defined in. With
+  `targets_only = FALSE`, a function on the canvas shows the same in the
+  Value pane. Functions are read from the script and the files it sources,
+  without running them (#153).
 * A target's settings: the Value pane has a Settings section, closed at
   first, with its pattern, iteration, memory, storage, retrieval,
   deployment, error, priority, repository and resources (the kinds set,
