@@ -94,6 +94,10 @@
 
 ## Bug fixes
 
+* Dark mode is remembered: a page reloaded in dark mode stays dark, as
+  the theme already did. A dark-only theme's dark isn't taken for yours,
+  and with the `targetsboard.theme` option your mode is still remembered
+  (#216).
 * For a moment after a run started, the run summary showed the last run's
   clock and counts ("Running 0:28" at once, its targets as built). Until
   targets records the new run, it now shows the run starting: nothing done

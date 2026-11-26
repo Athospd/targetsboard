@@ -39,7 +39,10 @@ local_theme_calls <- function(env = parent.frame()) {
   calls$asked <- 0
   local_mocked_bindings(
     set_page_theme = function(session, name, remember = TRUE) calls$themes <- c(calls$themes, name),
-    set_page_mode = function(session, mode) calls$modes <- c(calls$modes, mode),
+    set_page_mode = function(session, mode, remember = FALSE) {
+      calls$modes <- c(calls$modes, mode)
+      calls$remembered <- c(calls$remembered, remember)
+    },
     ask_saved_theme = function(session) calls$asked <- calls$asked + 1,
     .env = env
   )
@@ -74,6 +77,20 @@ test_that("the button flips the page's mode", {
     session$setInputs(mode = 1)
     session$setInputs(dark_mode = "dark", mode = 2)
     expect_equal(calls$modes, c("dark", "light"))
+    expect_equal(calls$remembered, c(TRUE, TRUE)) # the user's: the page keeps it (#216)
+  })
+})
+
+test_that("a dark-only theme's dark isn't remembered, and leaving it gives back the user's mode (#216)", {
+  withr::local_options(targetsboard.theme = NULL)
+  calls <- local_theme_calls()
+  shiny::testServer(theme_server, {
+    session$setInputs(pick = "Targets board", dark_mode = "light")
+    session$setInputs(mode = 1) # the user goes dark
+    session$setInputs(dark_mode = "dark", pick = "Darkly")
+    session$setInputs(pick = "Targets board")
+    expect_equal(calls$modes, c("dark", "dark", "dark")) # their click, Darkly's, then theirs back
+    expect_equal(calls$remembered, c(TRUE, FALSE, FALSE))
   })
 })
 
@@ -83,12 +100,24 @@ test_that("the page's remembered pick is restored, unless the option chose the t
   shiny::testServer(theme_server, {
     expect_equal(calls$asked, 1)
     session$setInputs(pick = "Targets board")
-    session$setInputs(saved = "Nope") # not a theme: ignored
-    session$setInputs(saved = "Pulse") # updateSelectInput(): no error in the test session
+    session$setInputs(saved = list(theme = "Nope")) # not a theme: ignored
+    session$setInputs(saved = list(theme = "Pulse")) # updateSelectInput(): no error in the test session
+    expect_length(calls$modes, 0) # no mode remembered: the page's stays
+    session$setInputs(saved = list(theme = "Pulse", mode = "dark"))
+    expect_equal(calls$modes, "dark")
+    session$setInputs(saved = list(theme = "Vapor", mode = "light")) # dark-only: it keeps its dark
+    expect_equal(calls$modes, "dark")
   })
+  # The option's theme wins, but the user's mode is still theirs.
   withr::local_options(targetsboard.theme = "Cosmo")
   calls <- local_theme_calls()
-  shiny::testServer(theme_server, expect_equal(calls$asked, 0))
+  shiny::testServer(theme_server, {
+    expect_equal(calls$asked, 1)
+    session$setInputs(pick = "Cosmo")
+    session$setInputs(saved = list(theme = "Pulse", mode = "dark"))
+    expect_equal(calls$modes, "dark")
+    expect_equal(session$returned$theme(), "Cosmo")
+  })
 })
 
 test_that("set_page_theme() sets the theme, and has the page remember it unless asked not to", {
@@ -104,4 +133,15 @@ test_that("set_page_theme() sets the theme, and has the page remember it unless 
   set_page_theme(session, "Targets board", remember = FALSE)
   expect_null(bslib::theme_bootswatch(calls$theme))
   expect_null(calls$message)
+})
+
+test_that("set_page_mode() has the page remember the mode only when asked", {
+  calls <- list()
+  session <- list(sendCustomMessage = function(type, message) calls$message <<- list(type, message))
+  local_mocked_bindings(toggle_dark_mode = function(mode, session) calls$mode <<- mode, .package = "bslib")
+  set_page_mode(session, "dark")
+  expect_equal(calls$mode, "dark")
+  expect_null(calls$message)
+  set_page_mode(session, "light", remember = TRUE)
+  expect_equal(calls$message, list("tb-theme-remember", list(mode = "light")))
 })
