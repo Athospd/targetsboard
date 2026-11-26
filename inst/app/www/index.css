@@ -777,3 +777,13 @@ pre.hljs {
   width: 1em;
   text-align: center;
 }
+
+/* A tarchetypes rerun rule in the Value pane (rule_ui()). */
+.tb-rule {
+  margin: 0 0 0.5rem;
+  font-size: var(--tb-font-size-sm);
+  color: var(--bs-secondary-color);
+}
+.tb-rule > .fa {
+  margin-right: 0.4rem;
+}

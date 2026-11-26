@@ -15,6 +15,7 @@ preview_ui <- function(id) {
     position = "right",
     # Apart from the value's output: new reasons don't rebuild the value.
     shiny::uiOutput(ns("description")),
+    shiny::uiOutput(ns("rule")),
     shiny::uiOutput(ns("why")),
     # The same spinner card as Load's while a value is read and its preview
     # built, over the previous preview.
@@ -44,11 +45,11 @@ preview_ui <- function(id) {
 #'   problem pane asks to show.
 #' @noRd
 preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods,
-                           outdated = shiny::reactive(list())) {
+                           outdated = shiny::reactive(list()), rules = shiny::reactive(NULL)) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
-    shiny::is.reactive(methods), shiny::is.reactive(outdated)
+    shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(rules)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -99,6 +100,17 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     output$description <- shiny::renderUI({
       shiny::req(is_open(), focused())
       description_ui(target_description(board()$x$nodes, focused()))
+    })
+
+    # A tarchetypes rerun rule (cue_rules()), whatever the status: a skipped
+    # target looks up to date, an aged one gives no hint of when it is due.
+    output$rule <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      rule <- target_rule(rules(), focused())
+      shiny::req(rule)
+      meta <- tar_meta()
+      built <- if (!is.null(meta) && "time" %in% names(meta)) meta$time[meta$name %in% focused()][1] else NA
+      rule_ui(rule_sentence(rule, built))
     })
 
     output$why <- shiny::renderUI({
