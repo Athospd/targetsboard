@@ -9,7 +9,7 @@
 preview_ui <- function(id) {
   ns <- shiny::NS(id)
   bslib::sidebar(
-    id = ns("sidebar"),
+    id = ns("sidebar"), class = "tb-preview-pane",
     width = "40%",
     open = FALSE,
     position = "right",
@@ -17,8 +17,6 @@ preview_ui <- function(id) {
     shiny::uiOutput(ns("description")),
     shiny::uiOutput(ns("rule")),
     shiny::uiOutput(ns("why")),
-    shiny::uiOutput(ns("command")),
-    shiny::uiOutput(ns("settings")),
     shiny::uiOutput(ns("branch_inputs")),
     shiny::uiOutput(ns("debug")),
     # The same spinner card as Load's while a value is read and its preview
@@ -240,6 +238,26 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       skipped_ui(sentences, built)
     })
 
+    # The pane hides an empty block (index.css), and Shiny doesn't render a
+    # hidden output: these render anyway, or a block once empty stays so.
+    # Each waits for the pane to be open (is_open()).
+    for (id in c("description", "rule", "why", "branch_inputs", "debug")) {
+      shiny::outputOptions(output, id, suspendWhenHidden = FALSE)
+    }
+
+    # The tab the user last picked in the value's card, kept across targets
+    # where it exists (target_tabs()). A card without it falls back to its
+    # first tab: that isn't a pick, so it's not kept.
+    value_tab <- shiny::reactiveVal(NULL)
+    shown_tabs <- character()
+    shiny::observeEvent(input$value_tab, {
+      if (is.null(value_tab()) || value_tab() %in% shown_tabs) value_tab(input$value_tab)
+    })
+    tabs_for <- function(titles) {
+      shown_tabs <<- titles
+      shiny::isolate(value_tab())
+    }
+
     output$content <- shiny::renderUI({
       shiny::req(is_open(), focused())
       name <- focused()
@@ -259,18 +277,24 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
           problem, inputs, running = running(), script = backend$poller$script,
           store = store(), dir = normalizePath(getwd(), winslash = "/"), ns = session$ns
         )
-        if (!is.null(problem$error)) return(problem_part)
+        if (!is.null(problem$error)) return(shiny::tagList(problem_part, target_tabs_card(tabs_for, session$ns)))
       }
       methods()
       records_changed()
       # The problem says why there is no value: a pattern whose branches
       # errored. Without one, say it plainly.
-      no_value <- function() problem_part %||% shiny::p("No value stored for this target yet.")
+      no_value <- function() {
+        shiny::tagList(
+          problem_part %||% shiny::p("No value stored for this target yet."),
+          target_tabs_card(tabs_for, session$ns)
+        )
+      }
       target <- preview_target(name, store(), branch = branch())
       if (is.null(target)) return(no_value())
       key <- preview_key(target)
       if (preview_too_large(target) && !key %in% read_anyway()) {
-        return(shiny::tagList(problem_part, preview_gate(target, store = store(), ns = session$ns)))
+        return(shiny::tagList(problem_part, preview_gate(target, store = store(), ns = session$ns),
+                              target_tabs_card(tabs_for, session$ns)))
       }
       built <- previews$get(key)
       if (is.null(built)) {
@@ -294,7 +318,8 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       files <- Find(function(view) inherits(view, "tar_board_preview_files"), built$views)
       file_views(list(paths = files$paths, target = target))
       if (!is.null(files)) render_file_section(1)
-      shiny::tagList(problem_part, preview_frame(target, built, session$ns(plot_ids), store(), ns = session$ns))
+      shiny::tagList(problem_part, preview_frame(target, built, session$ns(plot_ids), store(), ns = session$ns,
+                                                 tabs_for = tabs_for))
     })
 
     file_views <- shiny::reactiveVal(NULL)
@@ -335,20 +360,55 @@ description_ui <- function(text) {
   shiny::tags$p(class = "tb-description", text)
 }
 
-#' A target's command, in a section closed at first, highlighted and
-#' copyable, or nothing
+#' The Command and Settings tabs of the value's card (#217)
+#'
+#' Their own outputs, filled apart from the value: the poller's recomputes
+#' don't build the value again.
 #' @noRd
-command_ui <- function(command) {
-  command <- unname(command)
-  if (length(command) != 1 || is.na(command) || !nzchar(command)) return(NULL)
-  shiny::tags$details(
-    class = "tb-command",
-    shiny::tags$summary("Command"),
-    code_block("As it runs, from tar_manifest()", "command", command)
+target_tabs <- function(ns = identity) {
+  list(
+    bslib::nav_panel("Command", shiny::tags$div(class = "tb-preview-view", shiny::uiOutput(ns("command")))),
+    bslib::nav_panel("Settings", shiny::tags$div(class = "tb-preview-view", shiny::uiOutput(ns("settings"))))
   )
 }
 
-#' A target's settings, in a section closed at first, or nothing
+#' The value's tab row: its views, then Command and Settings
+#'
+#' @param panels The value's views, as `bslib::nav_panel()`s.
+#' @param tabs_for A function of the row's titles, giving the tab to select
+#'   (the last one picked), or `NULL` for the first.
+#' @noRd
+value_tabs <- function(panels = list(), tabs_for = function(titles) NULL, ns = identity) {
+  panels <- c(panels, target_tabs(ns))
+  titles <- vapply(panels, nav_title, "")
+  selected <- tabs_for(titles)
+  do.call(bslib::navset_underline, c(
+    list(id = ns("value_tab"), selected = if (isTRUE(selected %in% titles)) selected),
+    panels
+  ))
+}
+
+# A nav_panel()'s title.
+nav_title <- function(panel) as.character(panel$attribs$`data-value` %||% "")
+
+#' Command and Settings in a card of their own, for a target without a
+#' value to show: the same place as beside a value
+#' @noRd
+target_tabs_card <- function(tabs_for = function(titles) NULL, ns = identity) {
+  bslib::card(class = "tb-preview tb-target-tabs", value_tabs(tabs_for = tabs_for, ns = ns))
+}
+
+#' A target's command, highlighted and copyable, for its Command tab
+#' @noRd
+command_ui <- function(command) {
+  command <- unname(command)
+  if (length(command) != 1 || is.na(command) || !nzchar(command)) {
+    return(shiny::p(class = "tb-preview-note", "Its command isn't known yet."))
+  }
+  code_block("As it runs, from tar_manifest()", "command", command)
+}
+
+#' A target's settings, for its Settings tab
 #'
 #' Every setting it has, those that differ from targets' defaults
 #' (`setting_defaults`) in bold; a note when it runs on a worker but the
@@ -356,11 +416,12 @@ command_ui <- function(command) {
 #' @param row Its row of target_settings().
 #' @noRd
 settings_ui <- function(row) {
-  if (is.null(row) || nrow(row) != 1) return(NULL)
+  unknown <- shiny::p(class = "tb-preview-note", "Its settings aren't known yet.")
+  if (is.null(row) || nrow(row) != 1) return(unknown)
   fields <- setdiff(names(row), "name")
   values <- vapply(fields, function(f) as.character(row[[f]][[1]]), character(1))
   shown <- fields[!is.na(values) & nzchar(values)]
-  if (!length(shown)) return(NULL)
+  if (!length(shown)) return(unknown)
   changed <- function(f) is.na(setting_defaults[[f]]) || !identical(values[[f]], setting_defaults[[f]])
   rows <- lapply(shown, function(f) {
     value <- shiny::tags$code(values[[f]])
@@ -374,9 +435,8 @@ settings_ui <- function(row) {
       paste(main, collapse = " and ")
     )
   }
-  shiny::tags$details(
-    class = "tb-command tb-settings",
-    shiny::tags$summary("Settings"),
+  shiny::tags$div(
+    class = "tb-settings",
     shiny::tags$table(class = "tb-settings-table", shiny::tags$tbody(rows)),
     if (!is.null(note)) shiny::tags$p(class = "tb-preview-note", note)
   )

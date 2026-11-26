@@ -7,14 +7,13 @@ test_that("target_commands() reads the manifest's commands, or none", {
   expect_length(target_commands(data.frame(name = "a")), 0)
 })
 
-test_that("command_ui() is a closed Command section with the code to copy, or nothing", {
+test_that("command_ui() is the Command tab's code to copy, or says it isn't known", {
   html <- as.character(command_ui(c(b = "f(a)")))
-  expect_match(html, "<details class=\"tb-command\">", fixed = TRUE)
-  expect_match(html, "<summary>Command</summary>", fixed = TRUE)
+  expect_match(html, "tb-code-command", fixed = TRUE)
   expect_match(html, "data-copy=\"f(a)\"", fixed = TRUE)
   expect_match(html, "<pre class=\"language-r\">f(a)</pre>", fixed = TRUE)
-  expect_null(command_ui(character()))
-  expect_null(command_ui(NA_character_))
+  expect_match(as.character(command_ui(character())), "isn't known yet", fixed = TRUE)
+  expect_match(as.character(command_ui(NA_character_)), "isn't known yet", fixed = TRUE)
   expect_error(preview_server("p", list(), shiny::reactive(NULL), shiny::reactive(0), shiny::reactive(NULL),
                               shiny::reactive(FALSE), shiny::reactive(NULL), shiny::reactive(0), commands = "x"),
                "is.reactive")
@@ -34,7 +33,8 @@ test_that("the Value pane shows a tar_map() copy's command, as it runs", {
   app$click(selector = ".react-flow__node[data-id='fit_3']")
   app$wait_for_js("document.querySelector(\".tb-node-toolbar [data-action='value']\") !== null")
   app$click(selector = ".tb-node-toolbar [data-action='value']")
-  app$wait_for_js("document.querySelector('.tb-command') !== null", timeout = 20000)
-  expect_false(app$get_js("document.querySelector('.tb-command').open")) # closed at first
-  expect_equal(app$get_js("document.querySelector('.tb-command .tb-copy').dataset.copy"), "method(10, 3)")
+  app$wait_for_js("document.querySelector(\".tb-preview a[data-value='Command']\") !== null", timeout = 20000)
+  app$click(selector = ".tb-preview a[data-value='Command']")
+  app$wait_for_js("document.querySelector('.tb-code-command .tb-copy') !== null", timeout = 20000)
+  expect_equal(app$get_js("document.querySelector('.tb-code-command .tb-copy').dataset.copy"), "method(10, 3)")
 })

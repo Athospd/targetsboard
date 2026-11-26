@@ -16,8 +16,8 @@
   `targets_only = FALSE`, a function on the canvas shows the same in the
   Value pane. Functions are read from the script and the files it sources,
   without running them (#153).
-* A target's settings: the Value pane has a Settings section, closed at
-  first, with its pattern, iteration, memory, storage, retrieval,
+* A target's settings: the value has a Settings tab, beside Preview and
+  Printed (#217), with its pattern, iteration, memory, storage, retrieval,
   deployment, error, priority, repository and resources (the kinds set,
   and crew's controller). Those that differ from targets' defaults are in
   bold. A note says when a target runs on a worker but the main process
@@ -81,7 +81,8 @@
   the literal paths of its `tar_source()` and `source()` calls (a folder, or
   a file), not only `R/` (#152).
 
-* The Value pane has a Command section, closed at first: the target's
+* The value has a Command tab, kept when another target is shown, and
+  in a card of its own for a target without a value (#217): the target's
   command as it runs, from `tar_manifest()`, highlighted and copyable. For
   targets made by `tar_map()`, `tar_eval()`, `tar_combine()` or hooks, that
   is not always what the author wrote (#144).
