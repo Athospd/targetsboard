@@ -104,6 +104,8 @@ graph_data_server <- function(id, backend) {
     skipped <- shiny::reactive(skipped_reasons(after_graph(), rules()))
     kinds <- shiny::reactive(target_kinds(after_graph()$manifest))
     commands <- shiny::reactive(target_commands(after_graph()$manifest))
+    # The script's targets, NULL until the manifest is read.
+    script_targets <- shiny::reactive(after_graph()$manifest$name)
     settings <- shiny::reactive(target_settings(after_graph()$manifest))
 
     list(
@@ -118,6 +120,7 @@ graph_data_server <- function(id, backend) {
       skipped = skipped,
       kinds = kinds,
       commands = commands,
+      script_targets = script_targets,
       settings = settings,
       rules = rules
     )

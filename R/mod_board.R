@@ -101,7 +101,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     log_server("log", backend)
     script_view_server("script_view", backend$loaded_script)
     visnetwork_server("visnetwork", board, color_mode)
-    meta_clicked <- meta_server("meta", data$tar_meta)
+    meta_clicked <- meta_server("meta", data$tar_meta, data$script_targets)
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
 
     # The value preview: opened by a double-click on a target, its Value, or

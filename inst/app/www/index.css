@@ -826,6 +826,13 @@ html .Reactable .rt-page-size-select {
   color: var(--bs-secondary-color);
 }
 
+/* Stored targets the script no longer has, over the Metadata tab (leftovers_ui()). */
+.tb-leftovers {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--tb-font-size-sm);
+}
+
 /* A tarchetypes rerun rule in the Value pane (rule_ui()). */
 .tb-rule {
   margin: 0 0 0.5rem;
