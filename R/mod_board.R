@@ -1,6 +1,7 @@
 #' A board: one pipeline's controls, graph and tabs
 #'
-#' board_sidebar_ui() holds its run controls, for the page's sidebar;
+#' board_sidebar_ui() holds its run controls and the run's summary, for the
+#' page's sidebar;
 #' board_ui() its script bar, as a browser's address bar, above its card of
 #' tabs: Board, the graph with the value preview beside it;
 #' Problems, what errored or warned, with a count in its title; Log, the
@@ -12,7 +13,10 @@
 #' @param id The module's id.
 #' @noRd
 board_sidebar_ui <- function(id) {
-  run_ui(shiny::NS(id, "run"))
+  shiny::tagList(
+    run_ui(shiny::NS(id, "run")),
+    run_summary_ui(shiny::NS(id, "run_summary"))
+  )
 }
 
 #' @param metadata `targets::tar_visnetwork()$x`, for the first render.
@@ -118,6 +122,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
 
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.
     run <- run_server("run", backend, board, data$running, action = graph$node_action)
+    # Under the run buttons: the run going, or the last one.
+    run_summary_server("run_summary", board, data$running, data$progress)
 
     # A target picked in the tar_meta() table or a problem's links: on the
     # Board tab, focused; a problem picked, with its Problem in the preview.
