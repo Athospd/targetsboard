@@ -122,7 +122,9 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       # A pattern: the branch picked, if one is (not all of them, branch 0).
       own <- target$pattern$branch_name %||% if (is.null(target$pattern)) name
       if (is.null(own)) return(NULL)
-      meta <- tar_meta()
+      # records_changed() above follows this target's records: another
+      # target's new metadata doesn't read the store again.
+      meta <- shiny::isolate(tar_meta())
       seed <- if (!is.null(meta) && "seed" %in% names(meta)) na_null(meta$seed[meta$name %in% own][1])
       edges <- board()$x$edges
       debug_ui(
