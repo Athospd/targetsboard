@@ -144,7 +144,7 @@ serve_file <- function(path, session = shiny::getDefaultReactiveDomain()) {
   type <- served_types[[tolower(tools::file_ext(path))]]
   if (is.null(session)) return(serve_html_report(path)) # outside a session: its folder
   session$registerDataObj(
-    name = paste0("tb_file_", substr(digest::digest(path), 1, 12)),
+    name = paste0("tb_file_", substr(rlang::hash(path), 1, 12)),
     data = normalizePath(path, winslash = "/"),
     filterFunc = function(data, req) {
       shiny::httpResponse(200, type, readBin(data, "raw", file.size(data)))
@@ -181,7 +181,7 @@ has_pdftools <- function() requireNamespace("pdftools", quietly = TRUE)
 #' @noRd
 serve_pdf_pages <- function(path, session) {
   session$registerDataObj(
-    name = paste0("tb_pdf_", substr(digest::digest(path), 1, 12)),
+    name = paste0("tb_pdf_", substr(rlang::hash(path), 1, 12)),
     data = normalizePath(path, winslash = "/"),
     filterFunc = function(data, req) {
       query <- shiny::parseQueryString(req$QUERY_STRING %||% "")

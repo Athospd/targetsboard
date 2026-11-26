@@ -60,6 +60,12 @@
   such as `names = starts_with("model")` included. Another script loaded
   from the board is drawn whole (#148).
 
+## Internal
+
+* Four fewer dependencies: dplyr, purrr, zeallot and digest. The widget's
+  graph conversion is base R and about 15 times as fast (5,000 targets:
+  1.2 s to 0.08 s), with the same JSON (#160).
+
 # targetsboard 0.3.0
 
 ## New features

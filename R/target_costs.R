@@ -10,7 +10,7 @@
 #'   as shown ("42 s", "1.2 MB"), `title` for hovering, and `slow`, `large`.
 #' @noRd
 target_costs <- function(meta) {
-  none <- structure(list(), names = character())
+  none <- json_object()
   if (is.null(meta) || !nrow(meta) || !all(c("name", "type", "seconds", "bytes") %in% names(meta))) return(none)
   built <- meta[meta$type %in% c("stem", "pattern") & !is.na(meta$seconds), , drop = FALSE]
   if (!nrow(built)) return(none)
