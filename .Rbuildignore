@@ -21,3 +21,4 @@
 ^\.git$
 ^inst/examples/.*\.html$
 ^inst/examples/.*_files$
+^\.claude$

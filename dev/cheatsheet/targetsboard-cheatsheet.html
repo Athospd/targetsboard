@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>targetsboard cheatsheet</title>
+<style>
+  @page { size: 11in 8.5in; margin: 0; }
+  :root {
+    --navy: #1d2a40; --navy2: #26354f; --teal: #3cc8b4; --teal-d: #1f8f80;
+    --ink: #1d2433; --muted: #5b6577; --rule: #d5dbe3; --tint: #eef7f5;
+    --up: #354823; --up-t: #d3f0b7; --out: #78b7c5; --out-t: #10363f;
+    --err: #c93312; --err-t: #ffb6a6; --run: #d49536; --run-t: #3f2f11;
+    --canvas: #f0e5d7; --warn: #f2c94c;
+    --mono: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", "Source Sans 3", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 8.4pt; line-height: 1.32; }
+  .page { width: 11in; height: 8.5in; padding: 0.32in 0.36in 0.28in; position: relative; overflow: hidden; page-break-after: always; display: flex; flex-direction: column; }
+  .page:last-child { page-break-after: auto; }
+
+  /* Header band */
+  .top { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid var(--navy); padding-bottom: 7px; margin-bottom: 9px; }
+  .top img { height: 74px; }
+  .top h1 { font-size: 23pt; margin: 0; letter-spacing: -0.3px; color: var(--navy); font-weight: 600; }
+  .top h1 b { font-weight: 800; }
+  .top h1 span { font-weight: 400; color: var(--muted); font-size: 15pt; }
+  .top p { margin: 2px 0 0; font-size: 9pt; color: var(--muted); max-width: 7.2in; }
+  .top .side { margin-left: auto; text-align: right; font-size: 8pt; color: var(--muted); }
+  .top .side code { color: var(--navy); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 18px; flex: 1; min-height: 0; }
+  .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+  section h2 { margin: 0 0 4px; font-size: 10.5pt; color: #fff; background: var(--navy); padding: 3px 8px; border-radius: 3px; font-weight: 700; letter-spacing: 0.2px; display: flex; justify-content: space-between; align-items: baseline; }
+  section h2 small { font-weight: 400; font-size: 7.6pt; opacity: 0.8; }
+  section h3 { margin: 5px 0 2px; font-size: 8.8pt; color: var(--teal-d); border-bottom: 1px solid var(--rule); padding-bottom: 1px; }
+  p { margin: 2px 0 3px; }
+  code, .code { font-family: var(--mono); font-size: 7.7pt; }
+  code { color: var(--navy); }
+  .fn { font-family: var(--mono); font-weight: 700; color: var(--navy); }
+  pre { font-family: var(--mono); font-size: 7.4pt; background: #f4f6f9; border-left: 3px solid var(--teal); margin: 3px 0 4px; padding: 4px 6px; white-space: pre-wrap; line-height: 1.3; }
+  pre .c { color: #6b7686; }
+  dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; }
+  dt { font-family: var(--mono); font-weight: 700; color: var(--navy); font-size: 7.7pt; }
+  dd { margin: 0; }
+  ul { margin: 2px 0 3px; padding-left: 13px; }
+  li { margin: 1px 0; }
+  .k { display: inline-block; font-family: var(--mono); font-size: 7pt; border: 1px solid #a9b2c0; border-bottom-width: 2px; border-radius: 3px; padding: 0 3px; background: #fff; color: var(--ink); white-space: nowrap; }
+  .btn { display: inline-block; border: 1px solid #8f99a8; border-radius: 3px; padding: 0 5px; font-size: 7.4pt; background: #fff; white-space: nowrap; }
+  .note { font-size: 7.6pt; color: var(--muted); }
+  .tip { background: var(--tint); border-radius: 3px; padding: 3px 6px; font-size: 7.7pt; margin-top: 3px; }
+
+  /* Mini nodes */
+  .node { display: inline-flex; align-items: center; justify-content: center; min-width: 54px; height: 16px; padding: 0 6px; border: 1.5px solid #1a192b; border-radius: 3px; font-size: 7pt; font-family: var(--mono); position: relative; }
+  .n-up { background: var(--up); color: var(--up-t); }
+  .n-out { background: var(--out); color: var(--out-t); }
+  .n-err { background: var(--err); color: var(--err-t); }
+  .n-run { background: var(--run); color: var(--run-t); }
+  .mark { position: absolute; top: -6px; right: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--warn); color: #3f2f11; font-size: 6.5pt; font-weight: 800; line-height: 10px; text-align: center; border: 1px solid #3f2f11; font-family: Arial, sans-serif; }
+  .badge { position: absolute; bottom: -7px; right: 2px; font-size: 5.8pt; background: #fff; color: var(--ink); border: 1px solid #8f99a8; border-radius: 6px; padding: 0 3px; line-height: 9px; }
+  .spin { width: 8px; height: 8px; border: 1.5px solid #fff; border-top-color: transparent; border-radius: 50%; margin-left: 4px; }
+  .status-grid { display: grid; grid-template-columns: max-content 1fr; gap: 5px 8px; align-items: center; margin: 3px 0; }
+
+  /* Board diagram */
+  .board { border: 1px solid #9aa4b2; border-radius: 4px; overflow: hidden; font-size: 6.8pt; background: #fff; }
+  .board .bar { display: flex; gap: 4px; align-items: center; padding: 3px 5px; border-bottom: 1px solid var(--rule); background: #fafbfc; }
+  .board .addr { flex: 1; border: 1px solid #b7bfca; border-radius: 3px; padding: 0 4px; font-family: var(--mono); background: #fff; }
+  .board .body { display: grid; grid-template-columns: 62px 1fr 64px; height: 118px; }
+  .board .panel { border-right: 1px solid var(--rule); padding: 4px; display: flex; flex-direction: column; gap: 3px; }
+  .board .panel .btn { font-size: 6.2pt; text-align: center; }
+  .board .tabs { display: flex; gap: 6px; padding: 2px 5px; border-bottom: 1px solid var(--rule); font-weight: 600; }
+  .board .tabs span.on { border-bottom: 2px solid var(--navy); }
+  .board .canvas { background: var(--canvas) radial-gradient(#cdbfae 0.8px, transparent 0.9px) 0 0 / 7px 7px; position: relative; height: 100%; }
+  .board .preview { border-left: 1px solid var(--rule); padding: 4px; }
+  .board .pin { position: absolute; width: 13px; height: 13px; border-radius: 50%; background: var(--teal); color: #08241f; font-weight: 800; font-size: 6.8pt; line-height: 13px; text-align: center; font-family: Arial, sans-serif; }
+  .callouts { display: grid; grid-template-columns: max-content 1fr; gap: 1px 6px; margin-top: 4px; font-size: 7.6pt; }
+  .callouts b.p { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--teal); color: #08241f; text-align: center; line-height: 12px; font-size: 6.8pt; font-family: Arial, sans-serif; }
+
+  .foot { display: flex; justify-content: space-between; font-size: 7pt; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 3px; margin-top: 6px; }
+  .foot a { color: var(--muted); }
+  table.t { border-collapse: collapse; width: 100%; font-size: 7.6pt; }
+  table.t td { padding: 1px 3px; border-bottom: 1px solid #edf0f4; vertical-align: top; }
+  table.t.stack td { display: block; border: 0; padding: 0 3px; }
+  table.t.stack tr { display: block; border-bottom: 1px solid #edf0f4; padding: 1px 0; }
+  table.t.stack td:last-child { padding-left: 12px; }
+  table.t td:first-child { font-family: var(--mono); font-weight: 700; color: var(--navy); white-space: nowrap; font-size: 7.4pt; }
+</style>
+</head>
+<body>
+
+<!-- ===================== PAGE 1 ===================== -->
+<div class="page">
+  <div class="top">
+    <img src="../../man/figures/logo.svg" alt="targetsboard hex">
+    <div>
+      <h1>targets<b>board</b> <span>:: cheatsheet</span></h1>
+      <p>A live board for the author of a <b>targets</b> pipeline: its structure, what is outdated, what each target produced and what a run is doing. It replaces <code>targets::tar_watch()</code>, in a background process, so your R session stays free.</p>
+    </div>
+    <div class="side">
+      <code>install.packages("targetsboard")</code><br>
+      <code>remotes::install_github("Athospd/targetsboard")</code><br>
+      targetsboard 0.3.0 &middot; targets &ge; 1.x
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- Column 1 -->
+    <div class="col">
+      <section>
+        <h2>Launch <small>no arguments needed</small></h2>
+<pre>library(targetsboard)
+app &lt;- <b>tar_board</b>()      <span class="c"># opens in your browser</span>
+targets::tar_make()       <span class="c"># the board follows along</span>
+
+app$is_alive()
+browseURL(attr(app, "url")) <span class="c"># reopen a closed tab</span>
+readLines(app$get_output_file()) <span class="c"># its log</span>
+app$kill()                <span class="c"># or the ⏻ button</span></pre>
+        <p>Like <code>tar_watch()</code>, it reads the project's script and store (<code>_targets.R</code>, <code>_targets/</code>, or what <code>_targets.yaml</code> says), serves on a random free port and waits until the board is up.</p>
+        <table class="t">
+          <tr><td>script =</td><td>the targets script to draw</td></tr>
+          <tr><td>scripts =</td><td>other scripts offered in the Script field</td></tr>
+          <tr><td>project =</td><td>a <code>_targets.yaml</code> project (default <code>TAR_PROJECT</code>)</td></tr>
+          <tr><td>targets_only =</td><td><code>FALSE</code> also draws functions and globals</td></tr>
+          <tr><td>port =, host =</td><td>default <code>shiny.port</code>, <code>127.0.0.1</code></td></tr>
+          <tr><td>browse = FALSE</td><td>don't open the browser</td></tr>
+          <tr><td>...</td><td>to <code>tar_visnetwork()</code>: <code>names</code>, <code>allow</code>, <code>exclude</code></td></tr>
+        </table>
+        <h3>In the foreground, or to deploy</h3>
+<pre>shiny::runApp(<b>tar_board_app</b>(script = "_targets.R"))</pre>
+      </section>
+
+      <section>
+        <h2>Options <small>set before <code style="color:#fff">tar_board()</code></small></h2>
+        <table class="t">
+          <tr><td>targetsboard.theme</td><td>start on a theme, e.g. <code>"Cosmo"</code>, <code>"Nord"</code></td></tr>
+          <tr><td>targetsboard.preview_bytes</td><td>values larger than this (100 MB) load only when asked</td></tr>
+          <tr><td>targetsboard.confirm_nodes</td><td>ask before drawing more targets than this (500); <code>Inf</code> never asks</td></tr>
+          <tr><td>shiny.port, shiny.host</td><td>where the board listens</td></tr>
+        </table>
+      </section>
+    </div>
+
+    <!-- Column 2 -->
+    <div class="col">
+      <section>
+        <h2>The board</h2>
+        <div class="board">
+          <div class="bar"><span class="btn">⟳</span><span class="addr">_targets.R</span><span class="btn">Load</span><span style="margin-left:4px">☀ ⏻</span></div>
+          <div class="body">
+            <div class="panel">
+              <b style="font-size:6.6pt">Control Panel</b>
+              <span class="btn">▶ Run all</span>
+              <span class="note" style="font-size:5.8pt">◯ Keep going<br>◯ Stop at warnings</span>
+              <span class="btn">■ Stop</span>
+              <span class="btn">⌫ Invalidate all</span>
+            </div>
+            <div style="display:flex;flex-direction:column;min-width:0">
+              <div class="tabs"><span class="on">Board</span><span>Problems</span><span>Log</span><span>Script</span><span>…</span></div>
+              <div class="canvas">
+                <span class="node n-up" style="position:absolute;left:8px;top:16px;min-width:38px">raw</span>
+                <span class="node n-up" style="position:absolute;left:62px;top:16px;min-width:38px">clean<span class="mark">!</span></span>
+                <span class="node n-err" style="position:absolute;left:116px;top:4px;min-width:38px">check</span>
+                <span class="node n-run" style="position:absolute;left:116px;top:30px;min-width:38px">fit<span class="spin"></span><span class="badge">3/6</span></span>
+                <span class="node n-out" style="position:absolute;left:116px;top:60px;min-width:38px">report</span>
+                <span class="pin" style="left:4px;top:52px">1</span>
+                <span class="pin" style="left:62px;top:52px">2</span>
+                <span class="pin" style="right:4px;top:4px">3</span>
+              </div>
+            </div>
+            <div class="preview"><b style="font-size:6.6pt">Value / problem</b><br><span class="note" style="font-size:5.8pt">header · views · Printed</span><span class="pin" style="position:relative;display:inline-block;margin-top:4px">4</span></div>
+          </div>
+        </div>
+        <div class="callouts">
+          <b class="p">1</b><span>Status legend: colours and counts; click one to select those targets. Its <b>Times</b> and <b>Sizes</b> switches label each node with build time and size.</span>
+          <b class="p">2</b><span>The DAG: drag targets anywhere, the layout is kept in <code>_targets/user/</code>. Minimap, zoom and ⤓ PNG at the corners.</span>
+          <b class="p">3</b><span><span class="btn">Tidy vertically</span> <span class="btn">Tidy horizontally</span> lay it out afresh.</span>
+          <b class="p">4</b><span>Value preview: opens on a double-click; a problem comes first.</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>Statuses &amp; marks</h2>
+        <div class="status-grid">
+          <span class="node n-up">model</span><span><b>up to date</b> (also skipped, completed)</span>
+          <span class="node n-out">model</span><span><b>outdated</b>: hover it for <i>why</i>: command, an upstream, a function that changed, a cue</span>
+          <span class="node n-run">model<span class="spin"></span></span><span><b>running</b>: edges feeding it are animated</span>
+          <span class="node n-err">model</span><span><b>errored</b>: its problem opens in the preview</span>
+          <span class="node n-up">clean<span class="mark">!</span></span><span>last build raised <b>warnings</b></span>
+          <span class="node n-run">fit<span class="badge">3/6</span></span><span>a pattern's <b>branches done</b>, while a run goes</span>
+        </div>
+        <p class="note">An icon in the corner tells the kind: pattern, file, Quarto / R Markdown report, function, object.</p>
+      </section>
+    </div>
+
+    <!-- Column 3 -->
+    <div class="col">
+      <section>
+        <h2>Mouse &amp; keys</h2>
+        <table class="t">
+          <tr><td>click</td><td>focus: highlight what it depends on and what depends on it</td></tr>
+          <tr><td>double-click</td><td>open its value (or its problem)</td></tr>
+          <tr><td>right-click</td><td>menu: Run, Invalidate, Show its value, Copy its name, Select upstream / downstream / lineage</td></tr>
+          <tr><td><span class="k">Ctrl</span>-click</td><td>add to the selection (<span class="k">Cmd</span> on a Mac)</td></tr>
+          <tr><td><span class="k">Shift</span>-drag</td><td>select a box of targets</td></tr>
+          <tr><td><span class="k">Esc</span>, background</td><td>clear focus and selection</td></tr>
+        </table>
+        <p>The toolbar over a focused target: <span class="btn">Run</span> <span class="btn">Invalidate</span> <span class="btn">Value</span> <span class="btn">Copy</span>. A selected group gets <span class="btn">Run {n}</span> <span class="btn">Invalidate {n}</span>.</p>
+      </section>
+
+      <section>
+        <h2>Run from the board</h2>
+        <dl>
+          <dt>▶ Run all</dt><dd><code>tar_make()</code> in a background process; it goes on if the board stops</dd>
+          <dt>■ Stop</dt><dd>kills the run going, wherever it was started</dd>
+          <dt>⌫ Invalidate all</dt><dd><code>tar_invalidate()</code> everything (asks first)</dd>
+          <dt>Keep going after errors</dt><dd>build what it can after an error</dd>
+          <dt>Stop at warnings</dt><dd>warnings become errors, so they leave a workspace</dd>
+        </dl>
+        <p class="tip">The run summary under the buttons counts built, skipped, running, errored and to-go targets, with a clock and the time left. Runs from the console show too.</p>
+      </section>
+
+      <section>
+        <h2>Tabs</h2>
+        <table class="t">
+          <tr><td>Board</td><td>the DAG</td></tr>
+          <tr><td>Problems</td><td>every target that errored or warned</td></tr>
+          <tr><td>Log</td><td>the latest run's output</td></tr>
+          <tr><td>Script</td><td>the loaded script, and where the store, metadata and workspaces are, each path a click to copy</td></tr>
+          <tr><td>tar_visnetwork()</td><td>targets' own graph</td></tr>
+          <tr><td>Metadata</td><td><code>tar_meta()</code>, slowest first</td></tr>
+        </table>
+        <p class="note">The top bar picks the project, the script (type to filter, <span class="k">Enter</span> loads) and the theme. ⟳ Refresh re-reads it all.</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>CC BY SA &middot; targetsboard authors &middot; <a href="https://github.com/Athospd/targetsboard">github.com/Athospd/targetsboard</a></span>
+    <span>Learn targets: <a href="https://books.ropensci.org/targets/">books.ropensci.org/targets</a></span>
+    <span>Updated 2026-11 &middot; targetsboard 0.3.0</span>
+  </div>
+</div>
+
+<!-- ===================== PAGE 2 ===================== -->
+<div class="page">
+  <div class="top" style="border-bottom-color: var(--teal-d)">
+    <img src="../../man/figures/logo.svg" alt="targetsboard hex" style="height:52px">
+    <div>
+      <h1 style="font-size:17pt">Problems, previews &amp; the DAG widget</h1>
+      <p>Find why a target fails, look inside any value, and put the board's DAG in your own Shiny app.</p>
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- Column 1 -->
+    <div class="col">
+      <section>
+        <h2>When a target fails</h2>
+        <p>Its preview opens on the <b>problem</b>: the error or warnings, the <b>traceback</b> through your own functions, its seed and inputs (links), and code to copy:</p>
+        <h3>Reproduce it from what it had</h3>
+<pre>targets::tar_workspace(check) <span class="c"># inputs, globals, seed</span>
+{ <span class="c"># its command</span>
+  stop_if_missing(clean)
+}</pre>
+        <p class="note">Workspaces exist when the pipeline saves them: <code>tar_option_set(workspace_on_error = TRUE)</code>, or switch on <b>Stop at warnings</b> for a warning.</p>
+        <h3>Stop in the debugger inside it</h3>
+<pre>targets::tar_make(
+  names = "check",
+  script = <b>debug_run_script</b>("check"),
+  callr_function = NULL,
+  use_crew = FALSE, as_job = FALSE
+)</pre>
+        <p><span class="fn">debug_run_script</span>(name) writes a script that loads yours and, for this run only, stops in the debugger inside <code>name</code> and skips the rest; yours is untouched. Restart R first.</p>
+      </section>
+
+      <section>
+        <h2>Why outdated?</h2>
+        <p>Hover an outdated target, or open its value: its reasons sit above it, from <code>tar_sitrep()</code> cues with what changed named from <code>tar_network()</code>:</p>
+        <ul>
+          <li>its command changed</li>
+          <li><code>f</code> changed (a function or global)</li>
+          <li>an upstream target is outdated</li>
+          <li>no record in the store; its file, format, seed or cue</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Follow a run in your own app</h2>
+        <p><code>tar_visnetwork()</code> hashes the whole pipeline: slow on big ones. Push only the statuses instead; the widget updates them in place.</p>
+<pre>p &lt;- targets::tar_progress()
+<b>update_targetsboard_status</b>(session, "dag",
+  setNames(p$progress, p$name))</pre>
+      </section>
+    </div>
+
+    <!-- Column 2 -->
+    <div class="col">
+      <section>
+        <h2>Value previews</h2>
+        <p>A frame per value: a header with its <b>class, shape, size in the store, format and build time</b>, a button that copies its <code>tar_read()</code> call, and a tab per <b>view</b>. The last tab, <b>Printed</b>, is what <code>print()</code> shows. ⛶ opens it full screen.</p>
+        <table class="t">
+          <tr><td>data frame</td><td><b>Rows</b>: 1,000 rows, searchable, sortable, a histogram per column; <b>Columns</b>: type, missing, unique, summary</td></tr>
+          <tr><td>vector</td><td>summary and distribution, or value counts</td></tr>
+          <tr><td>ggplot, plot</td><td>drawn at the preview's size</td></tr>
+          <tr><td>list</td><td>its items, two levels deep</td></tr>
+          <tr><td>model</td><td>estimates and fit (broom), or <code>summary()</code></td></tr>
+          <tr><td>pattern</td><td>pick a branch, or all combined</td></tr>
+          <tr><td>file target</td><td>each path in a section: images, PDF, HTML, CSV/TSV as tables, Markdown, text and R code in colour</td></tr>
+          <tr><td>report</td><td><code>tar_render()</code> / <code>tar_quarto()</code>: the rendered document</td></tr>
+        </table>
+        <p class="note">Values over <code>targetsboard.preview_bytes</code> wait for <span class="btn">Load the value</span>.</p>
+      </section>
+
+      <section>
+        <h2>Your own previews</h2>
+        <p><span class="fn">tar_board_preview</span>(x, target, ...) is an S3 generic: a method returns a view, or a named list of views shown as tabs. A view is HTML (a tag, a tag list, an htmlwidget) or a plot wrapped in <span class="fn">tar_board_preview_plot</span>().</p>
+<pre><span class="c"># _targetsboard.R, beside _targets.R</span>
+tar_board_preview.boot_summary &lt;-
+  function(x, target, ...) {
+    list(
+      Estimates = htmltools::tags$pre(
+        format(x$estimates)),
+      Draws = <b>tar_board_preview_plot</b>(
+        function() hist(x$draws))
+    )
+  }</pre>
+        <ul>
+          <li>The board sources <code>_targetsboard.R</code> (only that file) at start and on ⟳ Refresh.</li>
+          <li>Packages register methods with <code>@exportS3Method targetsboard::tar_board_preview</code>.</li>
+          <li>Files: a method for <code>tar_board_file_parquet</code> adds a file type.</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Column 3 -->
+    <div class="col">
+      <section>
+        <h2>The DAG widget in your app</h2>
+<pre>library(shiny); library(targetsboard)
+net &lt;- targets::tar_visnetwork(
+  targets_only = TRUE)$x
+
+ui &lt;- fluidPage(<b>targetsboard</b>("dag",
+  net$nodes, net$edges, height = "600px",
+  options = <b>targetsboard_options</b>(
+    node_actions = c(run = "Run it"))))
+
+server &lt;- function(input, output, session) {
+  observe(print(input$dag_focused_node))
+}
+shinyApp(ui, server)</pre>
+        <h3>Update from the server</h3>
+        <table class="t stack">
+          <tr><td>update_targetsboard()</td><td>a whole new graph; targets keep their place</td></tr>
+          <tr><td>update_targetsboard_status()</td><td>only statuses (light: for a run), warnings, branch counts, hover text, kinds</td></tr>
+          <tr><td>update_targetsboard_options()</td><td>some options, e.g. <code>color_mode</code></td></tr>
+          <tr><td>update_targetsboard_focus()</td><td>focus a target</td></tr>
+          <tr><td>update_targetsboard_selection()</td><td>select targets</td></tr>
+          <tr><td>targetsboard_fit_view()</td><td>bring targets into view</td></tr>
+          <tr><td>targetsboard_export_image()</td><td>ask for a PNG/SVG, then <code>save_targetsboard_image(input$dag_image, path)</code></td></tr>
+        </table>
+        <h3>Inputs it sets: <code>input$dag_*</code></h3>
+        <p><code>focused_node</code> · <code>selected_nodes</code> · <code>running_nodes</code> · <code>double_clicked_node</code> · <code>context_node</code> · <code>node_action</code> <span class="note">(action, node, nodes)</span> · <code>viewport</code> · <code>layout</code> <span class="note">(give it back as <code>layout =</code>)</span> · <code>image</code></p>
+        <h3><code>targetsboard_options()</code></h3>
+        <p><code>color_mode</code> light / dark / system · <code>minimap</code> · <code>controls</code> · <code>legend</code> · <code>background</code> · <code>edge_type</code> · <code>only_render_visible</code> · <code>node_actions</code>, <code>toolbar_actions</code> and their <code>_group_</code> versions · <code>download_image</code></p>
+      </section>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>CC BY SA &middot; targetsboard authors &middot; <a href="https://github.com/Athospd/targetsboard">github.com/Athospd/targetsboard</a></span>
+    <span>Help: <code>?tar_board</code> &middot; <code>?tar_board_preview</code> &middot; <code>?targetsboard</code></span>
+    <span>Updated 2026-11 &middot; targetsboard 0.3.0</span>
+  </div>
+</div>
+
+</body>
+</html>
