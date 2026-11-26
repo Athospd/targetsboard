@@ -24,6 +24,8 @@ active_run <- function() {
     return(NULL)
   handle
 }
+# targets and ps only: the poller runs it in its own process (tar_visnetwork_bg()).
+environment(active_run) <- baseenv()
 
 #' Start `tar_make()` in a background process
 #'

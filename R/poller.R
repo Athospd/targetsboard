@@ -27,7 +27,8 @@ NULL
 #' changed. They hash the pipeline again, so they come after the graph, which
 #' doesn't wait for them. With them goes `manifest`, each target's format and
 #' command (`tar_manifest()`), for its icon (target_kinds()), and its
-#' settings (target_settings()).
+#' settings (target_settings()). The three run in one process of their own
+#' (poller_why()).
 #'
 #' @param script Path to the targets script.
 #' @param interval Seconds between two checks; checks are cheap file stats.
@@ -44,7 +45,8 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
 
   # Runs in the background process: self-contained, it can't call this
   # package's internals.
-  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, filters, sourced_paths, ...) {
+  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, filters, sourced_paths,
+                                      active_run, why, ...) {
     progress_file <- file.path(targets::tar_config_get("store"), "meta", "progress")
 
     # What the script sources (sourced_paths()), read again when it changes;
@@ -64,21 +66,9 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
         refresh = if (file.exists(refresh_path)) readLines(refresh_path, warn = FALSE)
       )
     }
-    # Is the pipeline process targets recorded still running? (A copy of
-    # active_run(): a killed run leaves targets marked dispatched for good.)
-    running <- function() {
-      info <- tryCatch(targets::tar_process(), error = function(e) NULL)
-      if (is.null(info)) return(FALSE)
-      pid <- suppressWarnings(as.integer(info$value[info$name == "pid"]))
-      created <- as.POSIXct(info$value[info$name == "created"], tz = "UTC")
-      if (length(pid) != 1 || is.na(pid) || length(created) != 1 || is.na(created)) return(FALSE)
-      handle <- tryCatch(ps::ps_handle(pid), error = function(e) NULL)
-      if (is.null(handle)) return(FALSE)
-      started <- tryCatch(ps::ps_create_time(handle), error = function(e) NA)
-      isTRUE(tryCatch(ps::ps_is_running(handle), error = function(e) FALSE)) &&
-        !is.na(started) &&
-        abs(as.numeric(difftime(started, created, units = "secs"))) <= 2
-    }
+    # Is the pipeline process targets recorded still running? A killed run
+    # leaves targets marked dispatched for good.
+    running <- function() !is.null(active_run())
 
     computed_code <- NULL
     computed_progress <- NULL # progress mtime of the last recompute
@@ -123,48 +113,15 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
         }
         if (!is.null(widget) && written) {
           reasons_path <- sub("[.]rds$", "_reasons.rds", tar_vis_path) # poller_reasons_path()
-          reasons <- tryCatch({
-            network <- targets::tar_network(script = script, targets_only = FALSE)
-            meta <- targets::tar_meta(fields = "parent", targets_only = TRUE)
-            list(
-              sitrep = as.data.frame(targets::tar_sitrep(script = script)),
-              vertices = as.data.frame(network$vertices[, c("name", "type", "status")]),
-              edges = as.data.frame(network$edges),
-              parents = as.data.frame(meta[!is.na(meta$parent), c("name", "parent")]),
-              progress_mtime = progress_mtime
-            )
-          }, error = function(e) {
-            message("Why outdated failed: ", conditionMessage(e))
-            NULL
+          # Why targets are outdated, and the manifest: one process for the
+          # three, not one each (poller_why()).
+          found <- tryCatch(callr::r(why, args = list(script = script)), error = function(e) {
+            list(errors = c(why = conditionMessage(e)))
           })
-          # Each target's format and command, for its icon (target_kinds()),
-          # and its cue, for why it is up to date (skipped_reasons()): on its
-          # own, so a failure elsewhere doesn't lose it.
-          manifest <- tryCatch(
-            as.data.frame(targets::tar_manifest(script = script, fields = c(
-              "name", "format", "command", "cue_mode", "cue_command", "cue_depend",
-              "cue_file", "cue_format", "cue_repository", "cue_iteration",
-              "pattern", "iteration", "memory", "storage", "retrieval", "deployment",
-              "error", "priority", "repository", "resources"
-            ))),
-            error = function(e) {
-              message("tar_manifest() failed: ", conditionMessage(e))
-              NULL
-            }
-          )
-          # Resources as text, the kinds set and crew's controller: the
-          # objects themselves are environments, not for the app.
-          if (!is.null(manifest) && "resources" %in% names(manifest)) {
-            manifest$resources <- vapply(manifest$resources, function(r) {
-              if (!length(r)) return(NA_character_)
-              kinds <- names(r)
-              controller <- tryCatch(r$crew$controller, error = function(e) NULL)
-              if (is.character(controller) && length(controller) == 1) {
-                kinds[kinds == "crew"] <- sprintf("crew (controller %s)", controller)
-              }
-              paste(kinds, collapse = ", ")
-            }, character(1))
-          }
+          for (error in found$errors) message(error)
+          reasons <- found$reasons
+          manifest <- found$manifest
+          if (!is.null(reasons)) reasons$progress_mtime <- progress_mtime
           if (!is.null(reasons) || !is.null(manifest)) {
             if (is.null(reasons)) reasons <- list(progress_mtime = progress_mtime)
             reasons$manifest <- manifest
@@ -182,7 +139,8 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
     tar_visnetwork_instance,
     args = list(
       script = script, tar_vis_path = tar_vis_path, refresh_path = refresh_path,
-      interval = interval, settle = settle, filters = filters, sourced_paths = sourced_paths, ...
+      interval = interval, settle = settle, filters = filters, sourced_paths = sourced_paths,
+      active_run = active_run, why = poller_why, ...
     ),
     supervise = TRUE,
     poll_connection = TRUE,
@@ -191,6 +149,64 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
   )
   invisible(list(process = bg_process, tar_vis_path = tar_vis_path, refresh_path = refresh_path))
 }
+
+#' Why targets are outdated, and the manifest, for the poller
+#'
+#' What outdated_reasons() reads: `tar_sitrep()`, and `tar_network()` to name
+#' what changed; and `tar_manifest()`, each target's format, command, cue
+#' and settings (target_kinds(), skipped_reasons(), target_settings()). The
+#' poller runs it in a process of its own, where the three load the script
+#' in turn (`callr_function = NULL`) instead of starting a process each. Each part fails on its own. Base R
+#' only, in `baseenv()`: it runs in another process.
+#' @param script Path to the targets script.
+#' @return A list: `reasons` (`sitrep`, `vertices`, `edges`, `parents`) and
+#'   `manifest`, each `NULL` if it failed, and `errors`, the messages.
+#' @noRd
+poller_why <- function(script) {
+  # The script runs in its own environment each time, apart from this one.
+  fresh <- function() new.env(parent = globalenv())
+  errors <- character()
+  reasons <- tryCatch({
+    network <- targets::tar_network(script = script, targets_only = FALSE, callr_function = NULL, envir = fresh())
+    meta <- targets::tar_meta(fields = "parent", targets_only = TRUE)
+    list(
+      sitrep = as.data.frame(targets::tar_sitrep(script = script, callr_function = NULL, envir = fresh())),
+      vertices = as.data.frame(network$vertices[, c("name", "type", "status")]),
+      edges = as.data.frame(network$edges),
+      parents = as.data.frame(meta[!is.na(meta$parent), c("name", "parent")])
+    )
+  }, error = function(e) {
+    errors <<- c(errors, paste("Why outdated failed:", conditionMessage(e)))
+    NULL
+  })
+  manifest <- tryCatch(
+    as.data.frame(targets::tar_manifest(script = script, callr_function = NULL, envir = fresh(), fields = c(
+      "name", "format", "command", "cue_mode", "cue_command", "cue_depend",
+      "cue_file", "cue_format", "cue_repository", "cue_iteration",
+      "pattern", "iteration", "memory", "storage", "retrieval", "deployment",
+      "error", "priority", "repository", "resources"
+    ))),
+    error = function(e) {
+      errors <<- c(errors, paste("tar_manifest() failed:", conditionMessage(e)))
+      NULL
+    }
+  )
+  # Resources as text, the kinds set and crew's controller: the objects
+  # themselves are environments, not for the app.
+  if (!is.null(manifest) && "resources" %in% names(manifest)) {
+    manifest$resources <- vapply(manifest$resources, function(r) {
+      if (!length(r)) return(NA_character_)
+      kinds <- names(r)
+      controller <- tryCatch(r$crew$controller, error = function(e) NULL)
+      if (is.character(controller) && length(controller) == 1) {
+        kinds[kinds == "crew"] <- sprintf("crew (controller %s)", controller)
+      }
+      paste(kinds, collapse = ", ")
+    }, character(1))
+  }
+  list(reasons = reasons, manifest = manifest, errors = errors)
+}
+environment(poller_why) <- baseenv()
 
 # Where the poller writes why its last recompute failed: see tar_visnetwork_bg().
 poller_error_path <- function(tar_vis_path) sub("[.]rds$", ".error", tar_vis_path)

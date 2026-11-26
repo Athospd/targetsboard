@@ -142,3 +142,24 @@ test_that("the poller keeps the board's filters on every redraw (#148)", {
   wait_for_rewrite(poller, first)
   expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b"))
 })
+
+test_that("poller_why() reads the reasons and the manifest in one process, apart from the script (#161)", {
+  local_pipeline(make = TRUE)
+  # A script whose own names clash with poller_why()'s.
+  writeLines(c(
+    "library(targets)",
+    "errors <- 'mine'; reasons <- 1; fresh <- 2",
+    "list(tar_target(a, 1), tar_target(b, a + 2), tar_target(c, b * 2))"
+  ), "_targets.R")
+  found <- callr::r(poller_why, args = list(script = "_targets.R"))
+  expect_equal(found$errors, character())
+  expect_setequal(found$manifest$name, c("a", "b", "c"))
+  expect_true(all(c("sitrep", "vertices", "edges", "parents") %in% names(found$reasons)))
+  expect_equal(outdated_reasons(found$reasons)$b, c(command = "Its command changed."))
+
+  writeLines("stop('broken')", "_targets.R")
+  found <- callr::r(poller_why, args = list(script = "_targets.R"))
+  expect_null(found$reasons)
+  expect_null(found$manifest)
+  expect_match(found$errors, "broken")
+})
