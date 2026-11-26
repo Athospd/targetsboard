@@ -23,18 +23,23 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #' @param show Reactive event: `list(name)`, a target to focus and bring into
 #'   view with what it depends on and what depends on it directly.
 #' @param color_mode Reactive: `"light"` or `"dark"`, the page's mode.
+#' @param tar_meta Reactive: `targets::tar_meta()`, for an unfolded
+#'   pattern's branches.
 #' @return A list of reactives, the widget's events: `focused`, the focused
-#'   target; `double_clicked`, a target double-clicked; and `node_action`, an
-#'   action chosen in a menu or toolbar.
+#'   target; `double_clicked`, a target double-clicked; `node_action`, an
+#'   action chosen in a menu or toolbar; and `branch_clicked`,
+#'   `list(pattern, position)`, a branch of the unfolded pattern clicked.
 #' @noRd
 graph_server <- function(id, board, progress, running, warned_targets, show, color_mode,
                          outdated = shiny::reactive(list()),
                          kinds = shiny::reactive(character()),
-                         costs = shiny::reactive(list())) {
+                         costs = shiny::reactive(list()),
+                         tar_meta = shiny::reactive(NULL)) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(progress), shiny::is.reactive(running),
     shiny::is.reactive(warned_targets), shiny::is.reactive(show), shiny::is.reactive(color_mode),
-    shiny::is.reactive(outdated), shiny::is.reactive(kinds), shiny::is.reactive(costs)
+    shiny::is.reactive(outdated), shiny::is.reactive(kinds), shiny::is.reactive(costs),
+    shiny::is.reactive(tar_meta)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # A new graph: send it whole, with the live statuses on top.
@@ -106,10 +111,26 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
     # opens: in the store's user folder, `_targets/user/`.
     shiny::observeEvent(input$flow_layout, write_board_layout(input$flow_layout))
 
+    # One pattern unfolded at a time (#147): its toolbar's Branches button
+    # unfolds it, and folds it again. Its branches follow the run.
+    unfolded <- shiny::reactiveVal(NULL)
+    shiny::observeEvent(input$flow_node_action, {
+      action <- input$flow_node_action
+      if (!identical(action$action, "unfold")) return()
+      unfolded(if (!identical(unfolded(), action$node)) action$node)
+    })
+    shiny::observe({
+      pattern <- unfolded()
+      if (is.null(pattern)) return(send_command(session, "flow", "unfold"))
+      shown <- pattern_branches(pattern, tar_meta(), progress()$data)
+      send_command(session, "flow", "unfold", pattern = shown$pattern, branches = I(shown$branches), more = shown$more)
+    })
+
     list(
       focused = shiny::reactive(input$flow_focused_node),
       double_clicked = shiny::reactive(input$flow_double_clicked_node),
-      node_action = shiny::reactive(input$flow_node_action)
+      node_action = shiny::reactive(input$flow_node_action),
+      branch_clicked = shiny::reactive(input$flow_branch_click)
     )
   })
 }

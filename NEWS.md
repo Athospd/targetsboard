@@ -114,6 +114,11 @@
   `tar_rep2()`, `tar_map_rep()`), URLs (`format = "url"`), grouped data
   (`iteration = "group"`, as `tar_group_by()` gives) and storage formats
   other than rds (`qs`, `parquet`, ...), from `tar_manifest()` (#157).
+* A pattern unfolds into its branches: its toolbar's Branches button shows
+  them under it as small nodes in their status's colours, failing ones
+  first, up to 50 and then how many more. A click on one opens the
+  pattern's Value pane on that branch; Fold folds it. One pattern at a
+  time (#147).
 
 ## Bug fixes
 

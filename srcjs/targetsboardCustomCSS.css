@@ -143,11 +143,11 @@
   stroke: var(--tb-edge-running-selected);
 }
 
-/* A target's colours, by status. */
-.base-node.tb-status-uptodate { background-color: var(--tb-status-uptodate); color: var(--tb-status-uptodate-text); border-color: var(--tb-status-uptodate-border); }
-.base-node.tb-status-outdated { background-color: var(--tb-status-outdated); color: var(--tb-status-outdated-text); border-color: var(--tb-status-outdated-border); }
-.base-node.tb-status-errored { background-color: var(--tb-status-errored); color: var(--tb-status-errored-text); border-color: var(--tb-status-errored-border); }
-.base-node.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); border-color: var(--tb-status-running-border); }
+/* A target's colours, by status; an unfolded pattern's branches' too. */
+.base-node.tb-status-uptodate, .tb-branch.tb-status-uptodate { background-color: var(--tb-status-uptodate); color: var(--tb-status-uptodate-text); border-color: var(--tb-status-uptodate-border); }
+.base-node.tb-status-outdated, .tb-branch.tb-status-outdated { background-color: var(--tb-status-outdated); color: var(--tb-status-outdated-text); border-color: var(--tb-status-outdated-border); }
+.base-node.tb-status-errored, .tb-branch.tb-status-errored { background-color: var(--tb-status-errored); color: var(--tb-status-errored-text); border-color: var(--tb-status-errored-border); }
+.base-node.tb-status-running, .tb-branch.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); border-color: var(--tb-status-running-border); }
 
 .base-node {
   padding: 0.625rem;
@@ -300,6 +300,37 @@
   font-size: var(--tb-font-size-xxs);
   cursor: pointer;
   box-shadow: 0 2px 6px var(--tb-surface-shadow);
+}
+
+/* An unfolded pattern's branches (NodeActions.js, #147): small nodes, by
+   number, wrapping under it; then how many more. */
+.tb-branches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  max-width: 18rem;
+  padding: 0.25rem;
+  border: 1px solid var(--tb-surface-border);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-surface);
+  color: var(--tb-surface-text);
+  font-size: var(--tb-font-size-xxs);
+  box-shadow: 0 2px 6px var(--tb-surface-shadow);
+}
+
+.tb-branch {
+  min-width: 1.75rem;
+  padding: 0.125rem 0.25rem;
+  border: 1px solid;
+  border-radius: var(--tb-radius-sm);
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.tb-branches-more,
+.tb-branches-none {
+  align-self: center;
+  padding: 0 0.25rem;
 }
 
 .tb-node-toolbar button:hover,

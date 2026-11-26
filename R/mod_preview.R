@@ -46,19 +46,22 @@ preview_ui <- function(id) {
 #' @param outdated Reactive: why outdated targets are (outdated_reasons()).
 #' @param skipped Reactive: why up-to-date targets are (skipped_reasons()).
 #' @param settings Reactive: each target's settings (target_settings()).
+#' @param branch_request Reactive event: `list(pattern, position)`, a branch
+#'   clicked on the canvas, for the preview to show.
 #' @return A list of reactives: `target_link`, the target a link in the
 #'   problem pane asks to show.
 #' @noRd
 preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods,
                            outdated = shiny::reactive(list()), commands = shiny::reactive(character()),
                            rules = shiny::reactive(NULL), skipped = shiny::reactive(list()),
-                           settings = shiny::reactive(NULL), kinds = shiny::reactive(character())) {
+                           settings = shiny::reactive(NULL), kinds = shiny::reactive(character()),
+                           branch_request = shiny::reactive(NULL)) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
     shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(commands),
     shiny::is.reactive(rules), shiny::is.reactive(skipped), shiny::is.reactive(settings),
-    shiny::is.reactive(kinds)
+    shiny::is.reactive(kinds), shiny::is.reactive(branch_request)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -76,9 +79,22 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       bslib::toggle_sidebar("sidebar", open = is_open() && !is.null(focused()))
     })
 
-    # A pattern's preview opens on its first branch; the picker changes it.
+    # A pattern's preview opens on its first branch, or on the branch asked
+    # for on the canvas (#147), which may come before its focus does; the
+    # picker changes it.
     branch <- shiny::reactiveVal(1L)
-    shiny::observeEvent(focused(), branch(1L), priority = 10, ignoreNULL = FALSE)
+    asked <- NULL # list(pattern, position)
+    shiny::observeEvent(branch_request(), {
+      asked <<- branch_request()
+      if (identical(shiny::isolate(focused()), asked$pattern)) {
+        branch(as.integer(asked$position))
+        asked <<- NULL
+      }
+    })
+    shiny::observeEvent(focused(), {
+      branch(if (identical(asked$pattern, focused())) as.integer(asked$position) else 1L)
+      asked <<- NULL
+    }, priority = 10, ignoreNULL = FALSE)
     shiny::observeEvent(input$branch, branch(as.integer(input$branch)))
 
     # A large value is read only when asked: it can take long and fill the
