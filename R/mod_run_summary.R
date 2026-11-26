@@ -40,13 +40,21 @@ run_summary_server <- function(id, board, running, progress, tar_meta = shiny::r
       run_started()
     })
     summary <- shiny::reactive({
-      if (running()) shiny::invalidateLater(1000)
+      is_running <- running()
+      if (is_running) shiny::invalidateLater(1000)
       current <- progress()
+      # A run just started: until targets records it, the process and
+      # progress files are still the last run's (#183).
+      this <- if (is_running) {
+        current_run(current$data, current$mtime, run_started(), recorded = !is.null(active_run()))
+      } else {
+        list(progress = current$data, started = started())
+      }
       graph <- board()$x
       nodes <- graph$nodes
       run_summary(
-        current$data, run_targets(board_targets(nodes), graph$edges, scope()),
-        started = started(), ended = current$mtime, running = running(),
+        this$progress, run_targets(board_targets(nodes), graph$edges, scope()),
+        started = this$started, ended = current$mtime, running = is_running,
         meta = tar_meta(), outdated = outdated_targets(nodes)
       )
     })
@@ -112,7 +120,11 @@ run_targets <- function(targets, edges, names = NULL) {
 #' @noRd
 run_summary <- function(progress, targets = character(), started = NA, ended = NA,
                         running = FALSE, now = Sys.time(), meta = NULL, outdated = character()) {
-  if (is.null(progress) || nrow(progress) == 0) return(NULL)
+  if (is.null(progress) || nrow(progress) == 0) {
+    if (!running) return(NULL)
+    # A run starting: nothing done yet, all to go.
+    progress <- data.frame(name = character(), type = character(), parent = character(), progress = character())
+  }
   built <- progress[!progress$type %in% "pattern", , drop = FALSE]
   count <- function(status) sum(built$progress %in% status)
   end <- if (running) now else ended
@@ -259,6 +271,26 @@ run_summary_values <- function(summary) {
       }
     }
   )
+}
+
+#' What a run going has told so far: none of the last run's records
+#'
+#' The board sees a run it starts before targets records it: until then,
+#' tar_process() and the progress file are the last run's, so the summary
+#' showed its clock and counts for a moment (#183).
+#' @param progress The progress file's rows, or NULL.
+#' @param mtime The progress file's modification time.
+#' @param started When the recorded run's process started (run_started()).
+#' @param recorded Whether the recorded process is the one running
+#'   (active_run()).
+#' @return `progress` (NULL while none is this run's) and `started` (NA while
+#'   unknown).
+#' @noRd
+current_run <- function(progress, mtime, started, recorded) {
+  if (!recorded || is.na(started)) return(list(progress = NULL, started = NA))
+  # Written before this run started: the last run's lines.
+  stale <- length(mtime) != 1 || is.na(mtime) || as.numeric(difftime(mtime, started, units = "secs")) < -1
+  list(progress = if (!stale) progress, started = started)
 }
 
 # When the run's process started, from tar_process(), or NA.

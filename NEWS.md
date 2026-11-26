@@ -57,6 +57,11 @@
 
 ## Bug fixes
 
+* For a moment after a run started, the run summary showed the last run's
+  clock and counts ("Running 0:28" at once, its targets as built). Until
+  targets records the new run, it now shows the run starting: nothing done
+  yet, all to go, the clock once known (#183).
+
 * The run summary of a run of a few targets, from the graph's menus or
   toolbars, counted the rest of the pipeline as still to go ("13 to go"
   after its three were built), and estimated the time left from it. It now
