@@ -772,3 +772,19 @@ pre.hljs {
   width: 1em;
   text-align: center;
 }
+
+/* Every reactable table follows the page (board_table_theme()), but
+   reactable's own stylesheet paints them white (.Reactable, its inputs),
+   with the same specificity as the theme's rules: whichever loads last
+   wins, and a live theme switch (setCurrentTheme()) loads reactable's
+   again, after ours. One more level here wins in any order. */
+html .Reactable {
+  background-color: transparent;
+}
+html .Reactable .rt-filter,
+html .Reactable .rt-search,
+html .Reactable .rt-page-jump,
+html .Reactable .rt-page-size-select {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}

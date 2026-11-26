@@ -36,6 +36,11 @@
 * A click on a legend entry with a single target selected it without marking it
   on the canvas: now it focuses it too, as a click on the target does.
 
+* The Problems and Metadata tables could turn white after picking another
+  theme on the board, barely readable in a dark one: reactable's own
+  stylesheet, loaded again by the switch, won over the theme's colours.
+  The board's rules now win whatever the order (#165).
+
 # targetsboard 0.3.0
 
 ## New features
