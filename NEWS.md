@@ -41,6 +41,12 @@
   targets made by `tar_map()`, `tar_eval()`, `tar_combine()` or hooks, that
   is not always what the author wrote (#144).
 
+* The Value pane has a Debug section, closed at first, for any target and
+  not only failing ones: the Problems pane's Reproduce code (its globals,
+  inputs and seed, then its command) and debug run, for a target that runs
+  but gives a wrong value. A branch gets its debug run, and Reproduce when
+  it has a workspace (#150).
+
 ## Bug fixes
 
 * A redraw of the graph could drop an outdated target's hover text (why it
