@@ -150,6 +150,11 @@ full_id <- function(session, inputId) {
 #'   targets' kinds as they are; else a named character vector, by target,
 #'   of the targets that are a `"file"`, a `"quarto"` report or an
 #'   `"rmarkdown"` report, for their icons. The others are none of these.
+#' @param costs For `update_targetsboard_status()`: `NULL` leaves the
+#'   targets' time and size badges as they are; else a named list, by
+#'   target, of `list(time, size, title, slow, large)`: the badge's text
+#'   ("42 s", "1.2 MB"), its hover text, and whether to accent each part.
+#'   The targets it doesn't list show no badge.
 #' @param branches For `update_targetsboard_status()`: `NULL` leaves the
 #'   branch counts on patterns as they are; otherwise a data frame as
 #'   `targets::tar_progress_branches()` returns, and the patterns it lists
@@ -157,7 +162,7 @@ full_id <- function(session, inputId) {
 #'   none, so a data frame without rows clears them all.
 #' @export
 update_targetsboard_status <- function(session, inputId, statuses = character(), warnings = NULL,
-                                       branches = NULL, reasons = NULL, kinds = NULL) {
+                                       branches = NULL, reasons = NULL, kinds = NULL, costs = NULL) {
   stopifnot(is.character(statuses), !is.null(names(statuses)) || length(statuses) == 0)
   message <- list(
     id = full_id(session, inputId),
@@ -174,6 +179,9 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
   }
   if (!is.null(kinds)) {
     message$kinds <- if (length(kinds)) as.list(kinds) else structure(list(), names = character())
+  }
+  if (!is.null(costs)) {
+    message$costs <- if (length(costs)) costs else structure(list(), names = character())
   }
   session$sendCustomMessage("targetsboard:status", message)
 }

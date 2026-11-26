@@ -8,17 +8,30 @@
   Invalidate. It folds away, and the browser remembers; hide it with
   `targetsboard_options(legend = FALSE)` (#102).
 
-* An icon in each target's top-left corner tells its kind: a pattern, a file
+* An icon in each target's top-right corner tells its kind: a pattern, a file
   (`format = "file"`), a Quarto or R Markdown report, a function or an
   object. A plain target has none. Hover it for its name. The icons take the
   node's text colour, so they read in every status, theme and mode (#103).
+
 * A run summary in the Control Panel, under the run buttons: while a run
   goes, its clock and how many targets it built, skipped, is running, saw
-  error and has still to go; after it, the last run's time and counts,
-  until the next one. As `tar_progress_summary()` counts, from targets' own
+  error and has still to go, with a thin bar of those parts; after it, the
+  last run's time and counts, until the next one. Only its clock ticks: the
+  rest is drawn again when a count changes. As `tar_progress_summary()` counts, from targets' own
   files, so a run started from the console shows too (#140).
 
+* Build times and sizes: two switches in the legend, Times and Sizes, show
+  each built target's last build time and stored size in small text in its
+  bottom-left corner (a pattern's summed over its branches). The slowest
+  and largest tenth get a warm dot. The browser remembers the switches. The
+  Metadata tab (was `tar_meta()`) shows `seconds` and `bytes` readably,
+  slowest first, and the run summary estimates the time left from the
+  targets' last builds (#107).
+
 ## Bug fixes
+
+* A redraw of the graph could drop an outdated target's hover text (why it
+  is outdated) until the board next worked it out.
 
 * A click on a legend entry with a single target selected it without marking it
   on the canvas: now it focuses it too, as a click on the target does.

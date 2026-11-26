@@ -18,14 +18,28 @@ const storage = (use) => {
   }
 };
 
+// The time and size badges' switches, as the author left them.
+const COSTS_KEY = 'targetsboard.costs';
+export const readCostsShown = () => {
+  const saved = storage((s) => s.getItem(COSTS_KEY));
+  try {
+    const parsed = saved ? JSON.parse(saved) : {};
+    return { times: parsed.times === true, sizes: parsed.sizes === true };
+  } catch (e) {
+    return { times: false, sizes: false };
+  }
+};
+export const writeCostsShown = (shown) => storage((s) => s.setItem(COSTS_KEY, JSON.stringify(shown)));
+
 // Functions and globals (targets_only = FALSE) have a status too, but the
 // legend counts targets.
 const isTarget = (node) => !['function', 'object'].includes(node.data?.target_type);
 
 // What each status's colour means, with how many targets have it; a click
-// on one selects them. The colours are the nodes' own (statusColor()), so
+// on one selects them. Under them, the switches of the targets' time and
+// size badges. The colours are the nodes' own (statusColor()), so
 // the legend follows the theme and the mode by itself.
-const StatusLegend = ({ nodes, statuses, statusColor, onSelect }) => {
+const StatusLegend = ({ nodes, statuses, statusColor, onSelect, costsShown, onToggleCost }) => {
   const [open, setOpen] = useState(() => storage((s) => s.getItem(KEY)) !== 'closed');
   const toggle = useCallback(() => {
     setOpen((was) => {
@@ -72,6 +86,23 @@ const StatusLegend = ({ nodes, statuses, statusColor, onSelect }) => {
             );
           })}
         </ul>
+      )}
+      {open && costsShown && (
+        <div className="tb-legend-costs">
+          {[['times', 'Times', 'Each built target\'s last build time'],
+            ['sizes', 'Sizes', 'Each built target\'s stored size']].map(([part, label, title]) => (
+            <label key={part} className="tb-legend-switch" title={title}>
+              <input
+                type="checkbox"
+                role="switch"
+                data-part={part}
+                checked={costsShown[part]}
+                onChange={() => onToggleCost(part)}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -2,7 +2,7 @@
 # used by "a click on a tar_meta() row shows its target on the board".
 # Eight targets in one long chain.
 #
-# Try: after a run, click t6's row in the tar_meta() tab: the board zooms in
+# Try: after a run, click t6's row in the Metadata tab: the board zooms in
 # on t6 and its neighbours, with t1 out of view. Also Tidy vertically and
 # horizontally on a long, thin graph.
 
