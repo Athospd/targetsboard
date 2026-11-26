@@ -33,6 +33,9 @@
 * A redraw of the graph could drop an outdated target's hover text (why it
   is outdated) until the board next worked it out.
 
+* A click on a legend entry with a single target selected it without marking it
+  on the canvas: now it focuses it too, as a click on the target does.
+
 # targetsboard 0.3.0
 
 ## New features

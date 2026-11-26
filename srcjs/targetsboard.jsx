@@ -385,6 +385,14 @@ function Flow({ configuration }) {
     setFocusId(node.id);
     setMenu(null);
   }, []);
+  // A legend entry picks its status's targets. Two or more are a group,
+  // highlighted as one; a single one is focused too, as a click on it would,
+  // since a lone selected target has no mark of its own.
+  const onLegendSelect = useCallback((ids) => {
+    selectOnly(ids);
+    setFocusId(ids.length === 1 ? ids[0] : null);
+    setMenu(null);
+  }, [selectOnly]);
   const onPaneClick = useCallback(() => {
     setFocusId(null);
     setMenu(null);
@@ -799,7 +807,7 @@ function Flow({ configuration }) {
           <LayoutButtons onLayout={onLayout} />
           {options.legend && (
             <StatusLegend
-              nodes={nodes} statuses={STATUSES} statusColor={statusColor} onSelect={selectOnly}
+              nodes={nodes} statuses={STATUSES} statusColor={statusColor} onSelect={onLegendSelect}
               costsShown={costsShown} onToggleCost={toggleCostShown}
             />
           )}

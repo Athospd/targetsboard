@@ -312,6 +312,13 @@ test_that("the status legend counts the targets by status, selects them, and sta
   app$click(selector = entry("outdated"))
   app$wait_for_js("document.querySelectorAll('.react-flow__node.selected').length === 2")
   expect_setequal(unlist(app$get_value(input = "dag_selected_nodes")), c("b", "c"))
+  expect_equal(app$get_js("Array.from(document.querySelectorAll('.react-flow__node.tb-focused')).map(e => e.dataset.id).sort().join()"), "b,c")
+
+  # A status with a single target: selected and focused, so it is marked.
+  app$click(selector = entry("uptodate"))
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='a'].selected.tb-focused\") !== null")
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node.selected').length"), 1)
+  expect_equal(app$get_js("document.querySelectorAll('.react-flow__node.tb-focused').length"), 1)
 
   # Closed, it stays closed after a reload.
   app$click(selector = ".tb-legend-toggle")
