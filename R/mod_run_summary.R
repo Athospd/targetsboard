@@ -19,13 +19,17 @@ run_summary_ui <- function(id) {
 #'   (graph_data_server()).
 #' @param tar_meta Reactive: `tar_meta(targets_only = TRUE)`, for the time
 #'   left (time_left()).
+#' @param scope Reactive: the targets the board's run was asked for, or NULL
+#'   for the whole pipeline (run_server()). Only they and what they depend
+#'   on count as still to go (run_targets()).
 #' @return A reactive: run_summary(), or NULL before any run. It ticks every
 #'   second while a run goes.
 #' @noRd
-run_summary_server <- function(id, board, running, progress, tar_meta = shiny::reactive(NULL)) {
+run_summary_server <- function(id, board, running, progress, tar_meta = shiny::reactive(NULL),
+                               scope = shiny::reactive(NULL)) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(progress),
-    shiny::is.reactive(tar_meta)
+    shiny::is.reactive(tar_meta), shiny::is.reactive(scope)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # When the run's process started: tar_process(), read again when the
@@ -38,9 +42,10 @@ run_summary_server <- function(id, board, running, progress, tar_meta = shiny::r
     summary <- shiny::reactive({
       if (running()) shiny::invalidateLater(1000)
       current <- progress()
-      nodes <- board()$x$nodes
+      graph <- board()$x
+      nodes <- graph$nodes
       run_summary(
-        current$data, board_targets(nodes),
+        current$data, run_targets(board_targets(nodes), graph$edges, scope()),
         started = started(), ended = current$mtime, running = running(),
         meta = tar_meta(), outdated = outdated_targets(nodes)
       )
@@ -60,6 +65,26 @@ run_summary_server <- function(id, board, running, progress, tar_meta = shiny::r
     output$elapsed <- shiny::renderText(format_elapsed(summary()$elapsed))
     summary
   })
+}
+
+#' The targets a run reaches: those asked for and all they depend on
+#'
+#' As `tar_make(names = )` does: it checks what the targets asked for depend
+#' on, and builds what isn't up to date. So a run of three targets doesn't
+#' count the rest of the pipeline as still to go (#181).
+#' @param targets The graph's targets (board_targets()).
+#' @param edges The graph's edges: `from` and `to`.
+#' @param names The targets asked for, or NULL for the whole pipeline.
+#' @noRd
+run_targets <- function(targets, edges, names = NULL) {
+  if (is.null(names)) return(targets)
+  reached <- unique(as.character(names))
+  repeat {
+    more <- setdiff(as.character(edges$from[edges$to %in% reached]), reached)
+    if (!length(more)) break
+    reached <- c(reached, more)
+  }
+  targets[targets %in% reached]
 }
 
 #' The run as a whole: its counts and how long it took

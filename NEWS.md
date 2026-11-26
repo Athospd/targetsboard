@@ -57,6 +57,12 @@
 
 ## Bug fixes
 
+* The run summary of a run of a few targets, from the graph's menus or
+  toolbars, counted the rest of the pipeline as still to go ("13 to go"
+  after its three were built), and estimated the time left from it. It now
+  counts only the targets asked for and what they depend on. A run from the
+  console still counts the whole pipeline (#181).
+
 * Focusing a target highlighted its whole lineage, everything upstream and
   downstream at every level, so a target near the start of the pipeline
   lit up nearly the whole graph. It now highlights its direct inputs and

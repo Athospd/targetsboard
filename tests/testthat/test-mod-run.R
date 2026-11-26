@@ -41,6 +41,27 @@ test_that("Run all and the graph's Run start a run with the modes; Value is not 
   })
 })
 
+test_that("the run's scope: what the board's run was asked for, none for a run from the console (#181)", {
+  skip_on_cran()
+  local_pipeline()
+  args <- run_args()
+  local_mocked_bindings(start_run = function(...) NULL)
+  shiny::testServer(run_server, args = args, {
+    args$action(list(action = "run", nodes = list("a", "b")))
+    session$flushReact()
+    args$running(TRUE)
+    session$flushReact()
+    expect_equal(session$returned$scope(), c("a", "b"))
+    args$running(FALSE)
+    session$flushReact()
+    expect_equal(session$returned$scope(), c("a", "b")) # the last run's, until the next
+
+    args$running(TRUE) # one the board didn't start
+    session$flushReact()
+    expect_null(session$returned$scope())
+  })
+})
+
 test_that("the graph's Invalidate asks first, with the run's namespace on its button", {
   skip_on_cran()
   local_pipeline(make = TRUE)
