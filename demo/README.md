@@ -89,7 +89,8 @@ In each take's folder:
 Take four has its own pipeline (`v4/pipeline.R`, with a second project for
 the projects scene), cards (`v4/cards/`, rendered by `v4/cards.R`) and an
 assembler on top of take three's (`v4/assemble.py`): it adds the hook, the
-tagline card, tooltips drawn in post and the vertical cut. Its
+tagline card, tooltips drawn in post and the vertical cut. Its music is take
+two's synth-funk (`v2/soundtrack.py`). Its
 `record.R` marks the hook's stretches with `hook()` and the vertical cut's
 with `short()`. Check a cut with
 `python demo/v4/assemble.py demo/v4/build - - [--vertical] --stills 5 20`.

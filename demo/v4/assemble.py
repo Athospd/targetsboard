@@ -268,16 +268,15 @@ def vertical(tl, out):
 
 
 # ---- Output -------------------------------------------------------------------------------
-def encode(frames, size, wav, video):
-    frames = list(frames) if wav == "-" else frames
+def encode(frames, size, wav, video, seconds):
     if wav == "-":
-        return len(frames) / FPS
+        return seconds
     ff = imageio_ffmpeg.get_ffmpeg_exe()
     proc = subprocess.Popen(
         [ff, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{size[0]}x{size[1]}",
          "-r", str(FPS), "-i", "-", "-i", wav, "-map", "0:v", "-map", "1:a",
          "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
-         "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", video],
+         "-c:a", "aac", "-b:a", "192k", "-af", f"afade=t=out:st={seconds - 2.5:.2f}:d=2.5", "-shortest", "-movflags", "+faststart", video],
         stdin=subprocess.PIPE)
     n = 0
     for f in frames:
@@ -318,7 +317,7 @@ def main():
     if wav == "-":
         return
     size = (VW, VH) if vertical_cut else (W, H)
-    encode(vertical(tl, out) if vertical_cut else landscape(tl, out), size, wav, video)
+    encode(vertical(tl, out) if vertical_cut else landscape(tl, out), size, wav, video, total)
 
 
 if __name__ == "__main__":

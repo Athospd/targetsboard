@@ -2,7 +2,7 @@
 
   1. record.R            drives the board and logs every event        -> build/
   2. cards.R             the Pulse-brand cards and the thumbnail       -> build/*.png
-  3. ../v3/soundtrack.py synthesizes the music to each cut's length    -> build/*.wav
+  3. ../v2/soundtrack.py synthesizes the music (take two's synth-funk) to each cut's length -> build/*.wav
   4. assemble.py         the hook, the take, the cards, the vertical cut -> the videos
 
     python demo/v4/make-demo-v4.py              # everything
@@ -61,7 +61,7 @@ def main():
     (OUT / "thumbnail.png").replace(THUMB)
     for flags, video, wav in [([], VIDEO, "soundtrack.wav"), (["--vertical"], SHORT, "soundtrack-v.wav")]:
         seconds = total(*flags)
-        run(sys.executable, str(DEMO / "v3" / "soundtrack.py"), f"{seconds + 0.5:.2f}", str(OUT / wav))
+        run(sys.executable, str(DEMO / "v2" / "soundtrack.py"), f"{seconds + 0.5:.2f}", str(OUT / wav))
         run(sys.executable, str(HERE / "assemble.py"), str(OUT), str(OUT / wav), str(video), *flags)
         print(f"{video} ({seconds:.1f} s)")
     print(THUMB)
