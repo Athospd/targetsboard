@@ -41,11 +41,20 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
 
   # Runs in the background process: self-contained, it can't call this
   # package's internals.
-  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, ...) {
+  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, sourced_paths, ...) {
     progress_file <- file.path(targets::tar_config_get("store"), "meta", "progress")
 
+    # What the script sources (sourced_paths()), read again when it changes;
+    # their folders are listed every time, so a new file there counts too.
+    sourced <- list(mtime = NULL, paths = "R")
     code_signature <- function() {
-      files <- c(script, sort(list.files("R", pattern = "[.][Rr]$", recursive = TRUE, full.names = TRUE)))
+      mtime <- file.mtime(script)
+      if (!identical(mtime, sourced$mtime)) sourced <<- list(mtime = mtime, paths = sourced_paths(script))
+      listed <- lapply(sourced$paths, function(path) {
+        if (dir.exists(path)) list.files(path, pattern = "[.][Rr]$", recursive = TRUE, full.names = TRUE)
+        else if (file.exists(path)) path
+      })
+      files <- c(script, sort(unique(unlist(listed))))
       list(
         files = files,
         mtimes = file.mtime(files),
@@ -151,7 +160,7 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
     tar_visnetwork_instance,
     args = list(
       script = script, tar_vis_path = tar_vis_path, refresh_path = refresh_path,
-      interval = interval, settle = settle, ...
+      interval = interval, settle = settle, sourced_paths = sourced_paths, ...
     ),
     supervise = TRUE,
     poll_connection = TRUE,
@@ -181,3 +190,54 @@ script_error_text <- function(script, message) {
     "The error: ", message
   )
 }
+
+#' The files and folders a targets script sources
+#'
+#' The literal paths of its `tar_source()` and `source()` calls, anywhere in
+#' it, and `R/`, `tar_source()`'s default: the poller redraws when a `.R`
+#' file in them changes. A path built at run time (`file.path(dir, "f.R")`)
+#' isn't read. Base R only, in `baseenv()`: it runs in the poller, another
+#' process, where this package's internals aren't loaded.
+#' @param script Path to the targets script.
+#' @return A character vector of paths, `"R"` first.
+#' @noRd
+sourced_paths <- function(script) {
+  exprs <- tryCatch(parse(script, keep.source = FALSE), error = function(e) expression())
+  found <- character()
+  # The literal strings of an argument: "a", or c("a", "b").
+  literal <- function(arg) {
+    if (is.character(arg)) return(arg)
+    if (is.call(arg) && identical(arg[[1]], as.name("c"))) {
+      parts <- as.list(arg)[-1]
+      if (length(parts) && all(vapply(parts, is.character, logical(1)))) return(unlist(parts))
+    }
+    character()
+  }
+  visit <- function(x) {
+    if (!is.call(x)) return(invisible())
+    fn <- x[[1]]
+    name <- if (is.name(fn)) {
+      as.character(fn)
+    } else if (is.call(fn) && length(fn) == 3 && as.character(fn[[1]]) %in% c("::", ":::")) {
+      as.character(fn[[3]])
+    } else {
+      ""
+    }
+    if (name %in% c("tar_source", "source", "sys.source")) {
+      args <- as.list(x)[-1]
+      named <- if (is.null(names(args))) rep("", length(args)) else names(args)
+      arg <- if ("files" %in% named) {
+        args[["files"]]
+      } else if ("file" %in% named) {
+        args[["file"]]
+      } else if (length(args) && !nzchar(named[[1]])) {
+        args[[1]]
+      }
+      found <<- c(found, if (is.null(arg) && name == "tar_source") "R" else if (!is.null(arg)) literal(arg))
+    }
+    for (part in as.list(x)[-1]) if (!missing(part)) visit(part)
+  }
+  for (expr in exprs) visit(expr)
+  unique(c("R", found))
+}
+environment(sourced_paths) <- baseenv()
