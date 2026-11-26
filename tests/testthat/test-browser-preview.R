@@ -129,11 +129,13 @@ test_that("the preview's buttons and links work in the browser", {
   # A problem: its code copied, and its input's link shows that target.
   open_preview(app, "bad")
   app$wait_for_js("document.querySelector('.tb-problem .tb-input-link') !== null", timeout = preview_timeout)
-  app$click(selector = ".tb-problem .tb-copy")
+  # Clicked through JS: the pane can re-render between app$click()'s lookup
+  # and its click ("No node with given id found", main's CI 2026-11-26).
+  app$run_js("document.querySelector('.tb-problem .tb-copy').click()")
   app$wait_for_js("window.__copied !== null && window.__copied.includes('targets::tar_')")
   app$wait_for_js("document.querySelector('.tb-problem .tb-copy').textContent === 'Copied'")
   app$wait_for_js("document.querySelector('.tb-problem .tb-copy').textContent === 'Copy'")
-  app$click(selector = ".tb-problem .tb-input-link[data-target='a']")
+  app$run_js("document.querySelector('.tb-problem .tb-input-link[data-target=\"a\"]').click()")
   app$wait_for_js(paste0(node_js("a"), ".classList.contains('tb-focused')"))
 
   # A run that errors: its notification's link shows the problem.
