@@ -65,7 +65,7 @@ body {
 .tb-modal-list { max-height: 14rem; overflow-y: auto; }
 .tb-modal-list .list-group-item { padding: 0.3rem 0.75rem; }
 .tb-problem-error { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); padding: 0.5rem; border-radius: var(--bs-border-radius-sm); }
-.tb-problem-warnings { color: var(--bs-warning-text-emphasis); padding-left: 1.2rem; }
+.tb-problem-warnings { color: var(--bs-warning-text-emphasis); }
 .tb-traceback-own pre { border-left: 3px solid var(--bs-primary); padding-left: 0.5rem; }
 .tb-traceback-packages summary { color: var(--bs-secondary-color); cursor: pointer; font-size: var(--tb-font-size-xs); }
 .tb-code { margin-top: 0.75rem; }

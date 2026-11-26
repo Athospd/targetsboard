@@ -403,3 +403,11 @@ test_that("the preview's problem follows its target, not the graph's redraws (#1
     expect_equal(built, before + 1)
   })
 })
+
+test_that("a target's warnings show as targets stored them, not split on \". \" (#203)", {
+  # targets joins a target's warnings with ". ": one warning with a ". " in
+  # it can't be told from two, so the text is shown whole.
+  html <- as.character(problem_details(list(warnings = "Removed 3 rows. Check the input"), list()))
+  expect_match(html, "<p class=\"tb-problem-warnings\">Removed 3 rows. Check the input</p>", fixed = TRUE)
+  expect_no_match(html, "<li>", fixed = TRUE)
+})

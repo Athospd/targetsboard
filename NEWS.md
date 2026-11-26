@@ -95,6 +95,10 @@
 
 ## Bug fixes
 
+* The Problems pane no longer cuts one warning into several at ". ":
+  targets stores a target's warnings joined by ". ", so they are shown as
+  stored (#203).
+
 * Dark mode is remembered: a page reloaded in dark mode stays dark, as
   the theme already did. A dark-only theme's dark isn't taken for yours,
   and with the `targetsboard.theme` option your mode is still remembered
