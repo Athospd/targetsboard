@@ -86,3 +86,53 @@ test_that("the board's preview of a pattern follows its picker, and opens on bra
     expect_match(output[["board-preview-content"]]$html, 'max="4" value="1"', fixed = TRUE)
   })
 })
+
+test_that("a value that errored under error = 'null' is called a stand-in", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  writeLines(c(
+    "library(targets)",
+    "tar_option_set(error = 'null')",
+    "list(",
+    "  tar_target(i, 1:4),",
+    "  tar_target(some, if (i %% 2 == 0) stop('even ', i) else i * 10, pattern = map(i)),",
+    "  tar_target(fails, stop('no data')),",
+    "  tar_target(fine, 1)",
+    ")"
+  ), file.path(dir, "_targets.R"))
+  withr::local_dir(dir)
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  # A branch that errored: its NULL is a stand-in, with its error.
+  second <- preview_target("some", "_targets", branch = 2)
+  expect_equal(second$stand_in, "even 2")
+  note <- stand_in_note(second)
+  expect_match(note, 'This branch errored ("even 2"): with error = "null", targets stored NULL in its place', fixed = TRUE)
+  html <- as.character(preview_frame(second, build_preview(NULL, second)))
+  expect_match(html, "NULL is a stand-in, not its result.", fixed = TRUE)
+
+  # A branch that built is no stand-in.
+  expect_null(preview_target("some", "_targets", branch = 1)$stand_in)
+  expect_null(stand_in_note(preview_target("some", "_targets", branch = 1)))
+
+  # All branches: tar_read() leaves the stand-ins out, and the note says which.
+  all <- preview_target("some", "_targets", branch = 0)
+  expect_equal(all$pattern$stand_ins, c(2L, 4L))
+  expect_length(read_preview_value(all, "_targets"), 2)
+  expect_equal(
+    stand_in_note(all),
+    '2 of 4 branches errored and are left out: with error = "null", each stored NULL in its place (branches 2, 4).'
+  )
+
+  # A plain target, and one that errored.
+  expect_null(stand_in_note(preview_target("fine", "_targets")))
+  expect_match(stand_in_note(preview_target("fails", "_targets")), 'This target errored ("no data")', fixed = TRUE)
+})
+
+test_that("a long list of stand-in branches is cut, and a message too", {
+  many <- list(name = "p", pattern = list(branches = 40L, branch = 0L, stand_ins = 1:12))
+  expect_match(stand_in_note(many), "12 of 40 branches errored .* [(]branches 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 and 2 more[)][.]$")
+  long <- list(name = "t", stand_in = strrep("x", 300))
+  expect_match(stand_in_note(long), paste0('("', strrep("x", 199), intToUtf8(8230L), '")'), fixed = TRUE)
+  expect_match(stand_in_note(list(name = "t", stand_in = "")), "^This target errored: with", fixed = FALSE)
+})
