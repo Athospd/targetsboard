@@ -92,6 +92,10 @@
   inputs and seed, then its command) and debug run, for a target that runs
   but gives a wrong value. A branch gets its debug run, and Reproduce when
   it has a workspace (#150).
+* Six fewer Bootswatch themes in the picker: Brite, Flatly, Litera, Lux,
+  Sketchy and Yeti are gone. A browser that remembered one starts on
+  Targets board; `options(targetsboard.theme = )` naming one is an error
+  that lists the themes.
 
 ## Bug fixes
 
