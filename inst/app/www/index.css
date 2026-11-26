@@ -101,11 +101,14 @@ body {
   padding-top: 0.75rem;
   font-size: var(--tb-font-size-sm, 0.875rem);
 }
+/* "Last run" / "Running": small and muted, so the counts lead (#177). */
 .tb-run-summary-title {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-weight: 600;
+  font-size: var(--tb-font-size-xs);
+  font-weight: 500;
+  color: var(--bs-secondary-color);
 }
 .tb-run-dot {
   width: 0.5rem;
@@ -739,9 +742,10 @@ pre.hljs {
   width: auto;
   flex: none;
 }
+/* The Control Panel's title as the tab names are set (#177). */
 .bslib-page-sidebar > .bslib-sidebar-layout > .sidebar .sidebar-title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--bs-nav-link-font-size, 1rem);
+  font-weight: var(--bs-nav-link-font-weight, var(--bs-body-font-weight));
 }
 
 /* The theme picker and the dark mode button (R/mod_theme.R). The select in

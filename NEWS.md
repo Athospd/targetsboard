@@ -96,6 +96,9 @@
   Sketchy and Yeti are gone. A browser that remembered one starts on
   Targets board; `options(targetsboard.theme = )` naming one is an error
   that lists the themes.
+* The Control Panel's title is set as the tab names are, and the run
+  summary's "Last run" or "Running" is small and muted, so its counts lead
+  (#177).
 
 ## Bug fixes
 
