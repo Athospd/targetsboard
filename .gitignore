@@ -23,4 +23,6 @@ _targets_examples
 # renders its frames and audio to its own build/ folder
 demo/**/*.mp4
 demo/**/build/
+demo/**/*-thumbnail.png
+demo/**/cards/.render-*.html
 __pycache__/
