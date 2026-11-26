@@ -95,6 +95,10 @@
 
 ## Bug fixes
 
+* A run the user stopped no longer shows the green "done" dot with its
+  canceled targets in the bar's red: the summary says it stopped, with a
+  grey dot, and canceled targets have a grey part of the bar (#204).
+
 * Dark mode is remembered: a page reloaded in dark mode stays dark, as
   the theme already did. A dark-only theme's dark isn't taken for yours,
   and with the `targetsboard.theme` option your mode is still remembered

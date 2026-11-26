@@ -119,6 +119,7 @@ body {
   animation: tb-pulse 1.2s ease-in-out infinite;
 }
 .tb-run-summary-errored .tb-run-dot { background: var(--bs-danger); }
+.tb-run-summary-stopped .tb-run-dot { background: var(--bs-secondary-color); }
 @keyframes tb-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
@@ -147,6 +148,7 @@ body {
 .tb-run-bar-built { background: var(--bs-success); }
 .tb-run-bar-skipped { background: var(--bs-secondary-color); opacity: 0.5; }
 .tb-run-bar-errored { background: var(--bs-danger); }
+.tb-run-bar-canceled { background: var(--bs-secondary-color); }
 .tb-run-bar-running { background: var(--bs-warning); }
 .tb-run-counts {
   display: grid;
