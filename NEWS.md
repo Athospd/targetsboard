@@ -28,6 +28,10 @@
   slowest first, and the run summary estimates the time left from the
   targets' last builds (#107).
 
+* A target's description (`tar_target(description = )`, or
+  `tarchetypes::tar_map(descriptions = )`'s) shows when hovering it on the
+  canvas, before why it is outdated, and at the top of its Value pane (#143).
+
 * The board redraws when a function changes in any file the script sources:
   the literal paths of its `tar_source()` and `source()` calls (a folder, or
   a file), not only `R/` (#152).
@@ -39,6 +43,12 @@
 
 * A click on a legend entry with a single target selected it without marking it
   on the canvas: now it focuses it too, as a click on the target does.
+
+* `tar_board(names = , allow = , exclude = , ...)` kept the subset only for
+  the first drawing: the first change to the pipeline brought back the whole
+  graph. The board now redraws with them every time, tidyselect expressions
+  such as `names = starts_with("model")` included. Another script loaded
+  from the board is drawn whole (#148).
 
 # targetsboard 0.3.0
 
