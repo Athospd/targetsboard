@@ -14,7 +14,9 @@ test_that("the Control Panel counts a run as it goes, then keeps the last run", 
 
   app$click(selector = "#board-run-all")
   summary <- "document.querySelector('.tb-run-summary')"
-  app$wait_for_js(paste0(summary, " !== null && ", summary, ".classList.contains('tb-run-summary-running')"),
+  # The clock is an output of its own: it fills in a flush after the block.
+  app$wait_for_js(paste0(summary, " !== null && ", summary, ".classList.contains('tb-run-summary-running')",
+                         " && /[0-9]+:[0-9]{2}/.test(", summary, ".innerText)"),
                   timeout = 30000)
   text <- app$get_js(paste0(summary, ".innerText"))
   expect_match(text, "Running")

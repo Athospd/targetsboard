@@ -7,6 +7,13 @@ import TypeIcon, { targetKind } from './TypeIcon';
 // or running. Hovered, an outdated one says why (data.why). Its kind, when
 // not a plain target, shows as an icon (TypeIcon); its last build's time and
 // size, as a badge under it (data.cost).
+// The hover text: the target's description (tar_target(description = )),
+// then why it is outdated, if it is.
+const nodeTitle = (data) => {
+  const parts = [data?.description, data?.why].filter((part) => typeof part === 'string' && part.trim() !== '');
+  return parts.length ? parts.join('\n\n') : undefined;
+};
+
 const BaseNode = ({
   id,
   data,
@@ -18,7 +25,7 @@ const BaseNode = ({
   // Its colours come from the status's tokens, in targetsboardCustomCSS.css.
   const kind = targetKind(data?.target_type, data?.kind);
   return (
-    <div className={`base-node tb-status-${status}` + (kind ? ' tb-has-type-icon' : '')} title={data?.why ?? undefined}>
+    <div className={`base-node tb-status-${status}` + (kind ? ' tb-has-type-icon' : '')} title={nodeTitle(data)}>
       <FocusedNodeToolbar id={id} />
       <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
       <TypeIcon kind={kind} />

@@ -31,17 +31,19 @@ NULL
 #' @param script Path to the targets script.
 #' @param interval Seconds between two checks; checks are cheap file stats.
 #' @param settle Seconds without progress before a run counts as ended.
+#' @param filters More arguments to [targets::tar_visnetwork()], from
+#'   visnetwork_filters(): values, or expressions kept for tidyselect.
 #' @param ... Passed on to [targets::tar_visnetwork()].
 #' @return A list: the `process` ([callr::r_bg()]), `tar_vis_path` and
 #'   `refresh_path`.
 #' @noRd
-tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
+tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list(), ...) {
   tar_vis_path <- tempfile("tar_visnetwork_", fileext = ".rds")
   refresh_path <- sub("[.]rds$", ".refresh", tar_vis_path)
 
   # Runs in the background process: self-contained, it can't call this
   # package's internals.
-  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, ...) {
+  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, filters, ...) {
     progress_file <- file.path(targets::tar_config_get("store"), "meta", "progress")
 
     code_signature <- function() {
@@ -88,7 +90,7 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
       if (!identical(code, computed_code) || run_ended) {
         error_path <- sub("[.]rds$", ".error", tar_vis_path) # poller_error_path()
         widget <- tryCatch(
-          targets::tar_visnetwork(script = script, ...),
+          do.call(targets::tar_visnetwork, c(list(script = script, ...), filters)),
           error = function(e) {
             message("tar_visnetwork() failed: ", conditionMessage(e))
             writeLines(conditionMessage(e), error_path)
@@ -151,7 +153,7 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, ...) {
     tar_visnetwork_instance,
     args = list(
       script = script, tar_vis_path = tar_vis_path, refresh_path = refresh_path,
-      interval = interval, settle = settle, ...
+      interval = interval, settle = settle, filters = filters, ...
     ),
     supervise = TRUE,
     poll_connection = TRUE,
