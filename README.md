@@ -41,9 +41,9 @@ it, the pane shows the error, its traceback and the code to reproduce
 it; the script is fixed, only that target is rebuilt, and nothing else
 reruns](https://raw.githubusercontent.com/Athospd/targetsboard/logo-concepts/demo/readme-demo.gif)<!-- -->
 
-**[Watch the full demo](https://youtu.be/pEsTN9rke2U)** (under 2
-minutes, with sound): a pipeline running, shaping the DAG, value
-previews, and an error found, fixed and rebuilt.
+**[Cheatsheet
+(PDF)](https://github.com/Athospd/targetsboard/blob/main/dev/cheatsheet/targetsboard-cheatsheet.pdf)**:
+the whole board on two pages.
 
 **Early stage.** Help, support and ideas are welcome!
 
