@@ -38,7 +38,8 @@ update_targetsboard_status(
   statuses = character(),
   warnings = NULL,
   branches = NULL,
-  reasons = NULL
+  reasons = NULL,
+  kinds = NULL
 )
 
 update_targetsboard_focus(session, inputId, node = NULL)
@@ -109,6 +110,11 @@ none, so a data frame without rows clears them all.}
 targets' tooltips as they are; else a named character vector, every
 target's text shown on hovering it (why it is outdated), the others
 showing none.}
+
+\item{kinds}{For \code{update_targetsboard_status()}: \code{NULL} leaves the
+targets' kinds as they are; else a named character vector, by target,
+of the targets that are a \code{"file"}, a \code{"quarto"} report or an
+\code{"rmarkdown"} report, for their icons. The others are none of these.}
 
 \item{node}{For \code{update_targetsboard_focus()}: the id of the target to
 focus and select alone, as a click does, or \code{NULL} to clear the focus

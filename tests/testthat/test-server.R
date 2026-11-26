@@ -560,7 +560,7 @@ test_that("during a run, patterns show their branch counts; they go when it stop
   server <- local_app_server()
   sent <- list()
   local_mocked_bindings(update_targetsboard_status = function(session, inputId, statuses = character(),
-                                                              warnings = NULL, branches = NULL, reasons = NULL) {
+                                                              warnings = NULL, branches = NULL, reasons = NULL, ...) {
     if (!is.null(branches)) sent[[length(sent) + 1]] <<- branches
   })
 

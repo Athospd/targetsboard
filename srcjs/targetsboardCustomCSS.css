@@ -197,6 +197,20 @@
   position: relative;
 }
 
+/* A target's kind, but a plain one's (TypeIcon.js): in its inner top-left
+   corner, in its text colour, clear of the warning mark on the corner. */
+.tb-type-icon {
+  position: absolute;
+  top: 5px;
+  left: 11px;
+  display: flex;
+  opacity: 0.85;
+  line-height: 0;
+}
+.base-node.tb-has-type-icon {
+  padding-inline: 1.5rem; /* the label stays clear of the icon */
+}
+
 .warning-mark {
   position: absolute;
   top: -8px;
