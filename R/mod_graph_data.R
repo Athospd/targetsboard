@@ -4,7 +4,8 @@
 #' and the store. The graph as the poller last recomputed it
 #' (`poller_board`), why the script doesn't load (`script_error`), the run's
 #' live `progress`, whether a run is going (`running`), `tar_meta()`
-#' (`tar_meta`), the targets that warned (`warned_targets`) and why the
+#' (`tar_meta`), the targets that warned (`warned_targets`), each built
+#' target's time and size (`costs`, target_costs()) and why the
 #' outdated ones are outdated (`outdated`, outdated_reasons()) and the
 #' targets that are files or reports (`kinds`, target_kinds()).
 #'
@@ -75,6 +76,8 @@ graph_data_server <- function(id, backend) {
 
     # Targets whose last build raised warnings, for the warning marks.
     warned_targets <- shiny::reactive(warned_targets_of(tar_meta_data()))
+    # Each built target's time and size, for its badge (target_costs()).
+    costs <- shiny::reactive(target_costs(tar_meta_data()))
 
     # What the poller writes after the graph: why the outdated targets are,
     # and each target's definition, for its icon.
@@ -101,6 +104,7 @@ graph_data_server <- function(id, backend) {
       running = running,
       tar_meta = tar_meta_data,
       warned_targets = warned_targets,
+      costs = costs,
       outdated = outdated,
       kinds = kinds
     )

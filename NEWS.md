@@ -18,6 +18,18 @@
   until the next one. As `tar_progress_summary()` counts, from targets' own
   files, so a run started from the console shows too (#140).
 
+* Build times and sizes: two switches in the legend, Times and Sizes, show
+  each built target's last build time and stored size in a badge under it
+  (a pattern's summed over its branches). The slowest and largest tenth get
+  a warm accent. The browser remembers the switches. The `tar_meta()` tab
+  shows `seconds` and `bytes` readably, slowest first, and the run summary
+  estimates the time left from the targets' last builds (#107).
+
+## Bug fixes
+
+* A redraw of the graph could drop an outdated target's hover text (why it
+  is outdated) until the board next worked it out.
+
 # targetsboard 0.3.0
 
 ## New features

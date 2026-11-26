@@ -17,11 +17,16 @@ run_summary_ui <- function(id) {
 #' @param running Reactive: whether the pipeline is running.
 #' @param progress Reactive: the progress file's `list(mtime, data)`
 #'   (graph_data_server()).
+#' @param tar_meta Reactive: `tar_meta(targets_only = TRUE)`, for the time
+#'   left (time_left()).
 #' @return A reactive: run_summary(), or NULL before any run. It ticks every
 #'   second while a run goes.
 #' @noRd
-run_summary_server <- function(id, board, running, progress) {
-  stopifnot(shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(progress))
+run_summary_server <- function(id, board, running, progress, tar_meta = shiny::reactive(NULL)) {
+  stopifnot(
+    shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(progress),
+    shiny::is.reactive(tar_meta)
+  )
   shiny::moduleServer(id, function(input, output, session) {
     # When the run's process started: tar_process(), read again when the
     # progress file changes or a run starts or stops (a new run rewrites both).
@@ -33,9 +38,11 @@ run_summary_server <- function(id, board, running, progress) {
     summary <- shiny::reactive({
       if (running()) shiny::invalidateLater(1000)
       current <- progress()
+      nodes <- board()$x$nodes
       run_summary(
-        current$data, board_targets(board()$x$nodes),
-        started = started(), ended = current$mtime, running = running()
+        current$data, board_targets(nodes),
+        started = started(), ended = current$mtime, running = running(),
+        meta = tar_meta(), outdated = outdated_targets(nodes)
       )
     })
     output$summary <- shiny::renderUI(run_summary_tags(summary()))
@@ -54,12 +61,16 @@ run_summary_server <- function(id, board, running, progress) {
 #' @param ended The progress file's modification time: the run's last news.
 #' @param running Whether the run is going.
 #' @param now The time, for the clock of a run going.
+#' @param meta `tar_meta(targets_only = TRUE)`, for the time left, or NULL.
+#' @param outdated The graph's targets that aren't up to date: of those the
+#'   run hasn't reached, only these count for the time left.
 #' @return NULL when there is no run to tell of, or a list of `running`,
-#'   `elapsed` (seconds, NA when unknown) and the counts `built`, `skipped`,
-#'   `running_targets`, `errored`, `canceled` and `to_go`.
+#'   `elapsed` (seconds, NA when unknown), the counts `built`, `skipped`,
+#'   `running_targets`, `errored`, `canceled` and `to_go`, and while running
+#'   `left`, time_left()'s estimate (or NULL).
 #' @noRd
 run_summary <- function(progress, targets = character(), started = NA, ended = NA,
-                        running = FALSE, now = Sys.time()) {
+                        running = FALSE, now = Sys.time(), meta = NULL, outdated = character()) {
   if (is.null(progress) || nrow(progress) == 0) return(NULL)
   built <- progress[!progress$type %in% "pattern", , drop = FALSE]
   count <- function(status) sum(built$progress %in% status)
@@ -75,7 +86,11 @@ run_summary <- function(progress, targets = character(), started = NA, ended = N
     errored = count("errored"),
     canceled = count("canceled"),
     # The targets the run hasn't reached: no line in the progress file yet.
-    to_go = sum(!targets %in% c(progress$name, progress$parent))
+    to_go = sum(!targets %in% c(progress$name, progress$parent)),
+    left = if (running) {
+      to_go <- intersect(targets[!targets %in% c(progress$name, progress$parent)], outdated)
+      time_left(progress, to_go, meta)
+    }
   )
 }
 
@@ -113,7 +128,18 @@ run_summary_tags <- function(summary) {
       title,
       if (!is.na(elapsed)) shiny::tags$span(class = "tb-run-elapsed", elapsed)
     ),
-    shiny::tags$div(class = "tb-run-counts", Filter(Negate(is.null), counts))
+    shiny::tags$div(class = "tb-run-counts", Filter(Negate(is.null), counts)),
+    if (!is.null(summary$left) && (summary$left$seconds > 0 || summary$left$unknown > 0)) {
+      shiny::tags$div(
+        class = "tb-run-left",
+        title = "From the targets' last builds",
+        if (summary$left$seconds > 0) {
+          paste0("About ", format_elapsed(summary$left$seconds), if (summary$left$unknown > 0) "+", " left")
+        } else {
+          "Time left unknown: never built before"
+        }
+      )
+    }
   )
 }
 
@@ -124,4 +150,11 @@ run_started <- function() {
   if (length(created) != 1) return(NA)
   # targets writes it in UTC.
   as.POSIXct(created, tz = "UTC")
+}
+
+# The graph's targets that aren't up to date.
+outdated_targets <- function(nodes) {
+  targets <- board_targets(nodes)
+  if (!"status" %in% names(nodes)) return(targets)
+  intersect(targets, as.character(nodes$id[!nodes$status %in% c("uptodate", "completed", "skipped")]))
 }
