@@ -21,8 +21,8 @@
 * Build times and sizes: two switches in the legend, Times and Sizes, show
   each built target's last build time and stored size in a badge under it
   (a pattern's summed over its branches). The slowest and largest tenth get
-  a warm accent. The browser remembers the switches. The `tar_meta()` tab
-  shows `seconds` and `bytes` readably, slowest first, and the run summary
+  a warm accent. The browser remembers the switches. The Metadata tab
+  (was `tar_meta()`) shows `seconds` and `bytes` readably, slowest first, and the run summary
   estimates the time left from the targets' last builds (#107).
 
 ## Bug fixes

@@ -495,7 +495,7 @@ test_that("the graph follows the page's dark mode switch", {
   })
 })
 
-test_that("a row clicked in the tar_meta() table shows its target on the board", {
+test_that("a row clicked in the Metadata table shows its target on the board", {
   skip_on_cran()
   local_pipeline(make = TRUE)
   server <- local_app_server()

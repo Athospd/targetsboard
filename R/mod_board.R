@@ -59,7 +59,7 @@ board_tabs_ui <- function(ns, metadata, layout) {
     bslib::nav_panel("Log", value = "log", log_ui(ns("log"))),
     bslib::nav_panel("Script", value = "script", script_view_ui(ns("script_view"))),
     bslib::nav_panel("tar_visnetwork()", value = "tar_visnetwork", visnetwork_ui(ns("visnetwork"))),
-    bslib::nav_panel("tar_meta()", value = "tar_meta", meta_ui(ns("meta"))),
+    bslib::nav_panel("Metadata", value = "tar_meta", meta_ui(ns("meta"))),
     if (board_dev_mode()) {
       bslib::nav_panel("Internals", value = "internals", internals_ui(ns("internals")))
     }
@@ -125,7 +125,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     # Under the run buttons: the run going, or the last one.
     run_summary_server("run_summary", board, data$running, data$progress, data$tar_meta)
 
-    # A target picked in the tar_meta() table or a problem's links: on the
+    # A target picked in the Metadata table or a problem's links: on the
     # Board tab, focused; a problem picked, with its Problem in the preview.
     show_on_board <- function(name, preview = FALSE) {
       bslib::nav_select("view", "board")

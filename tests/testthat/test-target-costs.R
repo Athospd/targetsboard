@@ -90,7 +90,7 @@ test_that("the run summary says the time left while running, not after", {
   expect_no_match(as.character(run_summary_tags(done)), "left")
 })
 
-test_that("the tar_meta() table shows times and sizes readably, slowest first", {
+test_that("the Metadata table shows times and sizes readably, slowest first", {
   meta <- data.frame(name = c("a", "b"), seconds = c(1.5, 90), bytes = c(1500, NA))
   columns <- meta_columns(meta)
   expect_equal(columns$seconds$cell(90), "1m 30s")

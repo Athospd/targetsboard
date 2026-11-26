@@ -1,4 +1,4 @@
-#' The tar_meta() tab
+#' The Metadata tab: tar_meta()'s table
 #'
 #' `tar_meta()` as a table. A click on a row asks to show its target on the
 #' board.

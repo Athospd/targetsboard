@@ -43,7 +43,7 @@ test_that("the legend's switches show each target's time and size; the slowest i
   expect_true(app$get_js("document.querySelector(\".tb-legend-switch input[data-part='sizes']\").checked"))
   expect_true(shown(badge("big")))
 
-  # The tar_meta() tab: slowest first, its time readable.
+  # The Metadata tab: slowest first, its time readable.
   app$click(selector = "#board-view .nav-link[data-value='tar_meta']")
   first_row <- "document.querySelector('#board-meta-table .rt-tbody .rt-tr')"
   app$wait_for_js(paste(first_row, "!== null"), timeout = 20000)
