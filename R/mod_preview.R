@@ -18,6 +18,7 @@ preview_ui <- function(id) {
     shiny::uiOutput(ns("rule")),
     shiny::uiOutput(ns("why")),
     shiny::uiOutput(ns("command")),
+    shiny::uiOutput(ns("settings")),
     shiny::uiOutput(ns("debug")),
     # The same spinner card as Load's while a value is read and its preview
     # built, over the previous preview.
@@ -44,17 +45,19 @@ preview_ui <- function(id) {
 #'   loaded again.
 #' @param outdated Reactive: why outdated targets are (outdated_reasons()).
 #' @param skipped Reactive: why up-to-date targets are (skipped_reasons()).
+#' @param settings Reactive: each target's settings (target_settings()).
 #' @return A list of reactives: `target_link`, the target a link in the
 #'   problem pane asks to show.
 #' @noRd
 preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods,
                            outdated = shiny::reactive(list()), commands = shiny::reactive(character()),
-                           rules = shiny::reactive(NULL), skipped = shiny::reactive(list())) {
+                           rules = shiny::reactive(NULL), skipped = shiny::reactive(list()),
+                           settings = shiny::reactive(NULL)) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
     shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(commands),
-    shiny::is.reactive(rules), shiny::is.reactive(skipped)
+    shiny::is.reactive(rules), shiny::is.reactive(skipped), shiny::is.reactive(settings)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -124,6 +127,13 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     output$command <- shiny::renderUI({
       shiny::req(is_open(), focused())
       command_ui(commands()[focused()])
+    })
+
+    # Its memory, storage, deployment and the rest (target_settings()).
+    output$settings <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      all <- settings()
+      settings_ui(if (!is.null(all)) all[all$name %in% focused(), , drop = FALSE])
     })
 
     # The focused target's command, once per change: commands() changes with
@@ -302,6 +312,40 @@ command_ui <- function(command) {
     class = "tb-command",
     shiny::tags$summary("Command"),
     code_block("As it runs, from tar_manifest()", "command", command)
+  )
+}
+
+#' A target's settings, in a section closed at first, or nothing
+#'
+#' Every setting it has, those that differ from targets' defaults
+#' (`setting_defaults`) in bold; a note when it runs on a worker but the
+#' main process stores or retrieves its value.
+#' @param row Its row of target_settings().
+#' @noRd
+settings_ui <- function(row) {
+  if (is.null(row) || nrow(row) != 1) return(NULL)
+  fields <- setdiff(names(row), "name")
+  values <- vapply(fields, function(f) as.character(row[[f]][[1]]), character(1))
+  shown <- fields[!is.na(values) & nzchar(values)]
+  if (!length(shown)) return(NULL)
+  changed <- function(f) is.na(setting_defaults[[f]]) || !identical(values[[f]], setting_defaults[[f]])
+  rows <- lapply(shown, function(f) {
+    value <- shiny::tags$code(values[[f]])
+    shiny::tags$tr(shiny::tags$th(f), shiny::tags$td(if (changed(f)) shiny::tags$strong(value, .noWS = "inside") else value))
+  })
+  main <- intersect(c("storage", "retrieval"), shown[values[shown] %in% "main"])
+  note <- if (length(main) && !identical(unname(values["deployment"]), "main")) {
+    sprintf(
+      "It runs on a worker, but the main process %s its value (%s main): with a slow network file system, a large value makes it slow.",
+      paste(c(storage = "writes", retrieval = "reads")[main], collapse = " and "),
+      paste(main, collapse = " and ")
+    )
+  }
+  shiny::tags$details(
+    class = "tb-command tb-settings",
+    shiny::tags$summary("Settings"),
+    shiny::tags$table(class = "tb-settings-table", shiny::tags$tbody(rows)),
+    if (!is.null(note)) shiny::tags$p(class = "tb-preview-note", note)
   )
 }
 

@@ -8,6 +8,12 @@
   `targets_only = FALSE`, a function on the canvas shows the same in the
   Value pane. Functions are read from the script and the files it sources,
   without running them (#153).
+* A target's settings: the Value pane has a Settings section, closed at
+  first, with its pattern, iteration, memory, storage, retrieval,
+  deployment, error, priority, repository and resources (the kinds set,
+  and crew's controller). Those that differ from targets' defaults are in
+  bold. A note says when a target runs on a worker but the main process
+  writes or reads its value (#130).
 * Why a run skips a target: an up-to-date target's Value pane says that its
   command, what it uses and its settings haven't changed since its last
   build, with when that was. Its cue is named when it changes that:

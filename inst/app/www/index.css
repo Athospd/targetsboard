@@ -816,6 +816,13 @@ html .Reactable .rt-page-size-select {
   padding: 0.25rem 0.75rem 0;
 }
 .tb-function-where {
+/* A target's settings (settings_ui()), in a Command-like section. */
+.tb-settings-table {
+  margin-top: 0.35rem;
+}
+.tb-settings-table th {
+  padding-right: 1rem;
+  font-weight: normal;
   color: var(--bs-secondary-color);
 }
 
