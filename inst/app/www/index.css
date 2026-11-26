@@ -793,3 +793,16 @@ html .Reactable .rt-page-size-select {
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
 }
+
+/* A target's command in the Value pane (command_ui()), closed at first. */
+.tb-command {
+  margin: 0 0 0.5rem;
+  font-size: var(--tb-font-size-sm);
+}
+.tb-command > summary {
+  cursor: pointer;
+  color: var(--bs-secondary-color);
+}
+.tb-command > .tb-code {
+  margin-top: 0.35rem;
+}

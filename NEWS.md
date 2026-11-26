@@ -36,6 +36,11 @@
   the literal paths of its `tar_source()` and `source()` calls (a folder, or
   a file), not only `R/` (#152).
 
+* The Value pane has a Command section, closed at first: the target's
+  command as it runs, from `tar_manifest()`, highlighted and copyable. For
+  targets made by `tar_map()`, `tar_eval()`, `tar_combine()` or hooks, that
+  is not always what the author wrote (#144).
+
 ## Bug fixes
 
 * A redraw of the graph could drop an outdated target's hover text (why it

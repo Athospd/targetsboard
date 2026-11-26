@@ -25,3 +25,18 @@ target_kinds <- function(manifest) {
   keep <- !is.na(kind)
   stats::setNames(kind[keep], manifest$name[keep])
 }
+
+#' Each target's command, as it runs
+#'
+#' From `tar_manifest()`, which the poller reads: the command after
+#' metaprogramming (`tar_map()`, `tar_eval()`, `tar_combine()`, hooks), not
+#' always what the author wrote.
+#' @param manifest `targets::tar_manifest(fields = c("name", ..., "command"))`.
+#' @return A named character vector: target name to command.
+#' @noRd
+target_commands <- function(manifest) {
+  none <- stats::setNames(character(), character())
+  if (is.null(manifest) || !nrow(manifest) || !all(c("name", "command") %in% names(manifest))) return(none)
+  keep <- !is.na(manifest$command) & nzchar(manifest$command)
+  stats::setNames(as.character(manifest$command[keep]), manifest$name[keep])
+}
