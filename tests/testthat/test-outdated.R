@@ -70,3 +70,57 @@ test_that("names are listed in words, and the reasons read as a tooltip and in t
   expect_match(html, "fa-pen", fixed = TRUE) # depend's
   expect_null(reasons_ui(NULL))
 })
+
+test_that("an up-to-date target says why a run skips it, and names its cue", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  writeLines(c(
+    "library(targets)",
+    "list(",
+    "  tar_target(a, 1),",
+    "  tar_target(b, a + 1, cue = tar_cue(mode = 'never')),",
+    "  tar_target(c, b * 2, cue = tar_cue(command = FALSE, depend = FALSE)),",
+    "  tar_target(d, c + 1),",
+    "  tar_target(p, a + 1:3, pattern = map(a))",
+    ")"
+  ), "_targets.R")
+  targets::tar_make(reporter = "silent")
+  reasons <- poller_reasons()
+  reasons$manifest <- as.data.frame(targets::tar_manifest(fields = c(
+    "name", "format", "command", "cue_mode", "cue_command", "cue_depend",
+    "cue_file", "cue_format", "cue_repository", "cue_iteration"
+  )))
+  skipped <- skipped_reasons(reasons)
+  expect_setequal(names(skipped), c("a", "b", "c", "d", "p"))
+  expect_match(skipped$a, "^Up to date: its command, the functions, objects and targets it uses, and its settings haven't changed since its last build")
+  expect_equal(skipped$b, "Its cue is \"never\": a run skips it, even when something it uses changes.")
+  expect_equal(skipped$c, c(
+    "Up to date: nothing its cue checks changed since its last build, so a run skips it.",
+    "Its cue doesn't check its command or what it uses: a change there doesn't run it again."
+  ))
+
+  # An outdated target has its reasons instead.
+  writeLines(sub("tar_target\\(d, c \\+ 1\\)", "tar_target(d, c + 2)", readLines("_targets.R")), "_targets.R")
+  expect_false("d" %in% names(skipped_reasons(poller_reasons())))
+
+  # A tarchetypes skip rule has its own line.
+  rules <- data.frame(name = "a", rule = "skip", arg = "TRUE", `for` = NA_character_, check.names = FALSE)
+  expect_false("a" %in% names(skipped_reasons(reasons, rules)))
+})
+
+test_that("why a run skips a target reads in the pane, with its last build", {
+  expect_null(skipped_ui(NULL))
+  expect_equal(skipped_reasons(list()), list())
+  html <- as.character(skipped_ui(
+    c("Up to date: nothing its cue checks changed since its last build, so a run skips it.", "Its cue doesn't check its command: a change there doesn't run it again."),
+    built = as.POSIXct("2026-11-26 12:01:30")
+  ))
+  expect_match(html, "since its last build, 2026-11-26 12:01, so a run skips it.", fixed = TRUE)
+  expect_equal(lengths(regmatches(html, gregexpr('class="tb-rule"', html))), 2)
+  expect_match(html, "circle-check", fixed = TRUE)
+  expect_no_match(as.character(skipped_ui("Up to date: x since its last build.")), "since its last build,", fixed = TRUE)
+  expect_equal(and_list(c("a", "b", "c")), "a, b and c")
+  expect_equal(and_list(c("a", "b"), "or"), "a or b")
+  expect_equal(backticked(c("f", "g")), "`f` and `g`")
+})

@@ -43,17 +43,18 @@ preview_ui <- function(id) {
 #' @param methods Reactive: changes when the project's preview methods are
 #'   loaded again.
 #' @param outdated Reactive: why outdated targets are (outdated_reasons()).
+#' @param skipped Reactive: why up-to-date targets are (skipped_reasons()).
 #' @return A list of reactives: `target_link`, the target a link in the
 #'   problem pane asks to show.
 #' @noRd
 preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods,
                            outdated = shiny::reactive(list()), commands = shiny::reactive(character()),
-                           rules = shiny::reactive(NULL)) {
+                           rules = shiny::reactive(NULL), skipped = shiny::reactive(list())) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
     shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(commands),
-    shiny::is.reactive(rules)
+    shiny::is.reactive(rules), shiny::is.reactive(skipped)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -165,9 +166,23 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       rule_ui(rule_sentence(rule, built))
     })
 
+    # Why it is outdated, or why a run skips it.
     output$why <- shiny::renderUI({
       shiny::req(is_open(), focused())
-      reasons_ui(outdated()[[focused()]])
+      name <- focused()
+      reasons <- outdated()[[name]]
+      if (length(reasons)) return(reasons_ui(reasons))
+      sentences <- skipped()[[name]]
+      shiny::req(sentences)
+      meta <- tar_meta()
+      built <- NA
+      if (!is.null(meta) && "time" %in% names(meta)) {
+        parent <- if ("parent" %in% names(meta)) meta$parent else NA_character_
+        times <- meta$time[meta$name %in% name | parent %in% name]
+        times <- times[!is.na(times)]
+        if (length(times)) built <- max(times)
+      }
+      skipped_ui(sentences, built)
     })
 
     output$content <- shiny::renderUI({

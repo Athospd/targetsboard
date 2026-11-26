@@ -2,6 +2,11 @@
 
 ## New features
 
+* Why a run skips a target: an up-to-date target's Value pane says that its
+  command, what it uses and its settings haven't changed since its last
+  build, with when that was. Its cue is named when it changes that:
+  `tar_cue(mode = "never")`, or a cue that doesn't check, say, its command
+  (#187).
 * Stand-ins from `error = "null"`: a branch or target that errored under
   `tar_option_set(error = "null")` stored `NULL` in its place, and the Value
   pane now says so instead of showing `NULL` as its result. All of a

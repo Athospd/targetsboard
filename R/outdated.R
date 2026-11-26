@@ -83,12 +83,81 @@ outdated_reasons <- function(reasons, rules = NULL) {
   result
 }
 
-# Names as `a`, `b` and `c`.
-backticked <- function(names) {
-  names <- sprintf("`%s`", names)
-  if (length(names) <= 1) return(names)
-  paste(paste(names[-length(names)], collapse = ", "), "and", names[length(names)])
+#' Why each up-to-date target is up to date: why a run skips it
+#'
+#' Nothing it depends on changed since its last build: its command, the
+#' functions, objects and targets it uses, and its settings. Its cue can
+#' say otherwise, and is named then: `tar_cue(mode = "never")` skips it
+#' whatever changed, and a cue that doesn't check, say, its command ignores
+#' a change there. A tarchetypes skip rule has its own line (rule_ui()).
+#'
+#' @param reasons What the poller wrote: its `vertices` (`status`) and
+#'   `manifest` (`cue_*`).
+#' @param rules cue_rules().
+#' @return A named list: for each up-to-date target, its sentences.
+#' @noRd
+skipped_reasons <- function(reasons, rules = NULL) {
+  vertices <- reasons$vertices
+  if (is.null(vertices) || !all(c("name", "type", "status") %in% names(vertices))) return(list())
+  names <- vertices$name[vertices$type %in% c("stem", "pattern") & vertices$status %in% "uptodate"]
+  skip_rules <- if (!is.null(rules) && nrow(rules)) rules$name[rules$rule == "skip"]
+  manifest <- reasons$manifest
+  cue <- function(name, field) {
+    if (is.null(manifest) || !field %in% names(manifest)) return(NA)
+    manifest[[field]][manifest$name %in% name][1]
+  }
+  checks <- c(
+    cue_command = "its command", cue_depend = "what it uses", cue_format = "its storage format",
+    cue_repository = "its repository", cue_iteration = "its iteration", cue_file = "its file"
+  )
+  result <- list()
+  for (name in setdiff(names, skip_rules)) {
+    if (identical(cue(name, "cue_mode"), "never")) {
+      result[[name]] <- "Its cue is \"never\": a run skips it, even when something it uses changes."
+      next
+    }
+    off <- names(checks)[vapply(names(checks), function(f) isFALSE(as.logical(cue(name, f))), logical(1))]
+    result[[name]] <- if (length(off)) {
+      c(
+        "Up to date: nothing its cue checks changed since its last build, so a run skips it.",
+        sprintf("Its cue doesn't check %s: a change there doesn't run it again.", and_list(unname(checks[off]), "or"))
+      )
+    } else {
+      paste(
+        "Up to date: its command, the functions, objects and targets it uses, and its settings",
+        "haven't changed since its last build, so a run skips it."
+      )
+    }
+  }
+  result
 }
+
+#' Why a target is up to date, in the Value pane: a line per sentence, as
+#' the rule's (rule_ui()), with when it last built
+#' @param sentences From skipped_reasons().
+#' @param built Its last build's time, or NA.
+#' @noRd
+skipped_ui <- function(sentences, built = NA) {
+  if (!length(sentences)) return(NULL)
+  if (length(built) == 1 && !is.na(built)) {
+    when <- format(as.POSIXct(built), "%Y-%m-%d %H:%M")
+    sentences[[1]] <- sub("since its last build", paste0("since its last build, ", when), sentences[[1]], fixed = TRUE)
+  }
+  icons <- c("circle-check", rep("filter", length(sentences) - 1))
+  shiny::tags$div(
+    class = "tb-skipped",
+    unname(Map(function(text, icon) shiny::tags$p(class = "tb-rule", shiny::icon(icon), text), sentences, icons))
+  )
+}
+
+# Words as "a", "a and b", "a, b and c"; or with "or".
+and_list <- function(words, conjunction = "and") {
+  if (length(words) <= 1) return(words)
+  paste(paste(words[-length(words)], collapse = ", "), conjunction, words[length(words)])
+}
+
+# Names as `a`, `b` and `c`.
+backticked <- function(names) and_list(sprintf("`%s`", names))
 
 #' A target's reasons, in one line for the canvas's tooltip
 #' @noRd
