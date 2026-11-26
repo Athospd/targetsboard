@@ -98,3 +98,20 @@ test_that("the browser remembers the pick, unless the option chose the theme", {
   expect_true(app2$get_js(shown))
   app2$run_js("localStorage.removeItem('targetsboard.theme')")
 })
+
+test_that("the browser remembers the user's dark mode across a reload (#216)", {
+  dir <- local_pipeline(make = TRUE)
+  app <- local_board_app(dir, "mode-remember")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3")
+  app$run_js("localStorage.removeItem('targetsboard.theme'); localStorage.removeItem('targetsboard.mode')")
+  app$wait_for_js("document.querySelector('.tb-mode-button')?.offsetParent != null", timeout = 20000)
+  app$click(selector = ".tb-mode-button")
+  app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'", timeout = 20000)
+  expect_equal(app$get_js("localStorage.getItem('targetsboard.mode')"), "dark")
+
+  app$run_js("location.reload()")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 3", timeout = 30000)
+  app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'", timeout = 20000)
+  wait_for_widget_mode(app, "dark")
+  app$run_js("localStorage.removeItem('targetsboard.mode')")
+})
