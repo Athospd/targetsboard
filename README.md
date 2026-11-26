@@ -36,13 +36,14 @@ check errored: its problem, traceback and code to reproduce it are in
 the pane on the right</figcaption>
 </figure>
 
-Watch the board in a demo of under 2 minutes, with sound: a pipeline
-running, shaping the DAG, value previews, and an error found, fixed and
-rebuilt.
+![An error found, fixed and rebuilt on the board: the Problems tab lists
+it, the pane shows the error, its traceback and the code to reproduce
+it; the script is fixed, only that target is rebuilt, and nothing else
+reruns](https://raw.githubusercontent.com/Athospd/targetsboard/media/demo.gif)<!-- -->
 
-[![Watch the demo (under 2 minutes): a pipeline running, shaping the
-DAG, value previews, and an error found, fixed and
-rebuilt](man/figures/README-demo.jpg)](https://youtu.be/pEsTN9rke2U)
+**[Watch the full demo](https://youtu.be/pEsTN9rke2U)** (under 2
+minutes, with sound): a pipeline running, shaping the DAG, value
+previews, and an error found, fixed and rebuilt.
 
 **Early stage.** Help, support and ideas are welcome!
 
