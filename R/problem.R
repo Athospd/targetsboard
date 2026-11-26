@@ -248,6 +248,7 @@ problem_ui <- function(problem, inputs = character(), running = FALSE, script = 
               }
             ),
             problem_details(branch, problem$functions),
+            branch_inputs_section(branch$name, ns = ns), # the slices it failed on (#227)
             if (branch$workspace) {
               code_block(
                 "Reproduce", "reproduce",

@@ -102,6 +102,8 @@
 * A folder with no targets script yet: the board says no targets
   pipeline file was detected, links the targets manual's walkthrough, and
   draws the pipeline once the script exists. It writes nothing (#190).
+* A failing branch in a pattern's problems has the Inputs section too:
+  the slices it failed on, and their values (#227).
 
 ## Bug fixes
 
