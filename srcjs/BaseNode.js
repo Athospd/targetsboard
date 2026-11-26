@@ -24,7 +24,7 @@ const BaseNode = ({
       <TypeIcon kind={kind} />
       {data?.cost && (
         // Its time and size: each shows when the legend's switch is on
-        // (the wrapper's tb-show-times, tb-show-sizes).
+        // (the wrapper's tb-show-times, tb-show-sizes), in its corner.
         <span className="tb-cost" title={data.cost.title}>
           <span className={'tb-cost-time' + (data.cost.slow ? ' tb-cost-hot' : '')}>{data.cost.time}</span>
           {data.cost.size && (

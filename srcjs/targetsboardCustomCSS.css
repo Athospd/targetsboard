@@ -204,8 +204,9 @@
    corner, in its text colour, clear of the warning mark on the corner. */
 .tb-type-icon {
   position: absolute;
+  /* The inner top-right corner, as far from the top as from the side. */
   top: 5px;
-  left: 11px;
+  right: 5px;
   display: flex;
   opacity: 0.85;
   line-height: 0;
@@ -373,27 +374,25 @@
   accent-color: var(--bs-primary, #0d6efd);
 }
 
-/* A built target's last build time and stored size (BaseNode.js), under
-   it, as the legend's switches say. The slowest and largest are warm. */
+/* A built target's last build time and stored size (BaseNode.js): small,
+   quiet text in its bottom-right corner, as the legend's switches say. The
+   slowest and largest get a warm dot. */
 .tb-cost {
   display: none;
   position: absolute;
-  bottom: -9px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 1px;
+  right: 5px; /* in line with the type icon's */
+  gap: 0.25rem;
   white-space: nowrap;
-  border-radius: var(--tb-radius-pill);
-  background: var(--tb-surface);
-  color: var(--tb-surface-text);
-  border: 1px solid var(--tb-surface-border);
-  font-size: var(--tb-font-size-xxs);
-  line-height: 16px;
+  color: inherit;
+  font-size: 0.5rem;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
+  opacity: 0.7;
+  pointer-events: auto;
 }
 .tb-cost > span {
   display: none;
-  padding: 0 0.375rem;
 }
 .tb-show-times .tb-cost:has(.tb-cost-time),
 .tb-show-sizes .tb-cost:has(.tb-cost-size) {
@@ -403,12 +402,25 @@
 .tb-show-sizes .tb-cost-size {
   display: inline;
 }
-.tb-show-times.tb-show-sizes .tb-cost-size {
-  border-left: 1px solid var(--tb-surface-border);
+.tb-show-times.tb-show-sizes .tb-cost-size::before {
+  content: "\00b7";
+  margin-right: 0.25rem;
 }
 .tb-cost .tb-cost-hot {
+  font-weight: 700;
+}
+.tb-cost .tb-cost-hot::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 2px;
+  border-radius: 50%;
   background: var(--tb-hot);
-  color: var(--tb-hot-text);
+  vertical-align: 1px;
+}
+.tb-cost:has(.tb-cost-hot) {
+  opacity: 0.9;
 }
 
 /* A pattern's branches done so far, during a run: "3/6". */
