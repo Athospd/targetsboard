@@ -262,6 +262,31 @@ window.jQuery(document).on('shiny:connected', () => {
     if (title) box.title = title;
     else box.removeAttribute('title');
   });
+  // The run summary's numbers, in place (R/mod_run_summary.R): its block is
+  // drawn again only when its shape changes, so nothing blinks or restarts.
+  window.Shiny.addCustomMessageHandler('tb-run-summary', ({ id, counts, bar, done, total, elapsed, left }) => {
+    const root = document.getElementById(id);
+    if (!root) return;
+    Object.entries(counts).forEach(([key, n]) => {
+      const count = root.querySelector(`[data-count="${key}"]`);
+      if (!count) return;
+      count.querySelector('b').textContent = n;
+      if (count.dataset.activeClass) count.classList.toggle(count.dataset.activeClass, n > 0);
+    });
+    const progress = root.querySelector('.tb-run-bar');
+    if (progress) {
+      Object.entries(bar).forEach(([part, width]) => {
+        const span = progress.querySelector(`.tb-run-bar-${part}`);
+        if (span) span.style.width = `${width}%`;
+      });
+      progress.setAttribute('aria-valuenow', done);
+      progress.setAttribute('aria-valuemax', total);
+    }
+    const clock = root.querySelector('.tb-run-elapsed');
+    if (clock && elapsed) clock.textContent = elapsed;
+    const timeLeft = root.querySelector('.tb-run-left');
+    if (timeLeft && left) timeLeft.textContent = left;
+  });
   window.Shiny.addCustomMessageHandler('tb-theme-remember', ({ name }) => {
     storage((s) => s.setItem(THEME_KEY, name));
   });

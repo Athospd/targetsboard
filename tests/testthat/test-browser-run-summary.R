@@ -23,6 +23,17 @@ test_that("the Control Panel counts a run as it goes, then keeps the last run", 
   expect_match(text, "to go")
   expect_match(text, "[0-9]+:[0-9]{2}")
 
+  # Updated in place, not drawn again (#173): the block marked now is still
+  # the one shown once a count and the clock have moved on.
+  app$run_js(paste0(summary, ".dataset.tbMark = 'kept'"))
+  clock <- app$get_js(paste0(summary, ".querySelector('.tb-run-elapsed').textContent.trim()"))
+  app$wait_for_js(paste0(
+    "(() => { const s = document.querySelector('.tb-run-summary-running'); if (!s) return false;",
+    " return s.querySelector('.tb-run-count b').textContent.trim() !== '0'", # built, the first count
+    " && s.querySelector('.tb-run-elapsed').textContent.trim() !== ", jsonlite::toJSON(clock, auto_unbox = TRUE), "; })()"
+  ), timeout = 30000)
+  expect_equal(app$get_js(paste0(summary, ".dataset.tbMark")), "kept")
+
   # Done: the run's last progress can land a poll after the run ends, so
   # wait for all three.
   app$wait_for_js(paste0(summary, " !== null && !", summary, ".classList.contains('tb-run-summary-running')",

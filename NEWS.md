@@ -57,6 +57,11 @@
 
 ## Bug fixes
 
+* The run summary still flickered while a run went: each new count or
+  estimate drew the whole block again, blanking the clock and restarting the
+  running dot. The block is now drawn once and its numbers change in place;
+  the bar's parts slide to their new widths (#173).
+
 * Focusing a target highlighted its whole lineage, everything upstream and
   downstream at every level, so a target near the start of the pipeline
   lit up nearly the whole graph. It now highlights its direct inputs and
