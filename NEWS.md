@@ -99,6 +99,9 @@
 
 ## Bug fixes
 
+* A target new in the pipeline no longer lands on top of a target the
+  author moved to its spot: it moves across the flow until the spot is
+  free (#205).
 * The Problems pane no longer cuts one warning into several at ". ":
   targets stores a target's warnings joined by ". ", so they are shown as
   stored (#203).
