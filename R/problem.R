@@ -266,12 +266,8 @@ problem_ui <- function(problem, inputs = character(), running = FALSE, script = 
 problem_details <- function(problem, functions) {
   shiny::tagList(
     if (!is.null(problem$error)) shiny::tags$pre(class = "tb-problem-error", problem$error),
-    if (!is.null(problem$warnings)) {
-      shiny::tags$ul(
-        class = "tb-problem-warnings",
-        lapply(strsplit(problem$warnings, ". ", fixed = TRUE)[[1]], shiny::tags$li)
-      )
-    },
+    # Whole: targets joins warnings with ". ", which a warning can contain too.
+    if (!is.null(problem$warnings)) shiny::tags$p(class = "tb-problem-warnings", problem$warnings),
     if (length(problem$traceback)) traceback_ui(fold_traceback(problem$traceback, functions)),
     if (!is.null(problem$seed)) shiny::tags$div(class = "tb-problem-seed text-muted", paste("Seed:", problem$seed))
   )

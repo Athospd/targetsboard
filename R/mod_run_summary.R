@@ -166,7 +166,7 @@ run_summary_tags <- function(summary, elapsed = NULL) {
   if (is.null(elapsed) && is.numeric(summary$elapsed) && !is.na(summary$elapsed)) {
     elapsed <- format_elapsed(summary$elapsed)
   }
-  state <- if (summary$running) "running" else if (summary$errored > 0) "errored" else "done"
+  state <- run_state(summary)
   # A count, marked for run_summary_values()'s updates; `class` while above 0.
   item <- function(n, what, key, class = NULL) {
     shiny::tags$span(
@@ -226,7 +226,7 @@ run_summary_shape <- function(summary) {
   running <- isTRUE(summary$running)
   values <- run_summary_values(summary)
   list(
-    state = if (running) "running" else if (summary$errored > 0) "errored" else "done",
+    state = run_state(summary),
     counts = c(
       "built", "skipped", if (running) "running",
       # Errored: during a run, once there is one.
@@ -240,6 +240,15 @@ run_summary_shape <- function(summary) {
   )
 }
 
+# How a run goes or ended: an error says more than a stop (canceled
+# targets), which isn't a success (#204).
+run_state <- function(summary) {
+  if (isTRUE(summary$running)) "running"
+  else if (summary$errored > 0) "errored"
+  else if (summary$canceled > 0) "stopped"
+  else "done"
+}
+
 #' The numbers of the summary block, as sent to update it in place
 #' @param summary run_summary().
 #' @return `counts`, `bar` (each part's width, in %), `done` and `total`
@@ -249,7 +258,7 @@ run_summary_shape <- function(summary) {
 run_summary_values <- function(summary) {
   running <- isTRUE(summary$running)
   parts <- c(
-    built = summary$built, skipped = summary$skipped, errored = summary$errored + summary$canceled,
+    built = summary$built, skipped = summary$skipped, errored = summary$errored, canceled = summary$canceled,
     running = if (running) summary$running_targets else 0
   )
   total <- sum(parts) + if (running) summary$to_go else 0
@@ -260,7 +269,7 @@ run_summary_values <- function(summary) {
       errored = summary$errored, canceled = summary$canceled, to_go = summary$to_go
     ),
     bar = as.list(if (total > 0) round(100 * parts / total, 2) else parts),
-    done = sum(parts[c("built", "skipped", "errored")]),
+    done = sum(parts[c("built", "skipped", "errored", "canceled")]),
     total = total,
     elapsed = if (is.numeric(summary$elapsed) && !is.na(summary$elapsed)) format_elapsed(summary$elapsed),
     left = if (!is.null(left) && (left$seconds > 0 || left$unknown > 0)) {

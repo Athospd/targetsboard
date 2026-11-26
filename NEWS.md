@@ -92,12 +92,22 @@
   inputs and seed, then its command) and debug run, for a target that runs
   but gives a wrong value. A branch gets its debug run, and Reproduce when
   it has a workspace (#150).
+* Six fewer Bootswatch themes in the picker: Brite, Flatly, Litera, Lux,
+  Sketchy and Yeti are gone. A browser that remembered one starts on
+  Targets board; `options(targetsboard.theme = )` naming one is an error
+  that lists the themes.
 
 ## Bug fixes
 
 * A target new in the pipeline no longer lands on top of a target the
   author moved to its spot: it moves across the flow until the spot is
   free (#205).
+* The Problems pane no longer cuts one warning into several at ". ":
+  targets stores a target's warnings joined by ". ", so they are shown as
+  stored (#203).
+* A run the user stopped no longer shows the green "done" dot with its
+  canceled targets in the bar's red: the summary says it stopped, with a
+  grey dot, and canceled targets have a grey part of the bar (#204).
 
 * Dark mode is remembered: a page reloaded in dark mode stays dark, as
   the theme already did. A dark-only theme's dark isn't taken for yours,

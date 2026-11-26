@@ -22,8 +22,12 @@ test_that("app_theme() is the board's own look by default, and a preset by name"
   expect_equal(bslib::theme_bootswatch(cosmo), "cosmo")
   expect_equal(unname(bslib::bs_get_variables(cosmo, "min-contrast-ratio")), "4.5")
 
-  withr::local_options(targetsboard.theme = "Lux")
-  expect_equal(bslib::theme_bootswatch(app_theme()), "lux")
+  withr::local_options(targetsboard.theme = "Minty")
+  expect_equal(bslib::theme_bootswatch(app_theme()), "minty")
+  # Taken out of the list: an unknown theme now.
+  for (gone in c("Brite", "Flatly", "Litera", "Lux", "Sketchy", "Yeti")) {
+    expect_error(app_theme(gone), "Unknown board theme")
+  }
 })
 
 test_that("an unknown theme is an error that lists the themes", {
