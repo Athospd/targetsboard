@@ -162,7 +162,10 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
 
     shiny::observeEvent(script_error(), ignoreNULL = FALSE, {
       if (!is.null(script_error())) load_done()
-      text <- script_error_text(poller$script, script_error())
+      # No script at all: the board's notice says so (no_script_ui()).
+      text <- if (is.null(poller$script) || file.exists(poller$script)) {
+        script_error_text(poller$script, script_error())
+      }
       if (is.null(text)) {
         shiny::removeNotification("script_error", session)
       } else {

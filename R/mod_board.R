@@ -45,6 +45,7 @@ board_tabs_ui <- function(ns, metadata, layout) {
       bslib::card_body(
         class = "tb-board-pane", padding = 0, gap = 0,
         script_loading_ui(ns("script")),
+        no_script_output(ns("no_script")),
         bslib::layout_sidebar(
           class = "p-0",
           sidebar = preview_ui(ns("preview")),
@@ -100,6 +101,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     problem_clicked <- problems_server("problems", board, data$tar_meta)
     log_server("log", backend)
     script_view_server("script_view", backend$loaded_script)
+    no_script_server("no_script", backend$loaded_script)
     visnetwork_server("visnetwork", board, color_mode)
     meta_clicked <- meta_server("meta", data$tar_meta, data$script_targets)
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))

@@ -221,7 +221,7 @@ poller_reasons_path <- function(tar_vis_path) sub("[.]rds$", "_reasons.rds", tar
 #' @noRd
 script_error_text <- function(script, message) {
   if (is.null(message) || !length(message)) return(NULL)
-  message <- paste(message, collapse = " ")
+  message <- cli::ansi_strip(paste(message, collapse = " "))
   if (nchar(message) > 300) message <- paste0(substr(message, 1, 297), "...")
   paste0(
     script, " doesn't load, so the board still shows its last working graph. ",
