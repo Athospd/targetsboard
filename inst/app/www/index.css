@@ -830,6 +830,7 @@ html .Reactable .rt-page-size-select {
 }
 
 /* A target's settings (settings_ui()), in its tab. */
+/* A target's settings (settings_ui()), in a Command-like section. */
 .tb-settings-table {
   margin: 0;
 }

@@ -200,11 +200,12 @@ document.addEventListener('keydown', (event) => {
   document.getElementById(input.dataset.tbEnter)?.click();
 });
 
-// The theme picker (R/mod_theme.R): the browser remembers the pick, which
-// the server stores here (tb-theme-remember) and asks for on load
-// (tb-theme-saved: sent back as the given input). Shiny keeps nothing in
-// the browser itself.
+// The theme picker (R/mod_theme.R): the browser remembers the pick and the
+// user's mode, which the server stores here (tb-theme-remember: a name, a
+// mode, or both) and asks for on load (tb-theme-saved: sent back as the
+// given input, {theme, mode}). Shiny keeps nothing in the browser itself.
 const THEME_KEY = 'targetsboard.theme';
+const MODE_KEY = 'targetsboard.mode';
 
 function storage(fn) {
   try { return fn(window.localStorage); } catch (e) { return null; }
@@ -287,11 +288,13 @@ window.jQuery(document).on('shiny:connected', () => {
     const timeLeft = root.querySelector('.tb-run-left');
     if (timeLeft && left) timeLeft.textContent = left;
   });
-  window.Shiny.addCustomMessageHandler('tb-theme-remember', ({ name }) => {
-    storage((s) => s.setItem(THEME_KEY, name));
+  window.Shiny.addCustomMessageHandler('tb-theme-remember', ({ name, mode }) => {
+    if (name) storage((s) => s.setItem(THEME_KEY, name));
+    if (mode) storage((s) => s.setItem(MODE_KEY, mode));
   });
   window.Shiny.addCustomMessageHandler('tb-theme-saved', ({ input }) => {
-    const saved = storage((s) => s.getItem(THEME_KEY));
-    if (saved) window.Shiny.setInputValue(input, saved);
+    const theme = storage((s) => s.getItem(THEME_KEY));
+    const mode = storage((s) => s.getItem(MODE_KEY));
+    if (theme || mode) window.Shiny.setInputValue(input, { theme, mode });
   });
 });

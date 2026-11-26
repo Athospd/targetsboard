@@ -6,9 +6,10 @@
 #'
 #' A pick sets the page's theme (theme_server()). A dark-only theme puts the
 #' page in dark mode and hides the button, which would not change it;
-#' leaving it gives back the mode the page had. The browser remembers the
-#' pick and the next page starts on it, unless the `targetsboard.theme`
-#' option chose the theme, which then wins.
+#' leaving it gives back the mode the user had. The browser remembers the
+#' pick and the mode the user set (#216), and the next page starts on them,
+#' unless the `targetsboard.theme` option chose the theme, which then wins;
+#' the mode is still remembered.
 #'
 #' The page's mode lives in bslib's dark mode switch, hidden: it sets the
 #' page's mode and sends it as an input; the button and the server flip it
@@ -58,32 +59,46 @@ theme_server <- function(id) {
     themes <- board_themes()$name
     remember <- is.null(getOption("targetsboard.theme"))
     dark_only <- shiny::reactive(theme_is_dark_only(input$pick))
+    # The user's own mode: their last click, or the one the browser
+    # remembers. A dark-only theme's dark isn't theirs: leaving the theme
+    # gives theirs back.
+    user_mode <- shiny::reactiveVal("light")
 
-    # The remembered pick: the page sends it, as `saved` (actions.js).
-    if (remember) ask_saved_theme(session)
+    # What the page remembers: `list(theme, mode)`, as `saved` (actions.js).
+    # The mode first, so a remembered dark-only theme that follows doesn't
+    # take dark for the user's.
+    ask_saved_theme(session)
     shiny::observeEvent(input$saved, {
-      shiny::req(input$saved %in% themes, !identical(input$saved, input$pick))
-      shiny::updateSelectInput(session, "pick", selected = input$saved)
+      theme <- input$saved$theme
+      # The page's theme: the picker's value, or before it comes, the one
+      # the page started with.
+      theme <- if (remember && isTRUE(theme %in% themes)) theme else input$pick %||% board_theme_option()
+      mode <- input$saved$mode
+      if (isTRUE(mode %in% c("light", "dark"))) {
+        user_mode(mode)
+        if (!theme_is_dark_only(theme)) set_page_mode(session, mode)
+      }
+      if (!identical(theme, input$pick)) shiny::updateSelectInput(session, "pick", selected = theme)
     })
 
     # A pick, not on load: the page starts with its theme. A dark-only one
-    # puts the page in dark mode; leaving it gives back the mode before.
+    # puts the page in dark mode; leaving it gives back the user's mode.
     was_dark_only <- shiny::reactiveVal(theme_is_dark_only(board_theme_option()))
-    mode_before <- shiny::reactiveVal("light")
     shiny::observeEvent(input$pick, ignoreInit = TRUE, {
       shiny::req(input$pick %in% themes)
       set_page_theme(session, input$pick, remember)
       if (dark_only() && !was_dark_only()) {
-        mode_before(if (is.null(input$dark_mode)) "light" else input$dark_mode)
         set_page_mode(session, "dark")
       } else if (!dark_only() && was_dark_only()) {
-        set_page_mode(session, mode_before())
+        set_page_mode(session, user_mode())
       }
       was_dark_only(dark_only())
     })
 
     shiny::observeEvent(input$mode, {
-      set_page_mode(session, if (identical(input$dark_mode, "dark")) "light" else "dark")
+      mode <- if (identical(input$dark_mode, "dark")) "light" else "dark"
+      user_mode(mode)
+      set_page_mode(session, mode, remember = TRUE)
     })
 
     list(
@@ -101,12 +116,15 @@ set_page_theme <- function(session, name, remember = TRUE) {
   if (remember) session$sendCustomMessage("tb-theme-remember", list(name = name))
 }
 
-# Sets the page's mode: bslib's switch follows, and sends it.
-set_page_mode <- function(session, mode) {
+# Sets the page's mode: bslib's switch follows, and sends it. The page
+# remembers it when the user chose it (actions.js).
+set_page_mode <- function(session, mode, remember = FALSE) {
   bslib::toggle_dark_mode(mode, session = session)
+  if (remember) session$sendCustomMessage("tb-theme-remember", list(mode = mode))
 }
 
-# Asks the page for the theme it remembers, as the module's `saved` input.
+# Asks the page for the theme and mode it remembers, as the module's `saved`
+# input: `list(theme, mode)`, each `NULL` if none.
 ask_saved_theme <- function(session) {
   session$sendCustomMessage("tb-theme-saved", list(input = session$ns("saved")))
 }
