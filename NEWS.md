@@ -2,6 +2,9 @@
 
 ## New features
 
+* Leftovers: the Metadata tab tells of stored targets the script no longer
+  has, their size, and `targets::tar_prune()` to copy, which removes them
+  from the store (#112).
 * A function's code where the board names it: under "Why it is
   outdated", each changed function has a section with its code, as
   written, and the file and line it's defined in. With
