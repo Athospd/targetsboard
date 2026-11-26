@@ -26,7 +26,8 @@ NULL
 #' `tar_sitrep()`, and `tar_network(targets_only = FALSE)` to name what
 #' changed. They hash the pipeline again, so they come after the graph, which
 #' doesn't wait for them. With them goes `manifest`, each target's format and
-#' command (`tar_manifest()`), for its icon (target_kinds()).
+#' command (`tar_manifest()`), for its icon (target_kinds()), and its
+#' settings (target_settings()).
 #'
 #' @param script Path to the targets script.
 #' @param interval Seconds between two checks; checks are cheap file stats.
@@ -142,13 +143,28 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
           manifest <- tryCatch(
             as.data.frame(targets::tar_manifest(script = script, fields = c(
               "name", "format", "command", "cue_mode", "cue_command", "cue_depend",
-              "cue_file", "cue_format", "cue_repository", "cue_iteration"
+              "cue_file", "cue_format", "cue_repository", "cue_iteration",
+              "pattern", "iteration", "memory", "storage", "retrieval", "deployment",
+              "error", "priority", "repository", "resources"
             ))),
             error = function(e) {
               message("tar_manifest() failed: ", conditionMessage(e))
               NULL
             }
           )
+          # Resources as text, the kinds set and crew's controller: the
+          # objects themselves are environments, not for the app.
+          if (!is.null(manifest) && "resources" %in% names(manifest)) {
+            manifest$resources <- vapply(manifest$resources, function(r) {
+              if (!length(r)) return(NA_character_)
+              kinds <- names(r)
+              controller <- tryCatch(r$crew$controller, error = function(e) NULL)
+              if (is.character(controller) && length(controller) == 1) {
+                kinds[kinds == "crew"] <- sprintf("crew (controller %s)", controller)
+              }
+              paste(kinds, collapse = ", ")
+            }, character(1))
+          }
           if (!is.null(reasons) || !is.null(manifest)) {
             if (is.null(reasons)) reasons <- list(progress_mtime = progress_mtime)
             reasons$manifest <- manifest

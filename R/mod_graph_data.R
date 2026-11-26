@@ -104,6 +104,7 @@ graph_data_server <- function(id, backend) {
     skipped <- shiny::reactive(skipped_reasons(after_graph(), rules()))
     kinds <- shiny::reactive(target_kinds(after_graph()$manifest))
     commands <- shiny::reactive(target_commands(after_graph()$manifest))
+    settings <- shiny::reactive(target_settings(after_graph()$manifest))
 
     list(
       poller_board = poller_board,
@@ -117,6 +118,7 @@ graph_data_server <- function(id, backend) {
       skipped = skipped,
       kinds = kinds,
       commands = commands,
+      settings = settings,
       rules = rules
     )
   })
