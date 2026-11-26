@@ -39,7 +39,7 @@ the pane on the right</figcaption>
 ![An error found, fixed and rebuilt on the board: the Problems tab lists
 it, the pane shows the error, its traceback and the code to reproduce
 it; the script is fixed, only that target is rebuilt, and nothing else
-reruns](https://raw.githubusercontent.com/Athospd/targetsboard/logo-concepts/demo/readme-demo.gif)<!-- -->
+reruns](https://raw.githubusercontent.com/Athospd/targetsboard/media/demo/readme-demo.gif)<!-- -->
 
 **[Cheatsheet
 (PDF)](https://github.com/Athospd/targetsboard/blob/main/dev/cheatsheet/targetsboard-cheatsheet.pdf)**:

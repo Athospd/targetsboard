@@ -223,7 +223,7 @@ body {
   box-shadow: var(--bs-box-shadow);
 }
 /* The spinner is the brand's mark, animated: the line draws, the target
-   pulses (pulse-spinner.svg, made on the logo-concepts branch). A mask, so it
+   pulses (pulse-spinner.svg, made on the media branch). A mask, so it
    takes the theme's primary colour. */
 .tb-loading .load-container .loader {
   grid-row: 1;

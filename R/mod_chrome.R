@@ -35,7 +35,7 @@ chrome_server <- function(id) {
 #' The brand's mark, inline, in the theme's text colour
 #'
 #' The wordmark, the Pulse mark and the name, the name as outlines
-#' (inst/app/www/wordmark.svg, written by make_logo.py on the logo-concepts
+#' (inst/app/www/wordmark.svg, written by make_logo.py on the media
 #' branch): inline rather than an image, so it takes `currentColor` in
 #' every theme and mode. Its
 #' `aria-label` is the name screen readers read.
