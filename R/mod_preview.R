@@ -19,6 +19,7 @@ preview_ui <- function(id) {
     shiny::uiOutput(ns("why")),
     shiny::uiOutput(ns("command")),
     shiny::uiOutput(ns("settings")),
+    shiny::uiOutput(ns("branch_inputs")),
     shiny::uiOutput(ns("debug")),
     # The same spinner card as Load's while a value is read and its preview
     # built, over the previous preview.
@@ -134,6 +135,38 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       shiny::req(is_open(), focused())
       all <- settings()
       settings_ui(if (!is.null(all)) all[all$name %in% focused(), , drop = FALSE])
+    })
+
+    # The slices a pattern's branch ran on (#142), worked out when its
+    # Inputs section opens: tar_branches() runs the script, a second or so.
+    # shortcut: it blocks the session meanwhile; an ExtendedTask if it grows slow.
+    output$branch_inputs <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      target <- preview_target(focused(), store(), branch = branch())
+      branch_inputs_section(target$pattern$branch_name, ns = session$ns)
+    })
+    branches_of <- new.env(parent = emptyenv()) # tar_branches() per pattern
+    output$inputs <- shiny::renderUI({
+      branch <- shiny::req(input$inputs_open)
+      name <- shiny::isolate(focused())
+      known <- branches_of[[name]]
+      if (is.null(known) || !branch %in% known[[1]]) {
+        known <- tryCatch(
+          as.data.frame(do.call(targets::tar_branches, list(
+            name = as.symbol(name), script = backend$poller$script, store = store()
+          ))),
+          error = function(e) NULL
+        )
+        branches_of[[name]] <- known
+      }
+      meta <- tryCatch(targets::tar_meta(fields = c("type", "children", "bytes"), store = store()),
+                       error = function(e) NULL)
+      all <- settings()
+      iterations <- if (!is.null(all) && "iteration" %in% names(all)) stats::setNames(all$iteration, all$name)
+      branch_inputs_ui(
+        branch_inputs(known, branch, meta), iterations, store = store(),
+        read = function(code) eval(parse(text = code), envir = baseenv())
+      )
     })
 
     # The focused target's command, once per change: commands() changes with

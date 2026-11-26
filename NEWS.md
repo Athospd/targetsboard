@@ -2,6 +2,11 @@
 
 ## New features
 
+* Which inputs a branch came from: a pattern's branch has an Inputs
+  section in the Value pane. Opened, it names the slice of each target the
+  branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
+  with the code that reads it and a few printed lines of it, for `map()`,
+  `cross()`, `slice()`, lists and groups (#142).
 * Leftovers: the Metadata tab tells of stored targets the script no longer
   has, their size, and `targets::tar_prune()` to copy, which removes them
   from the store (#112).
