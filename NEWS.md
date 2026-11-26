@@ -28,6 +28,14 @@
   slowest first, and the run summary estimates the time left from the
   targets' last builds (#107).
 
+* tarchetypes' rerun rules are said in the board's words. The Value pane
+  states a target's rule whatever its status: `tar_age()` (and when it is
+  due), `tar_force()`, `tar_skip()` (a skipped target looks up to date),
+  `tar_change()`, and the cues `tar_cue_age()`, `tar_cue_force()`,
+  `tar_cue_skip()`. Why it is outdated names the rule rather than the
+  "always" cue or the `_change` helper it sets, and a URL's file says it is
+  remote (#155).
+
 * A target's description (`tar_target(description = )`, or
   `tarchetypes::tar_map(descriptions = )`'s) shows when hovering it on the
   canvas, before why it is outdated, and at the top of its Value pane (#143).

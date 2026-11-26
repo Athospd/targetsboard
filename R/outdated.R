@@ -16,7 +16,7 @@
 #'   which picks their icon (reason_icons). Empty when nothing is outdated,
 #'   or the poller hasn't written them yet.
 #' @noRd
-outdated_reasons <- function(reasons) {
+outdated_reasons <- function(reasons, rules = NULL) {
   if (is.null(reasons) || is.null(reasons$vertices)) return(list())
   vertices <- reasons$vertices
   edges <- reasons$edges
@@ -35,9 +35,29 @@ outdated_reasons <- function(reasons) {
     inputs <- edges$from[edges$to == name]
     changed <- setdiff(intersect(inputs, outdated), targets) # functions, objects
     upstream <- intersect(intersect(inputs, outdated), targets)
+    # tarchetypes' rules (cue_rules()): their cues and helpers say it better.
+    rule <- target_rule(rules, name)
+    helpers <- if (!is.null(rules) && nrow(rules)) rules$name[rules$rule == "helper" & rules$`for` %in% name]
+    by_helper <- any(upstream %in% helpers)
+    upstream <- setdiff(upstream, helpers)
+    format <- if (!is.null(reasons$manifest) && all(c("name", "format") %in% names(reasons$manifest))) {
+      reasons$manifest$format[reasons$manifest$name %in% name][1]
+    }
     why <- c(
       meta = if (cue("meta")) "It has no record in the store: it is new, was invalidated, or never finished.",
-      always = if (cue("always")) "Its cue is \"always\": it runs every time.",
+      always = if (cue("always") && is.null(rule)) "Its cue is \"always\": it runs every time.",
+      age = if (identical(rule$rule, "age")) {
+        age <- rule_age(rule$arg)
+        sprintf("Its last build is older than %s.", if (is.null(age)) sprintf("`%s`", rule$arg) else format_age(age))
+      },
+      force = if (identical(rule$rule, "force") && (cue("always") || by_helper)) {
+        sprintf("Forced: `%s` is true.", rule$arg)
+      },
+      change = if (identical(rule$rule, "change") && by_helper) {
+        sprintf("`%s` is checked on every run: it runs again if its value changed.", rule$arg)
+      },
+      skip = if (identical(rule$rule, "skip")) sprintf("While `%s` is true, a run skips it.", rule$arg),
+      helper = if (identical(rule$rule, "helper")) rule_sentence(rule),
       command = if (cue("command")) "Its command changed.",
       depend = if (cue("depend")) {
         if (length(changed)) {
@@ -49,7 +69,9 @@ outdated_reasons <- function(reasons) {
       format = if (cue("format")) "Its storage format changed.",
       repository = if (cue("repository")) "Its repository changed.",
       iteration = if (cue("iteration")) "Its iteration changed.",
-      file = if (cue("file")) "Its file changed, or is missing.",
+      file = if (cue("file")) {
+        if (identical(format, "url")) "Its URL's remote file changed, or can't be reached." else "Its file changed, or is missing."
+      },
       seed = if (cue("seed")) "Its seed changed.",
       upstream = if (length(upstream)) {
         sprintf("Upstream, %s %s outdated.", backticked(upstream), if (length(upstream) == 1) "is" else "are")
@@ -78,7 +100,8 @@ reasons_tooltip <- function(reasons) {
 reason_icons <- c(
   meta = "database", always = "rotate", command = "code", depend = "pen",
   format = "box-archive", repository = "box-archive", iteration = "layer-group",
-  file = "file", seed = "dice", upstream = "arrow-turn-up"
+  file = "file", seed = "dice", upstream = "arrow-turn-up",
+  age = "hourglass-half", force = "bolt", change = "rotate", skip = "forward", helper = "rotate"
 )
 
 #' A target's reasons, for the value preview

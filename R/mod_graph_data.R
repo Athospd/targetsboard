@@ -94,7 +94,13 @@ graph_data_server <- function(id, backend) {
         tryCatch(readRDS(reasons_path), error = function(e) NULL)
       }
     )
-    outdated <- shiny::reactive(outdated_reasons(after_graph()))
+    # tarchetypes' rerun rules, from the script's text (cue_rules()): read
+    # again when the poller redraws, as it does when the script changes.
+    rules <- shiny::reactive({
+      after_graph()
+      cue_rules(backend$loaded_script())
+    })
+    outdated <- shiny::reactive(outdated_reasons(after_graph(), rules()))
     kinds <- shiny::reactive(target_kinds(after_graph()$manifest))
     commands <- shiny::reactive(target_commands(after_graph()$manifest))
 
@@ -108,7 +114,8 @@ graph_data_server <- function(id, backend) {
       costs = costs,
       outdated = outdated,
       kinds = kinds,
-      commands = commands
+      commands = commands,
+      rules = rules
     )
   })
 }
