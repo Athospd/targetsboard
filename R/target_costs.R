@@ -23,7 +23,7 @@ target_costs <- function(meta) {
       time = time,
       size = size,
       title = paste0(
-        "Built in ", time, if (!is.na(size)) paste0(" · stored ", size),
+        "Built in ", time, if (!is.na(size)) paste0(" \u00b7 stored ", size),
         if (built$type[i] == "pattern") " (all its branches)"
       ),
       slow = slow[i],
