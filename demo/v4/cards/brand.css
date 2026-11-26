@@ -1,0 +1,13 @@
+/* Take four's cards, in the Pulse brand: navy, teal, Bahnschrift. */
+html,body{margin:0;overflow:hidden}
+body{background:radial-gradient(120% 90% at 30% 20%,#26354F 0%,#141C2B 70%);color:#EEF3F9;
+  font-family:Bahnschrift,'Segoe UI',Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(60,200,180,.10) 1.2px,transparent 1.3px);background-size:24px 24px}
+.wordmark{color:#EEF3F9}
+.wordmark svg{height:100%;width:auto;display:block}
+.teal{color:#3CC8B4}
+.c{background:#0E1520;border:1px solid rgba(60,200,180,.35);border-radius:14px;font-family:Consolas,monospace;color:#EEF3F9;
+  box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.c .p{color:#3CC8B4}
+.k{letter-spacing:.2em;text-transform:uppercase;color:#3CC8B4;font-weight:700}

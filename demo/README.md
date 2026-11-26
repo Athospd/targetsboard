@@ -8,6 +8,7 @@ pipeline. Each take has its own folder and builds its own video:
 | `v1/` | `targetsboard-demo-v1.mp4` | the first 2.5-minute walkthrough, with a title card |
 | `v2/` | `targetsboard-demo-v2.mp4` | faster, on DAG control, values and debugging; camera moves and chapter cards drawn in post |
 | `v3/` | `targetsboard-demo-v3.mp4` | v2's path with the waits cut out, zooms framed on what they show, the fix in three steps, and a jazz soundtrack; linked from the package README |
+| `v4/` | `targetsboard-demo-v4.mp4`, `targetsboard-demo-v4-vertical.mp4` | a ~100-second pitch, "See it. Understand it. Fix it. Without rerunning what's already done.": a fast hook (run, fail, fix, rerun one), five chapters on a 21-target pipeline, the Pulse-brand cards and thumbnail; plus a 30-second vertical cut for social media (#179) |
 | `projects/` | `targetsboard-projects.mp4` | a 90-second tutorial on targets projects (`_targets.yaml`), on `dev/projects/`'s sandbox, following its `play.R` |
 
 Take one goes like this:
@@ -36,8 +37,8 @@ python demo/v1/make-demo-v1.py              # about 4 minutes
 python demo/v1/make-demo-v1.py --no-record  # reuse the frames, redo cards, music and video
 ```
 
-`v2/make-demo-v2.py`, `v3/make-demo-v3.py` and `projects/make-demo-projects.py`
-work the same way. The projects take reuses take three's soundtrack and
+`v2/make-demo-v2.py`, `v3/make-demo-v3.py`, `v4/make-demo-v4.py` and
+`projects/make-demo-projects.py` work the same way. The projects take reuses take three's soundtrack and
 assembler, and drives the board with `driver.R`: take three's driving
 helpers (cursor, clicks, captions, camera, cuts), plus a console card for R
 code and file contents.
@@ -84,3 +85,11 @@ In each take's folder:
 | `assemble.py` | frames, cards and music into the video |
 | `v1/recorder.R` | the screencast to `build/frames/` |
 | `v1/overlay.js` | the cursor, click ripples, captions and code card, drawn over the page |
+
+Take four has its own pipeline (`v4/pipeline.R`, with a second project for
+the projects scene), cards (`v4/cards/`, rendered by `v4/cards.R`) and an
+assembler on top of take three's (`v4/assemble.py`): it adds the hook, the
+tagline card, tooltips drawn in post and the vertical cut. Its
+`record.R` marks the hook's stretches with `hook()` and the vertical cut's
+with `short()`. Check a cut with
+`python demo/v4/assemble.py demo/v4/build - - [--vertical] --stills 5 20`.
