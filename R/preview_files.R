@@ -242,21 +242,23 @@ markdown_view <- function(lines) {
 #'
 #' The rendered document is what the target made, with its chunks' output:
 #' the board doesn't render it again. It's the file next to the source with
-#' its name, HTML or else PDF. tar_quarto() and tar_render() return it too,
-#' first: it has its own section then, and the source's shows the source.
+#' its name, HTML or else PDF, or, in a Quarto project, the one in the
+#' project's output folder (`_site/`, `_book/`). tar_quarto() and
+#' tar_render() return it too, first: it has its own section then, and the
+#' source's shows the source.
 #' @param path The source.
 #' @param target The target, with `files`, its paths, in a file section.
 #' @noRd
 document_view <- function(path, target) {
   stem <- tools::file_path_sans_ext(path)
-  candidates <- paste0(stem, c(".html", ".pdf"))
+  candidates <- c(paste0(stem, c(".html", ".pdf")), project_output(path))
   rendered <- candidates[file.exists(candidates)][1]
   note <- function(...) shiny::tags$p(class = "tb-table-caption", ...)
   same_file <- function(a, b) normalizePath(a, winslash = "/", mustWork = FALSE) %in% normalizePath(b, winslash = "/", mustWork = FALSE)
   if (!is.na(rendered) && !same_file(rendered, target$files %||% character())) {
     older <- file.mtime(rendered) < file.mtime(path)
     return(shiny::tagList(
-      note(sprintf("Rendered as %s%s.", basename(rendered), if (older) ", older than its source" else "")),
+      note(sprintf("Rendered as %s%s.", names(rendered) %||% basename(rendered), if (older) ", older than its source" else "")),
       tar_board_preview(board_file(rendered), target)
     ))
   }
@@ -273,6 +275,52 @@ document_view <- function(path, target) {
     },
     source
   )
+}
+
+#' Where a Quarto project rendered a source to
+#'
+#' The nearest folder above the source, at most five up, with a
+#' `_quarto.yml` is the project; its output folder is `output-dir`, or
+#' `_site` for a website and `_book` for a book, else the project's folder.
+#' The page keeps the source's place under it: `posts/first.qmd` renders to
+#' `_site/posts/first.html`.
+#' @param path The source.
+#' @return The HTML and PDF it may have rendered to, each named by its path
+#'   in the project (`_site/posts/first.html`); none outside a project.
+#' @noRd
+project_output <- function(path) {
+  path <- normalizePath(path, winslash = "/", mustWork = FALSE)
+  here <- dirname(path)
+  for (i in 1:5) {
+    config <- file.path(here, "_quarto.yml")
+    if (file.exists(config)) {
+      out <- quarto_output_dir(readLines(config, warn = FALSE))
+      page <- paste0(substring(tools::file_path_sans_ext(path), nchar(here) + 2), c(".html", ".pdf"))
+      shown <- if (out == ".") page else file.path(out, page)
+      return(stats::setNames(file.path(here, shown), shown))
+    }
+    up <- dirname(here)
+    if (identical(up, here)) break
+    here <- up
+  }
+  character()
+}
+
+#' A Quarto project's output folder, from its `_quarto.yml`'s lines
+#'
+#' Read by pattern, for the two fields it needs (`output-dir` and the
+#' project's `type`), so the board needs no YAML parser.
+#' @noRd
+quarto_output_dir <- function(lines) {
+  field <- function(name) {
+    line <- grep(sprintf("^[[:space:]]+%s:", name), lines, value = TRUE)[1]
+    if (is.na(line)) return(NA_character_)
+    trimws(gsub("[\"']", "", sub(sprintf("^[[:space:]]+%s:", name), "", line)))
+  }
+  out <- field("output-dir")
+  if (!is.na(out) && nzchar(out)) return(sub("/+$", "", out))
+  type <- field("type")
+  if (identical(type, "website")) "_site" else if (identical(type, "book")) "_book" else "."
 }
 
 #' A Quarto or R Markdown document's lines as plain Markdown
@@ -309,7 +357,14 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
   ext <- tolower(tools::file_ext(path))
   if (dir.exists(path)) {
     files <- list.files(path, recursive = TRUE)
-    return(shiny::tags$p(sprintf("A folder of %s files.", format(length(files), big.mark = ","))))
+    count <- sprintf("A folder of %s files", format(length(files), big.mark = ","))
+    # A rendered website or book (tar_quarto() on a project returns its
+    # output folder): its front page, with its links.
+    index <- file.path(path, "index.html")
+    if (file.exists(index)) {
+      return(shiny::tagList(shiny::tags$p(class = "tb-table-caption", paste0(count, ": a site, from its index.html.")), html_view(index)))
+    }
+    return(shiny::tags$p(paste0(count, ".")))
   }
   if (ext %in% names(image_types)) {
     url <- serve_file(path)
@@ -319,9 +374,7 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
     ))
   }
   if (ext == "pdf") return(pdf_view(path))
-  if (ext %in% c("html", "htm")) {
-    return(shiny::tags$iframe(class = "tb-preview-document", src = serve_html_report(path), title = basename(path)))
-  }
+  if (ext %in% c("html", "htm")) return(html_view(path))
   if (ext %in% c("csv", "tsv")) {
     read <- if (ext == "csv") utils::read.csv else utils::read.delim
     data <- read(path, nrows = csv_rows, check.names = FALSE, stringsAsFactors = FALSE)

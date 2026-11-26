@@ -7,6 +7,12 @@
   pane now says so instead of showing `NULL` as its result. All of a
   pattern's branches together name the branches left out, since
   `tar_read()` drops their `NULL`s (#151).
+* Quarto websites, books and slide decks in the Value pane. A rendered site's
+  folder (what `tar_quarto()` returns for a project) shows its front page,
+  served from the site's root, so its links work and pages in subfolders keep
+  their styles. Each source shows the page it rendered to in `_site/` or
+  `_book/`, where it used to say "Not rendered". A revealjs deck can go
+  fullscreen (#134, #194).
 
 * A status legend on the canvas, under the Tidy buttons: each status's
   colour, the nodes' own in every theme and mode, with how many targets
@@ -62,6 +68,11 @@
   it has a workspace (#150).
 
 ## Bug fixes
+
+* For a moment after a run started, the run summary showed the last run's
+  clock and counts ("Running 0:28" at once, its targets as built). Until
+  targets records the new run, it now shows the run starting: nothing done
+  yet, all to go, the clock once known (#183).
 
 * The run summary of a run of a few targets, from the graph's menus or
   toolbars, counted the rest of the pipeline as still to go ("13 to go"

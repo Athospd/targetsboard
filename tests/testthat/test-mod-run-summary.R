@@ -133,3 +133,21 @@ test_that("run_targets(): those asked for and all they depend on (#181)", {
   s <- run_summary(progress, run_targets(targets, edges, "c"), started = Sys.time(), running = TRUE)
   expect_equal(s$to_go, 1)
 })
+
+test_that("a run just started shows none of the last run's clock or counts (#183)", {
+  t0 <- as.POSIXct("2026-11-26 10:00:00", tz = "UTC")
+  last <- data.frame(name = c("a", "b"), type = "stem", parent = c("a", "b"), progress = "completed")
+  # Not recorded yet: the process file is the last run's.
+  expect_equal(current_run(last, t0, t0 - 30, recorded = FALSE), list(progress = NULL, started = NA))
+  # Recorded, but the progress file is older than the run.
+  expect_null(current_run(last, t0 - 20, t0, recorded = TRUE)$progress)
+  expect_equal(current_run(last, t0 - 20, t0, recorded = TRUE)$started, t0)
+  # This run's.
+  expect_equal(current_run(last, t0 + 3, t0, recorded = TRUE)$progress, last)
+  # Running with nothing yet: zero counts, all to go, no clock.
+  s <- run_summary(NULL, c("a", "b", "c"), started = NA, running = TRUE)
+  expect_true(s$running)
+  expect_true(is.na(s$elapsed))
+  expect_equal(c(s$built, s$skipped, s$to_go), c(0, 0, 3))
+  expect_null(run_summary(NULL, c("a", "b"), running = FALSE))
+})
