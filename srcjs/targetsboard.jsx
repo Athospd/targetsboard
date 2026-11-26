@@ -222,6 +222,16 @@ const upstreamOf = (ids, edges) => reachable(ids, edges, 'target', 'source');
 const downstreamOf = (ids, edges) => reachable(ids, edges, 'source', 'target');
 // Targets with everything upstream and downstream of them.
 const lineageOf = (ids, edges) => new Set([...upstreamOf(ids, edges), ...downstreamOf(ids, edges)]);
+// Targets with their direct inputs and outputs, as tar_visnetwork() highlights.
+const neighboursOf = (ids, edges) => {
+  const marked = new Set(ids);
+  const near = new Set(ids);
+  edges.forEach((e) => {
+    if (marked.has(e.source)) near.add(e.target);
+    if (marked.has(e.target)) near.add(e.source);
+  });
+  return near;
+};
 
 // The menu's selection actions: what to select, from the targets it covers.
 const SELECT_ACTIONS = {
@@ -728,21 +738,23 @@ function Flow({ configuration }) {
     [toolbarFocus, options.toolbar_actions, onMenuAction],
   );
 
-  // Highlighting is derived, never stored: dim what lies outside the lineage
-  // of the selected group, or else of the focused target.
+  // Highlighting is derived, never stored: the selected group, or else the
+  // focused target, with its direct inputs and outputs and the edges to them,
+  // as tar_visnetwork() does; the rest dims. The whole lineage is a menu
+  // action away (Select its lineage).
   const marked = group ?? (focusId ? [focusId] : null);
   const markedIds = new Set(marked ?? []);
-  const lineage = marked ? lineageOf(marked, edges) : null;
-  const shownNodes = lineage
+  const near = marked ? neighboursOf(marked, edges) : null;
+  const shownNodes = near
     ? nodes.map((n) => ({
         ...n,
-        className: markedIds.has(n.id) ? 'tb-focused' : lineage.has(n.id) ? undefined : 'tb-dimmed',
+        className: markedIds.has(n.id) ? 'tb-focused' : near.has(n.id) ? undefined : 'tb-dimmed',
       }))
     : nodes;
   const shownEdges = edges.map((e) => ({
     ...e,
     type: options.edge_type,
-    className: !lineage || (lineage.has(e.source) && lineage.has(e.target)) ? undefined : 'tb-dimmed',
+    className: !near || markedIds.has(e.source) || markedIds.has(e.target) ? undefined : 'tb-dimmed',
   }));
 
   const menuActions = menu?.nodes.length > 1 ? options.node_group_actions : options.node_actions;
