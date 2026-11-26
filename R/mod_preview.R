@@ -128,16 +128,31 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       reasons_ui(outdated()[[focused()]])
     })
 
+    # The focused target's command, once per change: commands() changes with
+    # every recompute of the poller, the target's command seldom.
+    focused_command <- shiny::reactiveVal(NULL)
+    shiny::observe({
+      command <- if (!is.null(focused())) unname(commands()[focused()])
+      focused_command(if (length(command) == 1 && !is.na(command)) command)
+    })
+    # Its problem follows the target, its records and its command, not the
+    # graph: a redraw or a run starting doesn't build it again.
+    problem <- shiny::reactive({
+      shiny::req(focused())
+      records_changed()
+      target_problem(focused(), command = focused_command())
+    })
+
     output$content <- shiny::renderUI({
       shiny::req(is_open(), focused())
       name <- focused()
       # A target that errored or warned shows its problem first; an errored
       # one has no value to show.
-      problem <- target_problem(name, backend$poller$script)
+      problem <- problem()
       problem_part <- NULL
       if (has_problem(problem)) {
-        edges <- board()$x$edges
-        inputs <- intersect(edges$from[edges$to == name], board_targets(board()$x$nodes))
+        graph <- shiny::isolate(board())$x
+        inputs <- intersect(graph$edges$from[graph$edges$to == name], board_targets(graph$nodes))
         problem_part <- problem_ui(
           problem, inputs, running = running(), script = backend$poller$script,
           store = store(), dir = normalizePath(getwd(), winslash = "/"), ns = session$ns

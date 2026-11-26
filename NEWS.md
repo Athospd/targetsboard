@@ -51,6 +51,14 @@
 
 ## Bug fixes
 
+* The preview of a target that errored or warned took seconds to open,
+  with the whole board waiting: it ran the pipeline's script for the
+  target's command, and again for a pattern's branch positions, and did it
+  all over at every redraw of the graph or start of a run. The command now
+  comes from what the board already reads, the positions from the store's
+  metadata, and the problem is built again only when the target's own
+  records change: milliseconds, whatever the script (#176).
+
 * Focusing a target highlighted its whole lineage, everything upstream and
   downstream at every level, so a target near the start of the pipeline
   lit up nearly the whole graph. It now highlights its direct inputs and
