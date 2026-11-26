@@ -8,13 +8,15 @@
 #' @param script Path to the targets script the poller starts on.
 #' @param targets_only Show only targets, without functions and globals.
 #' @param project The project of `_targets.yaml` it starts on.
+#' @param filters tar_visnetwork()'s filters for `script` (visnetwork_filters()):
+#'   kept on every redraw of it; another script is drawn whole.
 #' @return A list: the `poller` and `runner` environments, the `previews`
 #'   cache, the reactive values `rds_path` (the poller's graph file),
 #'   `loaded_script` and `project` (the active project of `_targets.yaml`),
 #'   and functions to start and stop the poller, switch project, ask the
 #'   poller to recompute, and tell whether a run is going.
 #' @noRd
-board_backend <- function(script, targets_only = TRUE, project = active_project()) {
+board_backend <- function(script, targets_only = TRUE, project = active_project(), filters = list()) {
   # One background poller, restarted only when someone loads a different
   # script.
   poller <- new.env()
@@ -22,6 +24,7 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
   loaded_script <- shiny::reactiveVal(script) # the script the poller draws
   project <- shiny::reactiveVal(project) # its project (projects.R)
   previews <- preview_cache()
+  first_script <- script
 
   stop_poller <- function() {
     if (inherits(poller$process, "r_process") && poller$process$is_alive())
@@ -31,7 +34,9 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
 
   start_poller <- function(script) {
     stop_poller()
-    assets <- tar_visnetwork_bg(script = script, targets_only = targets_only)
+    # The author's filters name the opened script's targets: only for it.
+    own <- identical(normalizePath(script, mustWork = FALSE), normalizePath(first_script, mustWork = FALSE))
+    assets <- tar_visnetwork_bg(script = script, targets_only = targets_only, filters = if (own) filters else list())
     poller$process <- assets$process
     poller$script <- script
     loaded_script(script)

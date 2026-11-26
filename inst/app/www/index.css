@@ -35,6 +35,11 @@ body {
 .tb-problem pre { white-space: pre-wrap; word-break: break-word; font-size: var(--tb-font-size-xs); margin-bottom: 0.5rem; }
 /* Why the focused target is outdated: a card above its value's, in the
    outdated status's colour, info, a reason per row with its icon. */
+.tb-description {
+  margin: 0 0 0.5rem;
+  font-size: var(--tb-font-size-sm);
+  color: var(--bs-secondary-color);
+}
 .tb-why { margin: 0 0 0.5rem; font-size: var(--tb-font-size-sm); }
 .tb-why .tb-why-title {
   display: flex; align-items: center; gap: 0.5rem;
