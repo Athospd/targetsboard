@@ -15,9 +15,16 @@
   }
 }
 
-# zeallot's multiple assignment, used internally: c(a, b) %<-% list(1, 2).
-#' @importFrom zeallot %<-%
+# targets::tar_random_port(), tar_board()'s default port, needs parallelly,
+# which targets only suggests: imported so it is installed with the board.
+#' @importFrom parallelly freePort
 NULL
+
+# A named list, a JSON object even when empty: `{}`, where an empty plain
+# list would be `[]`.
+json_object <- function(x = list()) {
+  if (length(x)) x else structure(list(), names = character())
+}
 
 #' A value read again every `ms` milliseconds
 #'

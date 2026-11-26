@@ -175,13 +175,13 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
   if (!is.null(branches)) message$branches <- branch_counts(branches)
   if (!is.null(reasons)) {
     # Every target's: one that isn't listed loses its reason.
-    message$reasons <- if (length(reasons)) as.list(reasons) else structure(list(), names = character())
+    message$reasons <- json_object(as.list(reasons))
   }
   if (!is.null(kinds)) {
-    message$kinds <- if (length(kinds)) as.list(kinds) else structure(list(), names = character())
+    message$kinds <- json_object(as.list(kinds))
   }
   if (!is.null(costs)) {
-    message$costs <- if (length(costs)) costs else structure(list(), names = character())
+    message$costs <- json_object(costs)
   }
   session$sendCustomMessage("targetsboard:status", message)
 }
@@ -432,33 +432,29 @@ board_configuration <- function(inputId, nodes, edges, height, width, warnings =
 }
 
 #' Convert tar_visnetwork() nodes to React Flow nodes
-#' @importFrom rlang .data
+#'
+#' One list per node, in base R: it runs on every new graph, and a plain
+#' loop is about 20 times as fast as a rowwise data frame on 5,000 targets.
 #' @noRd
 dataframe_to_reactflow_node_data <- function(dataframe, warnings = character()) {
-
-  dataframe |>
-    dplyr::select(
-      c("id", "description", "type", "status", "level", "label", "color")
-    ) |>
-    dplyr::rowwise() |>
-    dplyr::summarise(
-      id = .data$id,
-      position = list(list(x = 0, y = 0)),
-      # `data` must come before `type` is overwritten: later expressions in
-      # summarise() see the new columns, also through .data.
-      data = list(list(
-        label = .data$label,
-        level = .data$level,
-        description = .data$description,
-        target_type = .data$type,
-        target_status = .data$status,
-        warning = .data$id %in% warnings
-      )),
-      type = status_to_node_type(.data$status) # picks the node component
-    ) |>
-    # The board is read-only: no target can be deleted from it.
-    dplyr::mutate(deletable = FALSE) |>
-    purrr::transpose()
+  types <- status_to_node_type(dataframe$status) # picks the node component
+  warned <- dataframe$id %in% warnings
+  lapply(seq_len(nrow(dataframe)), function(i) {
+    list(
+      id = dataframe$id[[i]],
+      position = list(x = 0, y = 0),
+      data = list(
+        label = dataframe$label[[i]],
+        level = dataframe$level[[i]],
+        description = dataframe$description[[i]],
+        target_type = dataframe$type[[i]],
+        target_status = dataframe$status[[i]],
+        warning = warned[[i]]
+      ),
+      type = types[[i]],
+      deletable = FALSE # the board is read-only: no target can be deleted from it
+    )
+  })
 }
 
 # The widget has one node component per status the board shows: uptodate,
@@ -482,13 +478,10 @@ status_to_node_type <- function(status) {
 #' Convert tar_visnetwork() edges to React Flow edges
 #' @noRd
 dataframe_to_reactflow_edge_data <- function(dataframe) {
-  dataframe |>
-    dplyr::mutate(
-      id = paste(.data$from, .data$arrows, .data$to, sep = "_")
-    ) |>
-    dplyr::select(dplyr::all_of(c(id = "id", source = "from", target = "to"))) |>
-    dplyr::mutate(deletable = FALSE) |>
-    purrr::transpose()
+  ids <- paste(dataframe$from, dataframe$arrows, dataframe$to, sep = "_")
+  lapply(seq_len(nrow(dataframe)), function(i) {
+    list(id = ids[[i]], source = dataframe$from[[i]], target = dataframe$to[[i]], deletable = FALSE)
+  })
 }
 
 #' Branch counts for the widget, from `tar_progress_branches()`

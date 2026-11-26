@@ -129,6 +129,6 @@ settle_statuses <- function(statuses, running) {
 #' @param names Target names.
 #' @noRd
 invalidate_targets <- function(names) {
-  targets::tar_invalidate(names = dplyr::any_of(names))
+  targets::tar_invalidate(names = targets::any_of(names))
   invisible(names)
 }

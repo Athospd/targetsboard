@@ -40,21 +40,17 @@ Imports:
     bslib (>= 0.7.0),
     callr,
     cli,
-    digest,
-    dplyr,
     htmltools,
     jsonlite,
     parallelly,
     ps,
-    purrr,
     reactable,
     reactR,
-    rlang,
+    rlang (>= 1.0.0),
     shinycssloaders (>= 1.1.0),
     shiny (>= 1.8.1),
     targets,
-    visNetwork,
-    zeallot
+    visNetwork
 Suggests:
     broom,
     chromote,

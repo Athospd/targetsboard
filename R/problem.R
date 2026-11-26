@@ -83,7 +83,7 @@ target_traceback <- function(name) {
 
 target_command <- function(name, script) {
   manifest <- tryCatch(
-    targets::tar_manifest(names = dplyr::any_of(name), fields = "command", script = script),
+    targets::tar_manifest(names = targets::any_of(name), fields = "command", script = script),
     error = function(e) NULL
   )
   if (is.null(manifest) || nrow(manifest) == 0) return(NULL)

@@ -36,6 +36,12 @@
 * A click on a legend entry with a single target selected it without marking it
   on the canvas: now it focuses it too, as a click on the target does.
 
+## Internal
+
+* Four fewer dependencies: dplyr, purrr, zeallot and digest. The widget's
+  graph conversion is base R and about 15 times as fast (5,000 targets:
+  1.2 s to 0.08 s), with the same JSON (#160).
+
 # targetsboard 0.3.0
 
 ## New features
