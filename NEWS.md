@@ -2,6 +2,13 @@
 
 ## New features
 
+* Quarto websites, books and slide decks in the Value pane. A rendered site's
+  folder (what `tar_quarto()` returns for a project) shows its front page,
+  served from the site's root, so its links work and pages in subfolders keep
+  their styles. Each source shows the page it rendered to in `_site/` or
+  `_book/`, where it used to say "Not rendered". A revealjs deck can go
+  fullscreen (#134, #194).
+
 * A status legend on the canvas, under the Tidy buttons: each status's
   colour, the nodes' own in every theme and mode, with how many targets
   have it. A click on one selects those targets, for the group's Run and

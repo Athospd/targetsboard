@@ -6,15 +6,37 @@ extract_html_file_path <- function(x) {
   x[grepl("[.]html?$", x, ignore.case = TRUE) & file.exists(x)]
 }
 
-# Serve only the folder of this one report (so a non-self-contained Quarto
+# Serve the folder of this one report (so a non-self-contained Quarto
 # report still finds its _files/ assets) under its own URL prefix, and
-# return the URL of the report.
+# return the URL of the report. A page of a website or book is served from
+# its site's root instead, so a page in a subfolder still reaches
+# ../site_libs/ and links to the other pages.
 serve_html_report <- function(path) {
   path <- normalizePath(path, winslash = "/")
-  report_dir <- dirname(path)
-  prefix <- paste0("report_", substr(rlang::hash(report_dir), 1, 12))
-  shiny::addResourcePath(prefix, report_dir)
-  paste0(prefix, "/", utils::URLencode(basename(path)))
+  root <- html_root(path)
+  prefix <- paste0("report_", substr(rlang::hash(root), 1, 12))
+  shiny::addResourcePath(prefix, root)
+  paste0(prefix, "/", utils::URLencode(substring(path, nchar(root) + 2)))
+}
+
+# The folder a page is served from: the nearest folder above it, at most
+# five up, that holds site_libs/ (the root of a Quarto or R Markdown
+# website or book), else its own folder.
+html_root <- function(path) {
+  here <- dirname(path)
+  for (i in 1:5) {
+    if (dir.exists(file.path(here, "site_libs"))) return(here)
+    up <- dirname(here)
+    if (identical(up, here)) break
+    here <- up
+  }
+  dirname(path)
+}
+
+# An HTML document in a frame, served with its folder. Fullscreen is
+# allowed: a revealjs deck goes fullscreen with F.
+html_view <- function(path) {
+  shiny::tags$iframe(class = "tb-preview-document", src = serve_html_report(path), title = basename(path), allow = "fullscreen")
 }
 
 #' How the board previews a target's value
@@ -38,7 +60,10 @@ serve_html_report <- function(path) {
 #' `tar_board_file`. The board's method shows images, PDF and HTML files,
 #' CSV and TSV files as tables, Markdown, and the first lines of text files,
 #' with R code in colour. A method for, say, `tar_board_file_parquet` adds a
-#' type.
+#' type. A rendered website or book (a folder with an `index.html`, as
+#' `tarchetypes::tar_quarto()` returns for a Quarto project) shows its front
+#' page, with its links; a Quarto source shows the page it rendered to, from
+#' the project's output folder.
 #'
 #' @section Where methods come from:
 #' A package registers its methods as usual, with `S3method()` in its
@@ -146,7 +171,7 @@ tar_board_preview.character <- function(x, target, ...) {
   path <- extract_html_file_path(x)[1]
   shiny::tagList(
     file_facts(path),
-    shiny::tags$iframe(class = "tb-preview-document", src = serve_html_report(path), title = basename(path))
+    html_view(path)
   )
 }
 
