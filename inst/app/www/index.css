@@ -140,7 +140,10 @@ body {
   overflow: hidden;
   background: var(--bs-secondary-bg);
 }
-.tb-run-bar > span { height: 100%; }
+.tb-run-bar > span { height: 100%; transition: width 0.4s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .tb-run-bar > span { transition: none; }
+}
 .tb-run-bar-built { background: var(--bs-success); }
 .tb-run-bar-skipped { background: var(--bs-secondary-color); opacity: 0.5; }
 .tb-run-bar-errored { background: var(--bs-danger); }

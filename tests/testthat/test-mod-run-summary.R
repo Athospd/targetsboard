@@ -110,7 +110,8 @@ test_that("run_summary_tags() shows a bar of the run's parts, and errored mid-ru
   going <- as.character(run_summary_tags(run_summary(progress, c("a", "b", "c", "d"), started = now - 5, running = TRUE, now = now)))
   expect_match(going, "tb-run-bar-built\" style=\"width: 25.00%", fixed = TRUE)
   expect_match(going, "tb-run-bar-running", fixed = TRUE)
-  expect_no_match(going, "errored")
+  expect_match(going, "tb-run-bar-errored\" style=\"width: 0.00%", fixed = TRUE) # there, empty
+  expect_no_match(going, "data-count=\"errored\"", fixed = TRUE) # no count before an error
   done <- as.character(run_summary_tags(run_summary(progress[1:2, ], c("a", "b"), started = now - 5, ended = now)))
   expect_match(done, "<b>0</b>[[:space:]]*errored")
   expect_match(done, "tb-run-summary-done", fixed = TRUE)
