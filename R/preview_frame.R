@@ -8,18 +8,24 @@ preview_bytes_limit <- function() getOption("targetsboard.preview_bytes", 100e6)
 
 #' What the store says about a target, without reading its value
 #'
+#' A target or branch that errored under `error = "null"` stored `NULL` in
+#' its place (format "null"): its `stand_in` is its error message. With all
+#' of a pattern's branches, `pattern$stand_ins` numbers the ones that did.
+#'
 #' @return `list(name, format, bytes, time)`, or `NULL` when the store has no
 #'   record of it. A pattern's bytes are the sum of its branches'.
 #' @noRd
 preview_target <- function(name, store = targets::tar_config_get("store"), branch = 1L) {
   meta <- tryCatch(
-    targets::tar_meta(fields = c("type", "format", "bytes", "time", "children"), store = store),
+    targets::tar_meta(fields = c("type", "format", "bytes", "time", "children", "error"), store = store),
     error = function(e) NULL
   )
   if (is.null(meta) || !name %in% meta$name) return(NULL)
   field <- function(row, f) if (f %in% names(row)) na_null(row[[f]]) else NULL
+  stand_in <- function(row) if (identical(field(row, "format"), "null")) field(row, "error") %||% ""
   row <- meta[meta$name == name, ]
   target <- list(name = name, format = field(row, "format"), bytes = field(row, "bytes"), time = field(row, "time"))
+  target$stand_in <- stand_in(row)
   children <- if ("children" %in% names(row)) row$children[[1]] else NULL
   children <- children[!is.na(children)]
   if (!identical(field(row, "type"), "pattern") || !length(children)) return(target)
@@ -33,6 +39,7 @@ preview_target <- function(name, store = targets::tar_config_get("store"), branc
   if (branch == 0L) {
     times <- rows$time[!is.na(rows$time)]
     target$time <- if (length(times)) max(times)
+    if ("format" %in% names(rows)) target$pattern$stand_ins <- which(rows$format %in% "null")
     return(target)
   }
   child <- rows[branch, ]
@@ -40,7 +47,34 @@ preview_target <- function(name, store = targets::tar_config_get("store"), branc
   target$format <- field(child, "format") %||% target$format
   target$bytes <- field(child, "bytes")
   target$time <- field(child, "time")
+  target$stand_in <- stand_in(child)
   target
+}
+
+#' What the frame says about stand-ins, or NULL: a value that is NULL only
+#' because its target errored under `error = "null"`, or the branches that
+#' all branches combined leave out (tar_read() drops their NULLs)
+#' @noRd
+stand_in_note <- function(target) {
+  if (!is.null(target$stand_in)) {
+    message <- sub("\n.*", "", target$stand_in) # its first line
+    if (nchar(message) > 200) message <- paste0(substr(message, 1, 199), intToUtf8(8230L))
+    return(sprintf(
+      'This %s errored%s: with error = "null", targets stored NULL in its place and went on. NULL is a stand-in, not its result.',
+      if (is.null(target$pattern)) "target" else "branch",
+      if (nzchar(message)) sprintf(' ("%s")', message) else ""
+    ))
+  }
+  numbers <- target$pattern$stand_ins
+  if (!length(numbers)) return(NULL)
+  shown <- utils::head(numbers, 10)
+  listed <- paste(shown, collapse = ", ")
+  if (length(numbers) > length(shown)) listed <- sprintf("%s and %d more", listed, length(numbers) - length(shown))
+  sprintf(
+    '%d of %s branches errored and are left out: with error = "null", each stored NULL in its place (%s %s).',
+    length(numbers), format(target$pattern$branches, big.mark = ","),
+    if (length(numbers) == 1) "branch" else "branches", listed
+  )
 }
 
 # The branches argument of tar_read() for a pattern's branch, if one.
@@ -277,7 +311,7 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL, n
     preview_header(target, built$facts, store, ns),
     bslib::card_body(
       class = "tb-preview-body", padding = 0, gap = 0,
-      if (!is.null(built$note)) shiny::tags$p(class = "tb-preview-note", built$note),
+      lapply(c(stand_in_note(target), built$note), function(note) shiny::tags$p(class = "tb-preview-note", note)),
       do.call(bslib::navset_underline, panels)
     )
   )

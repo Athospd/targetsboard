@@ -2,6 +2,12 @@
 
 ## New features
 
+* Stand-ins from `error = "null"`: a branch or target that errored under
+  `tar_option_set(error = "null")` stored `NULL` in its place, and the Value
+  pane now says so instead of showing `NULL` as its result. All of a
+  pattern's branches together name the branches left out, since
+  `tar_read()` drops their `NULL`s (#151).
+
 * A status legend on the canvas, under the Tidy buttons: each status's
   colour, the nodes' own in every theme and mode, with how many targets
   have it. A click on one selects those targets, for the group's Run and
