@@ -109,8 +109,9 @@ test_that("the board saves where targets were left, and opens with them there", 
   Sys.sleep(1) # the zoom's animation
   view <- viewport_numbers(app)
   # Saved once the board writes it: later under load, so wait for it. On
-  # Windows, a read can also hit the file while the board writes it.
-  read_saved <- function() tryCatch(jsonlite::read_json(path), error = function(e) NULL)
+  # Windows, a read can also hit the file while the board writes it. A file
+  # not there yet warns before it errors: both mean "not yet".
+  read_saved <- function() tryCatch(jsonlite::read_json(path), error = function(e) NULL, warning = function(w) NULL)
   wait_for(function() {
     saved <- read_saved()
     !is.null(saved) && isTRUE(abs(saved$positions$b$y - moved[["y"]]) < 0.5) && isTRUE(saved$viewport$zoom < 1.5)
