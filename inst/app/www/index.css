@@ -803,7 +803,8 @@ html .Reactable .rt-page-size-select {
   cursor: pointer;
   color: var(--bs-secondary-color);
 }
-.tb-command > .tb-code {
+.tb-command > .tb-code,
+.tb-command > .tb-debug-run {
   margin-top: 0.35rem;
 }
 

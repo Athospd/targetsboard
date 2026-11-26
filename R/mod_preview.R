@@ -18,6 +18,7 @@ preview_ui <- function(id) {
     shiny::uiOutput(ns("rule")),
     shiny::uiOutput(ns("why")),
     shiny::uiOutput(ns("command")),
+    shiny::uiOutput(ns("debug")),
     # The same spinner card as Load's while a value is read and its preview
     # built, over the previous preview.
     shiny::tags$div(
@@ -110,6 +111,32 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     output$command <- shiny::renderUI({
       shiny::req(is_open(), focused())
       command_ui(commands()[focused()])
+    })
+
+    # Reproduce and debug any target, not only one that failed: the Problems
+    # part gives the same code for those, so they don't get it twice.
+    output$debug <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      name <- focused()
+      records_changed()
+      if (has_problem(target_problem(name, backend$poller$script))) return(NULL)
+      target <- preview_target(name, store(), branch = branch())
+      if (is.null(target)) return(NULL)
+      # A pattern: the branch picked, if one is (not all of them, branch 0).
+      own <- target$pattern$branch_name %||% if (is.null(target$pattern)) name
+      if (is.null(own)) return(NULL)
+      # records_changed() above follows this target's records: another
+      # target's new metadata doesn't read the store again.
+      meta <- shiny::isolate(tar_meta())
+      seed <- if (!is.null(meta) && "seed" %in% names(meta)) na_null(meta$seed[meta$name %in% own][1])
+      edges <- board()$x$edges
+      debug_ui(
+        own, run = name, command = unname(commands()[name]),
+        inputs = intersect(edges$from[edges$to == name], board_targets(board()$x$nodes)),
+        seed = seed, workspace = own %in% tryCatch(targets::tar_workspaces(), error = function(e) character()),
+        branch = !is.null(target$pattern), running = running(), script = backend$poller$script,
+        store = store(), dir = normalizePath(getwd(), winslash = "/")
+      )
     })
 
     # A tarchetypes rerun rule (cue_rules()), whatever the status: a skipped
@@ -243,5 +270,29 @@ command_ui <- function(command) {
     class = "tb-command",
     shiny::tags$summary("Command"),
     code_block("As it runs, from tar_manifest()", "command", command)
+  )
+}
+
+#' Reproduce and debug-run code for a target, in a section closed at first
+#'
+#' The Problems part's code (reproduce_code(), debug_run_block()), for a
+#' target that runs but may give a wrong value. A branch's inputs are slices
+#' of its upstream targets: only its workspace, when it has one, loads them,
+#' so without one it gets the debug run alone.
+#' @param name The target, or the branch.
+#' @param run The target the debug run builds: the branch's pattern.
+#' @noRd
+debug_ui <- function(name, run = name, command = NULL, inputs = character(), seed = NULL,
+                     workspace = FALSE, branch = FALSE, running = FALSE, script = NULL,
+                     store = NULL, dir = NULL) {
+  if (length(command) != 1 || is.na(command)) command <- NULL
+  shiny::tags$details(
+    class = "tb-command tb-debug",
+    shiny::tags$summary("Debug"),
+    if (!branch || workspace) {
+      code_block("Reproduce", "reproduce",
+                 reproduce_code(name, command, workspace, inputs, seed, script = script, store = store, dir = dir))
+    },
+    debug_run_block(name, running, script, run = run, store = store, dir = dir)
   )
 }
