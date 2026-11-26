@@ -63,7 +63,7 @@ test_that("run_summary_tags() says Running with the clock and what's to go, then
   done <- as.character(run_summary_tags(run_summary(progress, c("a", "e"), started = now - 42, ended = now)))
   expect_match(done, "Last run")
   expect_no_match(done, "to go")
-  expect_no_match(done, "canceled")
+  expect_no_match(done, "data-count=\"canceled\"", fixed = TRUE)
   expect_null(run_summary_tags(NULL))
 })
 
@@ -150,4 +150,19 @@ test_that("a run just started shows none of the last run's clock or counts (#183
   expect_true(is.na(s$elapsed))
   expect_equal(c(s$built, s$skipped, s$to_go), c(0, 0, 3))
   expect_null(run_summary(NULL, c("a", "b"), running = FALSE))
+})
+
+test_that("a run stopped by the user is stopped, its canceled targets grey, not errored (#204)", {
+  now <- as.POSIXct("2026-11-26 10:00:10")
+  progress <- data.frame(name = c("a", "b"), type = "stem", parent = c("a", "b"), progress = c("completed", "canceled"))
+  stopped <- run_summary(progress, c("a", "b"), started = now - 5, ended = now)
+  html <- as.character(run_summary_tags(stopped))
+  expect_match(html, "tb-run-summary-stopped", fixed = TRUE)
+  expect_match(html, "tb-run-bar-canceled\" style=\"width: 50.00%", fixed = TRUE)
+  expect_match(html, "tb-run-bar-errored\" style=\"width: 0.00%", fixed = TRUE)
+  expect_equal(run_summary_shape(stopped)$state, "stopped")
+  # An error says more than the stop.
+  progress$progress[2] <- "errored"
+  progress <- rbind(progress, data.frame(name = "c", type = "stem", parent = "c", progress = "canceled"))
+  expect_equal(run_summary_shape(run_summary(progress, c("a", "b", "c"), started = now - 5, ended = now))$state, "errored")
 })
