@@ -19,15 +19,15 @@
 # All pass the contrast checks in test-browser-themes.R, in both modes, or
 # in dark mode for a dark-only one (the page keeps it in dark mode). Of
 # Bootswatch 5's, left out: journal (its buttons), morph (its light mode)
-# and spacelab (text just under 4.5); and by choice cyborg, lumen, materia,
-# sandstone, simplex, slate and superhero.
+# and spacelab (text just under 4.5); and by choice brite, cyborg, flatly,
+# litera, lumen, lux, materia, sandstone, simplex, sketchy, slate, superhero
+# and yeti.
 # `preset`: a Bootswatch preset's name. `dark_only`: the theme is dark in
 # light mode too (a palette with no light variant).
 board_themes <- function() {
   presets <- c(
-    "brite", "cerulean", "cosmo", "darkly", "flatly", "litera", "lux",
-    "minty", "pulse", "quartz", "sketchy", "solar", "united", "vapor", "yeti",
-    "zephyr"
+    "cerulean", "cosmo", "darkly", "minty", "pulse", "quartz", "solar",
+    "united", "vapor", "zephyr"
   )
   own <- names(board_own_palettes())
   editors <- names(board_palettes())
