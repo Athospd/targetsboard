@@ -113,13 +113,28 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       command_ui(commands()[focused()])
     })
 
+    # The focused target's command, once per change: commands() changes with
+    # every recompute of the poller, the target's command seldom.
+    focused_command <- shiny::reactiveVal(NULL)
+    shiny::observe({
+      command <- if (!is.null(focused())) unname(commands()[focused()])
+      focused_command(if (length(command) == 1 && !is.na(command)) command)
+    })
+    # Its problem follows the target, its records and its command, not the
+    # graph: a redraw or a run starting doesn't build it again.
+    focused_problem <- shiny::reactive({
+      shiny::req(focused())
+      records_changed()
+      target_problem(focused(), command = focused_command())
+    })
+
     # Reproduce and debug any target, not only one that failed: the Problems
     # part gives the same code for those, so they don't get it twice.
     output$debug <- shiny::renderUI({
       shiny::req(is_open(), focused())
       name <- focused()
       records_changed()
-      if (has_problem(target_problem(name, backend$poller$script))) return(NULL)
+      if (has_problem(focused_problem())) return(NULL)
       target <- preview_target(name, store(), branch = branch())
       if (is.null(target)) return(NULL)
       # A pattern: the branch picked, if one is (not all of them, branch 0).
@@ -155,27 +170,12 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       reasons_ui(outdated()[[focused()]])
     })
 
-    # The focused target's command, once per change: commands() changes with
-    # every recompute of the poller, the target's command seldom.
-    focused_command <- shiny::reactiveVal(NULL)
-    shiny::observe({
-      command <- if (!is.null(focused())) unname(commands()[focused()])
-      focused_command(if (length(command) == 1 && !is.na(command)) command)
-    })
-    # Its problem follows the target, its records and its command, not the
-    # graph: a redraw or a run starting doesn't build it again.
-    problem <- shiny::reactive({
-      shiny::req(focused())
-      records_changed()
-      target_problem(focused(), command = focused_command())
-    })
-
     output$content <- shiny::renderUI({
       shiny::req(is_open(), focused())
       name <- focused()
       # A target that errored or warned shows its problem first; an errored
       # one has no value to show.
-      problem <- problem()
+      problem <- focused_problem()
       problem_part <- NULL
       if (has_problem(problem)) {
         graph <- shiny::isolate(board())$x
