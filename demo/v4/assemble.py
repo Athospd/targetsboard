@@ -276,7 +276,7 @@ def encode(frames, size, wav, video, seconds):
         [ff, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{size[0]}x{size[1]}",
          "-r", str(FPS), "-i", "-", "-i", wav, "-map", "0:v", "-map", "1:a",
          "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
-         "-c:a", "aac", "-b:a", "192k", "-af", f"afade=t=out:st={seconds - 2.5:.2f}:d=2.5", "-shortest", "-movflags", "+faststart", video],
+         "-c:a", "aac", "-b:a", "192k", "-af", f"loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st={seconds - 2.5:.2f}:d=2.5", "-ar", "44100", "-shortest", "-movflags", "+faststart", video],
         stdin=subprocess.PIPE)
     n = 0
     for f in frames:
