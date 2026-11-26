@@ -28,6 +28,14 @@
   slowest first, and the run summary estimates the time left from the
   targets' last builds (#107).
 
+* tarchetypes' rerun rules are said in the board's words. The Value pane
+  states a target's rule whatever its status: `tar_age()` (and when it is
+  due), `tar_force()`, `tar_skip()` (a skipped target looks up to date),
+  `tar_change()`, and the cues `tar_cue_age()`, `tar_cue_force()`,
+  `tar_cue_skip()`. Why it is outdated names the rule rather than the
+  "always" cue or the `_change` helper it sets, and a URL's file says it is
+  remote (#155).
+
 * A target's description (`tar_target(description = )`, or
   `tarchetypes::tar_map(descriptions = )`'s) shows when hovering it on the
   canvas, before why it is outdated, and at the top of its Value pane (#143).
@@ -49,6 +57,13 @@
 
 ## Bug fixes
 
+* Focusing a target highlighted its whole lineage, everything upstream and
+  downstream at every level, so a target near the start of the pipeline
+  lit up nearly the whole graph. It now highlights its direct inputs and
+  outputs and the edges to them, as `tar_visnetwork()` does; a selected
+  group, the same around each of its targets. The menu's Select its lineage
+  still selects the whole lineage (#172).
+
 * A redraw of the graph could drop an outdated target's hover text (why it
   is outdated) until the board next worked it out.
 
@@ -65,6 +80,12 @@
   graph. The board now redraws with them every time, tidyselect expressions
   such as `names = starts_with("model")` included. Another script loaded
   from the board is drawn whole (#148).
+
+## Internal
+
+* Four fewer dependencies: dplyr, purrr, zeallot and digest. The widget's
+  graph conversion is base R and about 15 times as fast (5,000 targets:
+  1.2 s to 0.08 s), with the same JSON (#160).
 
 # targetsboard 0.3.0
 

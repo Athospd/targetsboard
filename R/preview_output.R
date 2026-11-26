@@ -12,7 +12,7 @@ extract_html_file_path <- function(x) {
 serve_html_report <- function(path) {
   path <- normalizePath(path, winslash = "/")
   report_dir <- dirname(path)
-  prefix <- paste0("report_", substr(digest::digest(report_dir), 1, 12))
+  prefix <- paste0("report_", substr(rlang::hash(report_dir), 1, 12))
   shiny::addResourcePath(prefix, report_dir)
   paste0(prefix, "/", utils::URLencode(basename(path)))
 }

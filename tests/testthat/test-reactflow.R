@@ -40,3 +40,31 @@ test_that("every targets status maps to one of the four statuses the board shows
   expect_equal(vapply(nodes, `[[`, "", "type"), c("uptodate", "outdated", "errored"))
   expect_equal(nodes[[1]]$data$target_status, "completed")
 })
+
+test_that("the nodes' and edges' JSON keeps its shape (#160: base R, as dplyr gave it)", {
+  nodes <- fake_nodes(c("raw", "model"), c("uptodate", "errored"))
+  nodes$description[1] <- "Raw NIH data"
+  json <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE, null = "null", na = "null"))
+  expect_equal(
+    json(dataframe_to_reactflow_node_data(nodes, warnings = "model")),
+    paste0(
+      '[{"id":"raw","position":{"x":0,"y":0},"data":{"label":"raw","level":1,"description":"Raw NIH data",',
+      '"target_type":"stem","target_status":"uptodate","warning":false},"type":"uptodate","deletable":false},',
+      '{"id":"model","position":{"x":0,"y":0},"data":{"label":"model","level":2,"description":null,',
+      '"target_type":"stem","target_status":"errored","warning":true},"type":"errored","deletable":false}]'
+    )
+  )
+  expect_equal(
+    json(dataframe_to_reactflow_edge_data(fake_edges())),
+    paste0(
+      '[{"id":"raw_to_model","source":"raw","target":"model","deletable":false},',
+      '{"id":"model_to_report","source":"model","target":"report","deletable":false}]'
+    )
+  )
+})
+
+test_that("json_object() is {} when empty, the list itself otherwise", {
+  expect_equal(as.character(jsonlite::toJSON(json_object(), auto_unbox = TRUE)), "{}")
+  expect_equal(as.character(jsonlite::toJSON(json_object(list()), auto_unbox = TRUE)), "{}")
+  expect_equal(json_object(list(a = 1)), list(a = 1))
+})

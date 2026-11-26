@@ -93,7 +93,6 @@
 #' # or in the foreground:
 #' shiny::runApp(tar_board_app())
 #' }
-#' @importFrom parallelly freePort
 #' @export
 tar_board <- function(script = targets::tar_config_get("script", project = project),
                       port = getOption("shiny.port", targets::tar_random_port()),

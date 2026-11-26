@@ -41,7 +41,8 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   # The page's R code highlighter (www/highlight.js) loaded, with R.
   expect_true(app$get_js("!!window.targetsboardHighlight && !!window.targetsboardHighlight.getLanguage('r')"))
   expect_true(has_class("c", "tb-focused"))
-  expect_false(has_class("a", "tb-dimmed")) # upstream of c: in its lineage
+  expect_false(has_class("b", "tb-dimmed")) # c's direct input
+  expect_true(has_class("a", "tb-dimmed")) # two steps up: not a direct neighbour
 
   # Escape in the preview, as when leaving its full-screen, keeps the focus
   # and the preview: only the board's own Escape clears them.
@@ -107,8 +108,17 @@ test_that("the board renders the DAG, focuses targets and keeps its layout", {
   app$wait_for_js(paste0(node("d"), ".style.transform !== 'translate(0px, 0px)'"), timeout = 30 * 1000)
   expect_equal(list(a = transform("a"), b = transform("b"), c = transform("c")), placed)
   expect_false(transform("d") %in% unlist(placed))
-  expect_false(has_class("d", "tb-dimmed")) # downstream of the focused c
+  # c, in the middle of a -> b -> c -> d: its direct neighbours b and d, and
+  # the edges to them; a, two steps up, and its edge to b dim (#172).
+  expect_false(has_class("d", "tb-dimmed")) # c's direct output
+  expect_false(has_class("b", "tb-dimmed")) # c's direct input
+  expect_true(has_class("a", "tb-dimmed"))
   expect_true(has_class("e", "tb-dimmed")) # unrelated to c
+  edge_dimmed <- function(from, to) app$get_js(sprintf(
+    "document.querySelector('.react-flow__edge[data-id^=\"%s_\"][data-id$=\"_%s\"]').classList.contains('tb-dimmed')", from, to))
+  expect_false(edge_dimmed("b", "c"))
+  expect_false(edge_dimmed("c", "d"))
+  expect_true(edge_dimmed("a", "b"))
 
   # Clicking the background clears the focus.
   app$click(selector = ".react-flow__pane")

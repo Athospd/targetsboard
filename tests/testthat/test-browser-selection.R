@@ -41,7 +41,7 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   expect_equal(buttons(".tb-group-toolbar button"), c("run", "invalidate"))
   expect_equal(buttons(".tb-group-toolbar button", "innerText.trim()"), c("Run 2", "Invalidate 2"))
 
-  # The group and its lineages stay bright; the loner f dims.
+  # The group and its direct neighbours stay bright; the loner f dims.
   for (id in c("b", "d")) expect_true(has_class(id, "tb-focused"))
   for (id in c("a", "c", "e")) expect_false(has_class(id, "tb-dimmed"))
   expect_true(has_class("f", "tb-dimmed"))

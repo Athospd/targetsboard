@@ -30,7 +30,8 @@ replace `targets::tar_watch()` for the author. The DAG is drawn with
 date, outdated, running or errored), running targets show a spinner and the
 edges feeding them are animated, and targets whose last build raised
 warnings carry a warning mark. Clicking a target focuses it: what it depends
-on and what depends on it stay highlighted, and its value is previewed.
+on and what depends on it directly stay highlighted, as in
+`tar_visnetwork()`, and its value is previewed.
 When the pipeline changes, targets already drawn keep their place.
 
 ![The board while tar_make() runs: model_a is running, model_b and report are outdated, clean raised a warning, and check errored: its problem, traceback and code to reproduce it are in the pane on the right](man/figures/README-board.png)

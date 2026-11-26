@@ -39,6 +39,4 @@ importFrom(htmltools,
 )
 importFrom(parallelly,freePort)
 importFrom(reactR,createReactShinyInput)
-importFrom(rlang,.data)
 importFrom(visNetwork,visNetwork)
-importFrom(zeallot,"%<-%")

@@ -23,9 +23,9 @@ Flow](https://reactflow.dev): targets are coloured by status (up to
 date, outdated, running or errored), running targets show a spinner and
 the edges feeding them are animated, and targets whose last build raised
 warnings carry a warning mark. Clicking a target focuses it: what it
-depends on and what depends on it stay highlighted, and its value is
-previewed. When the pipeline changes, targets already drawn keep their
-place.
+depends on and what depends on it directly stay highlighted, as in
+`tar_visnetwork()`, and its value is previewed. When the pipeline
+changes, targets already drawn keep their place.
 
 <figure>
 <img src="man/figures/README-board.png"
