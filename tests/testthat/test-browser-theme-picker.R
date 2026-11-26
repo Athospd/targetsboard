@@ -91,6 +91,10 @@ test_that("the browser remembers the pick, unless the option chose the theme", {
   app2$run_js("location.reload()")
   Sys.sleep(3)
   app2$wait_for_js("document.querySelector('#theme-pick')?.value === 'Cosmo'", timeout = 20000)
-  expect_true(app2$get_js("document.querySelector('.tb-mode-button').offsetParent !== null"))
+  # The mode button shows once the page has applied the theme: a slow runner
+  # can still be drawing it when the picker's value is set.
+  shown <- "document.querySelector('.tb-mode-button')?.offsetParent != null"
+  app2$wait_for_js(shown, timeout = 20000)
+  expect_true(app2$get_js(shown))
   app2$run_js("localStorage.removeItem('targetsboard.theme')")
 })
