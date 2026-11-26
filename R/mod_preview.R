@@ -14,6 +14,7 @@ preview_ui <- function(id) {
     open = FALSE,
     position = "right",
     # Apart from the value's output: new reasons don't rebuild the value.
+    shiny::uiOutput(ns("description")),
     shiny::uiOutput(ns("why")),
     # The same spinner card as Load's while a value is read and its preview
     # built, over the previous preview.
@@ -94,6 +95,12 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       records_changed(shiny::isolate(records_changed()) + 1)
     }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
+    # tar_target(description = ), or tar_map(descriptions = )'s.
+    output$description <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      description_ui(target_description(board()$x$nodes, focused()))
+    })
+
     output$why <- shiny::renderUI({
       shiny::req(is_open(), focused())
       reasons_ui(outdated()[[focused()]])
@@ -172,4 +179,19 @@ focused_records <- function(meta, name) {
   if (is.null(meta) || is.null(name)) return(NULL)
   parent <- if ("parent" %in% names(meta)) meta$parent else NA_character_
   meta[meta$name %in% name | parent %in% name, ]
+}
+
+#' A target's description, from the graph's nodes (tar_visnetwork()), or NULL
+#' when it has none
+#' @noRd
+target_description <- function(nodes, id) {
+  if (is.null(nodes) || !all(c("id", "description") %in% names(nodes))) return(NULL)
+  text <- nodes$description[nodes$id %in% id]
+  if (length(text) != 1 || is.na(text) || !nzchar(trimws(text))) return(NULL)
+  text
+}
+
+description_ui <- function(text) {
+  if (is.null(text)) return(NULL)
+  shiny::tags$p(class = "tb-description", text)
 }

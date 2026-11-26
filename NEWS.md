@@ -28,6 +28,10 @@
   slowest first, and the run summary estimates the time left from the
   targets' last builds (#107).
 
+* A target's description (`tar_target(description = )`, or
+  `tarchetypes::tar_map(descriptions = )`'s) shows when hovering it on the
+  canvas, before why it is outdated, and at the top of its Value pane (#143).
+
 ## Bug fixes
 
 * A redraw of the graph could drop an outdated target's hover text (why it
