@@ -43,6 +43,13 @@
 
 ## Bug fixes
 
+* Focusing a target highlighted its whole lineage, everything upstream and
+  downstream at every level, so a target near the start of the pipeline
+  lit up nearly the whole graph. It now highlights its direct inputs and
+  outputs and the edges to them, as `tar_visnetwork()` does; a selected
+  group, the same around each of its targets. The menu's Select its lineage
+  still selects the whole lineage (#172).
+
 * A redraw of the graph could drop an outdated target's hover text (why it
   is outdated) until the board next worked it out.
 

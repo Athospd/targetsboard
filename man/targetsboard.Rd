@@ -151,13 +151,15 @@ a spinner and their incoming edges are animated, and targets whose last
 build raised warnings carry a warning mark.
 }
 \details{
-Clicking a target focuses it: what it depends on and what depends on it are
-highlighted, and the rest of the graph dims. Clicking the background, or
+Clicking a target focuses it: what it depends on and what depends on it
+directly are highlighted, as \code{tar_visnetwork()} does, and the rest of the
+graph dims. The menu selects the whole lineage. Clicking the background, or
 Escape, clears the focus and the selection.
 
 Several targets can be selected: Ctrl-click (Cmd-click on a Mac) adds one,
 and Shift-drag selects those in a box. A group of two or more stays
-highlighted with all it depends on and all that depends on it. A
+highlighted with what its targets depend on and what depends on them
+directly. A
 right-click on one of the group opens the group's menu
 (\code{node_group_actions}), and a toolbar over the group holds
 \code{toolbar_group_actions}; a right-click on any other target selects that one
