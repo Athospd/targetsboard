@@ -39,4 +39,7 @@ test_that("an outdated target says why, on hover and in the preview", {
   withr::with_dir(dir, targets::tar_make(reporter = "silent"))
   app$wait_for_js("document.querySelector('.tb-why') === null", timeout = 90 * 1000)
   app$wait_for_js(sprintf("%s === null", title("b")), timeout = 30 * 1000)
+  # Up to date again: why a run skips it, in its place.
+  app$wait_for_js("document.querySelector('.tb-skipped')?.innerText.includes('so a run skips it') === true", timeout = 30 * 1000)
+  expect_match(app$get_js("document.querySelector('.tb-skipped').innerText.trim()"), "^Up to date: its command")
 })

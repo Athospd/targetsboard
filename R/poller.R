@@ -136,10 +136,14 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
             message("Why outdated failed: ", conditionMessage(e))
             NULL
           })
-          # Each target's format and command, for its icon (target_kinds()):
-          # on its own, so a failure elsewhere doesn't lose it.
+          # Each target's format and command, for its icon (target_kinds()),
+          # and its cue, for why it is up to date (skipped_reasons()): on its
+          # own, so a failure elsewhere doesn't lose it.
           manifest <- tryCatch(
-            as.data.frame(targets::tar_manifest(script = script, fields = c("name", "format", "command"))),
+            as.data.frame(targets::tar_manifest(script = script, fields = c(
+              "name", "format", "command", "cue_mode", "cue_command", "cue_depend",
+              "cue_file", "cue_format", "cue_repository", "cue_iteration"
+            ))),
             error = function(e) {
               message("tar_manifest() failed: ", conditionMessage(e))
               NULL

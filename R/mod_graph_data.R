@@ -101,6 +101,7 @@ graph_data_server <- function(id, backend) {
       cue_rules(backend$loaded_script())
     })
     outdated <- shiny::reactive(outdated_reasons(after_graph(), rules()))
+    skipped <- shiny::reactive(skipped_reasons(after_graph(), rules()))
     kinds <- shiny::reactive(target_kinds(after_graph()$manifest))
     commands <- shiny::reactive(target_commands(after_graph()$manifest))
 
@@ -113,6 +114,7 @@ graph_data_server <- function(id, backend) {
       warned_targets = warned_targets,
       costs = costs,
       outdated = outdated,
+      skipped = skipped,
       kinds = kinds,
       commands = commands,
       rules = rules
