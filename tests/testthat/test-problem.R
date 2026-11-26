@@ -23,7 +23,7 @@ local_problem_store <- function(.env = parent.frame()) {
 test_that("an errored target's problem has its error, traceback, seed and command", {
   skip_on_cran()
   local_problem_store()
-  problem <- target_problem("model", "_targets.R")
+  problem <- target_problem("model", command = "analyze(data)")
   expect_true(has_problem(problem))
   expect_match(problem$error, "object 'y' not found")
   expect_true(problem$workspace)
@@ -39,18 +39,15 @@ test_that("an errored target's problem has its error, traceback, seed and comman
   expect_match(segments[[2]]$calls[1], "stats::lm", fixed = TRUE)
   expect_false(any(grepl("handleSimpleError|simpleError", unlist(lapply(segments, `[[`, "calls")))))
 
-  expect_null(target_problem("data", "_targets.R")$error)
-  expect_false(has_problem(target_problem("data", "_targets.R")))
-  # Without a problem, the pipeline's script isn't run for its command.
-  local_mocked_bindings(target_command = function(...) stop("ran the script"))
-  expect_false(has_problem(target_problem("data", "_targets.R")))
-  expect_null(target_problem("absent", "_targets.R"))
+  expect_null(target_problem("data")$error)
+  expect_false(has_problem(target_problem("data")))
+  expect_null(target_problem("absent"))
 })
 
 test_that("a warned target's problem reproduces from its inputs and seed", {
   skip_on_cran()
   local_problem_store()
-  problem <- target_problem("warned", "_targets.R")
+  problem <- target_problem("warned", command = target_commands(targets::tar_manifest())[["warned"]])
   expect_true(has_problem(problem))
   expect_null(problem$error)
   expect_equal(problem$warnings, "2 rows dropped")
@@ -67,7 +64,7 @@ test_that("a warned target's problem reproduces from its inputs and seed", {
 test_that("a pattern's problem lists its failed branches, with their positions", {
   skip_on_cran()
   local_problem_store()
-  problem <- target_problem("branch", "_targets.R")
+  problem <- target_problem("branch")
   expect_true(has_problem(problem))
   expect_null(problem$error)
   expect_length(problem$branches, 1)
@@ -102,7 +99,7 @@ test_that("a pattern whose run stopped at a branch's error still shows that bran
   try(targets::tar_make(reporter = "silent"), silent = TRUE)
   expect_false("branch" %in% targets::tar_meta(fields = type)$name)
 
-  problem <- target_problem("branch", "_targets.R")
+  problem <- target_problem("branch", command = "if (nums == 2) stop(\"bad branch\") else nums")
   expect_true(has_problem(problem))
   expect_equal(problem$type, "pattern")
   expect_equal(problem$command, "if (nums == 2) stop(\"bad branch\") else nums")
@@ -112,7 +109,7 @@ test_that("a pattern whose run stopped at a branch's error still shows that bran
   expect_match(as.character(problem_ui(problem)), "Branches with problems: 1", fixed = TRUE)
 
   # A name with no metadata and no branches is still no problem.
-  expect_null(target_problem("absent", "_targets.R"))
+  expect_null(target_problem("absent"))
 })
 
 test_that("the pane shows the snippets to copy, but no debug run while running", {
@@ -354,4 +351,55 @@ test_that("the page has the Problems and Log tabs", {
   expect_match(html, 'id="board-problems-count"', fixed = TRUE)
   expect_match(html, 'data-value="log"', fixed = TRUE)
   expect_match(html, 'id="board-log-text"', fixed = TRUE)
+})
+
+test_that("a problem opens without running the script (#176)", {
+  skip_on_cran()
+  local_problem_store()
+  # Sourcing the script would now take 5 s: target_problem() mustn't.
+  lines <- readLines("_targets.R")
+  writeLines(c("if (nzchar(Sys.getenv('TB_SLOW_SCRIPT'))) Sys.sleep(5)", lines), "_targets.R")
+  withr::local_envvar(TB_SLOW_SCRIPT = "true")
+  for (name in c("model", "branch")) {
+    took <- system.time(problem <- target_problem(name))[["elapsed"]]
+    expect_true(has_problem(problem))
+    expect_lt(took, 1)
+  }
+  # The branch's position still comes, from the pattern's children.
+  expect_equal(c(problem$branches[[1]]$position, problem$branches[[1]]$of), c(2, 3))
+})
+
+test_that("the preview's problem follows its target, not the graph's redraws (#176)", {
+  skip_on_cran()
+  local_problem_store()
+  built <- 0
+  real <- target_problem
+  local_mocked_bindings(target_problem = function(...) {
+    built <<- built + 1
+    real(...)
+  })
+  graph <- targets::tar_visnetwork(targets_only = TRUE)$x
+  backend <- board_backend("_targets.R", targets_only = TRUE)
+  withr::defer(backend$stop_poller())
+  args <- list(
+    backend = backend, focused = shiny::reactiveVal("model"), open_request = shiny::reactiveVal(1),
+    board = shiny::reactiveVal(list(x = graph)), running = shiny::reactiveVal(FALSE),
+    tar_meta = shiny::reactiveVal(targets::tar_meta()), methods = shiny::reactiveVal(0),
+    commands = shiny::reactiveVal(c(model = "analyze(data)"))
+  )
+  shiny::testServer(preview_server, args = args, {
+    session$flushReact()
+    expect_match(output$content$html, "analyze(data)", fixed = TRUE)
+    before <- built
+    args$board(list(x = graph, redrawn = TRUE)) # the poller redraws
+    args$running(TRUE) # a run starts
+    args$commands(c(model = "analyze(data)", other = "1")) # another command changes
+    session$flushReact()
+    output$content
+    expect_equal(built, before)
+    args$commands(c(model = "analyze(data) + 0")) # its own command changes
+    session$flushReact()
+    expect_match(output$content$html, "analyze(data) + 0", fixed = TRUE)
+    expect_equal(built, before + 1)
+  })
 })
