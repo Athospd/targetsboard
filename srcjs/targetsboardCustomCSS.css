@@ -64,6 +64,9 @@
   --tb-focus-ring: var(--tb-theme-focus-ring, #2f223d);
   /* The slowest and largest targets' time and size badges. */
   --tb-hot: var(--tb-theme-hot, #e8833a);
+  /* Numbers on a target (its time and size): the page's monospace, as the
+     script path's. */
+  --tb-font-mono: var(--tb-theme-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace));
   --tb-hot-text: var(--tb-theme-hot-text, #2b1405);
   /* Menus, toolbars, buttons and badges over the canvas: in the app, the
      page's Bootstrap surfaces, as its dropdowns; alone, their values. */
@@ -389,8 +392,10 @@
   gap: 0.25rem;
   white-space: nowrap;
   color: inherit;
-  font-size: 0.5rem;
+  font-family: var(--tb-font-mono);
+  font-size: 0.4375rem; /* 7px */
   line-height: 1.2;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
   pointer-events: auto;

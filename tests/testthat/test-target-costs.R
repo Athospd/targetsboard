@@ -71,6 +71,11 @@ test_that("time_left() adds the last builds of what is to go and running, and a 
   expect_equal(left$seconds, 50)
   expect_equal(left$unknown, 1)
   expect_null(time_left(progress, "b", NULL))
+  # A first run, before any metadata: tar_meta()'s empty table is all character.
+  empty <- data.frame(name = character(), type = character(), seconds = character(), children = character())
+  first <- time_left(progress, "b", empty)
+  expect_equal(first$seconds, 0)
+  expect_equal(first$unknown, 3)
 })
 
 test_that("the run summary says the time left while running, not after", {

@@ -67,7 +67,8 @@ format_seconds <- function(seconds) {
 #' @noRd
 time_left <- function(progress, to_go, meta) {
   if (is.null(meta) || !all(c("name", "seconds") %in% names(meta))) return(NULL)
-  last <- stats::setNames(meta$seconds, meta$name)
+  # Before any metadata, tar_meta()'s empty table has character columns.
+  last <- stats::setNames(suppressWarnings(as.numeric(meta$seconds)), meta$name)
   top <- progress[!progress$type %in% "branch", , drop = FALSE]
   running <- top$name[top$progress %in% "dispatched"]
   # Patterns: dispatched themselves, or with a branch still running.
