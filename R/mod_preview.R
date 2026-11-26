@@ -101,6 +101,18 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       records_changed(shiny::isolate(records_changed()) + 1)
     }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
+    # The pipeline's functions as written (function_definitions()), read
+    # again with each new graph: the poller redraws when their files change.
+    functions <- shiny::reactive({
+      board()
+      function_definitions(backend$poller$script)
+    })
+    # A function on the canvas (targets_only = FALSE) has code, not a value.
+    is_function <- function(name) {
+      nodes <- shiny::isolate(board())$x$nodes
+      "type" %in% names(nodes) && name %in% nodes$id[nodes$type %in% "function"]
+    }
+
     # tar_target(description = ), or tar_map(descriptions = )'s.
     output$description <- shiny::renderUI({
       shiny::req(is_open(), focused())
@@ -135,7 +147,7 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       shiny::req(is_open(), focused())
       name <- focused()
       records_changed()
-      if (has_problem(focused_problem())) return(NULL)
+      if (is_function(name) || has_problem(focused_problem())) return(NULL)
       target <- preview_target(name, store(), branch = branch())
       if (is.null(target)) return(NULL)
       # A pattern: the branch picked, if one is (not all of them, branch 0).
@@ -171,7 +183,7 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       shiny::req(is_open(), focused())
       name <- focused()
       reasons <- outdated()[[name]]
-      if (length(reasons)) return(reasons_ui(reasons))
+      if (length(reasons)) return(reasons_ui(reasons, functions()))
       sentences <- skipped()[[name]]
       shiny::req(sentences)
       meta <- tar_meta()
@@ -188,6 +200,11 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     output$content <- shiny::renderUI({
       shiny::req(is_open(), focused())
       name <- focused()
+      if (is_function(name)) {
+        all <- functions()
+        return(function_ui(all[all$name == name, , drop = FALSE], open = TRUE) %||%
+          shiny::p("This function's code wasn't found in the script or the files it sources."))
+      }
       # A target that errored or warned shows its problem first; an errored
       # one has no value to show.
       problem <- focused_problem()

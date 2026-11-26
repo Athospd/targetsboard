@@ -811,6 +811,14 @@ html .Reactable .rt-page-size-select {
   margin-top: 0.35rem;
 }
 
+/* The functions a reason names, in the Why card (reason_functions_ui()). */
+.tb-why-functions {
+  padding: 0.25rem 0.75rem 0;
+}
+.tb-function-where {
+  color: var(--bs-secondary-color);
+}
+
 /* A tarchetypes rerun rule in the Value pane (rule_ui()). */
 .tb-rule {
   margin: 0 0 0.5rem;

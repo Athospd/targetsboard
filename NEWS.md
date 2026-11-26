@@ -2,6 +2,12 @@
 
 ## New features
 
+* A function's code where the board names it: under "Why it is
+  outdated", each changed function has a section with its code, as
+  written, and the file and line it's defined in. With
+  `targets_only = FALSE`, a function on the canvas shows the same in the
+  Value pane. Functions are read from the script and the files it sources,
+  without running them (#153).
 * Why a run skips a target: an up-to-date target's Value pane says that its
   command, what it uses and its settings haven't changed since its last
   build, with when that was. Its cue is named when it changes that:

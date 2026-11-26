@@ -178,9 +178,11 @@ reason_icons <- c(
 #' A card in the outdated status's colour, info, above the value's: a
 #' reason per row, with its kind's icon.
 #' @param reasons The target's sentences, from outdated_reasons().
+#' @param functions function_definitions(): the functions the reasons name
+#'   get their code, below them (reason_functions_ui()).
 #' @return A tag, or `NULL` without reasons.
 #' @noRd
-reasons_ui <- function(reasons) {
+reasons_ui <- function(reasons, functions = NULL) {
   if (!length(reasons)) return(NULL)
   kinds <- names(reasons) %||% rep("", length(reasons))
   # Names in backticks become code, inline in the escaped sentence.
@@ -201,7 +203,8 @@ reasons_ui <- function(reasons) {
     ),
     bslib::card_body(
       padding = 0,
-      shiny::tags$ul(class = "list-group list-group-flush", unname(Map(row, unname(reasons), kinds)))
+      shiny::tags$ul(class = "list-group list-group-flush", unname(Map(row, unname(reasons), kinds))),
+      reason_functions_ui(reasons, functions)
     )
   )
 }
