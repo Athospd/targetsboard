@@ -21,7 +21,10 @@ test_that("the Control Panel counts a run as it goes, then keeps the last run", 
   expect_match(text, "to go")
   expect_match(text, "[0-9]+:[0-9]{2}")
 
-  app$wait_for_js(paste0(summary, " !== null && !", summary, ".classList.contains('tb-run-summary-running')"),
+  # Done: the run's last progress can land a poll after the run ends, so
+  # wait for all three.
+  app$wait_for_js(paste0(summary, " !== null && !", summary, ".classList.contains('tb-run-summary-running')",
+                         " && /3[^0-9a-z]*built/.test(", summary, ".innerText)"),
                   timeout = 60000)
   text <- app$get_js(paste0(summary, ".innerText"))
   expect_match(text, "Last run")
