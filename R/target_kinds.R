@@ -40,3 +40,28 @@ target_commands <- function(manifest) {
   keep <- !is.na(manifest$command) & nzchar(manifest$command)
   stats::setNames(as.character(manifest$command[keep]), manifest$name[keep])
 }
+
+# targets' own defaults, as tar_option_get() gives them in a fresh session
+# (targets 1.12.1); NA: none, the setting is shown only when set.
+# test-target-settings.R checks them against the installed targets.
+setting_defaults <- c(
+  pattern = NA, iteration = "vector", memory = "auto", storage = "worker", retrieval = "auto",
+  deployment = "worker", error = "stop", priority = "0", repository = "local", resources = NA
+)
+
+#' Each target's settings, as they run
+#'
+#' From `tar_manifest()`, which the poller reads, with `resources` as text
+#' (the kinds set, and crew's controller).
+#' @param manifest `targets::tar_manifest()`, with the fields of
+#'   `setting_defaults`.
+#' @return A data frame: `name`, then one text column per setting it has.
+#' @noRd
+target_settings <- function(manifest) {
+  if (is.null(manifest) || !nrow(manifest) || !"name" %in% names(manifest)) return(NULL)
+  fields <- intersect(names(setting_defaults), names(manifest))
+  if (!length(fields)) return(NULL)
+  out <- as.data.frame(manifest)[c("name", fields)]
+  out[fields] <- lapply(out[fields], function(x) if (is.list(x)) NA_character_ else as.character(x))
+  out
+}

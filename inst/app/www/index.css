@@ -811,6 +811,16 @@ html .Reactable .rt-page-size-select {
   margin-top: 0.35rem;
 }
 
+/* A target's settings (settings_ui()), in a Command-like section. */
+.tb-settings-table {
+  margin-top: 0.35rem;
+}
+.tb-settings-table th {
+  padding-right: 1rem;
+  font-weight: normal;
+  color: var(--bs-secondary-color);
+}
+
 /* A tarchetypes rerun rule in the Value pane (rule_ui()). */
 .tb-rule {
   margin: 0 0 0.5rem;
