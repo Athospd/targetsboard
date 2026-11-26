@@ -57,6 +57,11 @@ shows <- function(what, timeout = 20) {
                 preview, what), timeout)
 }
 shows_cut <- function(what, timeout = 30) { skip(TRUE); shows(what, timeout); hold(0.25); skip(FALSE) }
+# The preview shows this target's value: its name heads the pane, and `what`
+# is in it (the last target's stays under the spinner until then).
+value_of <- function(name, what = "true") {
+  sprintf("p.querySelector('.tb-preview-name')?.textContent.trim() === '%s' && %s", name, what)
+}
 tab <- function(value) sprintf("#board-view .nav-link[data-value='%s']", value)
 menu <- function(id, action) {
   click(node(id), button = "right")
@@ -147,7 +152,7 @@ toggle(left = TRUE)
 hold(0.4)
 caption("Double-click any target: its value, no tar_read()")
 click(node("hot_days"), double = TRUE)
-shows_cut(sprintf("!!document.querySelector('%s .rt-table, %s table')", content, content))
+shows_cut(value_of("hot_days", "!!p.querySelector('.rt-table, table')"))
 dismiss()
 fit()
 frame_on(content, within = preview, max_h = 360, max_zoom = 1.8, dur = 0.6)
@@ -155,13 +160,13 @@ hold(2.2)
 home()
 caption("Plots")
 click(node("ozone_plot"))
-shows_cut(sprintf("!!document.querySelector('%s img')", content))
+shows_cut(value_of("ozone_plot", "!!p.querySelector('img')"))
 frame_on(sprintf("%s img", content), within = preview, max_zoom = 1.8, dur = 0.5)
 hold(1.6)
 home()
 caption("Rendered reports, in place")
 click(node("report"))
-shows_cut(sprintf("!!document.querySelector('%s iframe')", preview))
+shows_cut(value_of("report", "!!p.querySelector('iframe')"))
 hold(0.3)
 frame_on(sprintf("%s iframe", preview), within = preview, max_h = 380, max_zoom = 1.8, dur = 0.5)
 hold(1.8)
