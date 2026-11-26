@@ -18,6 +18,11 @@
   until the next one. As `tar_progress_summary()` counts, from targets' own
   files, so a run started from the console shows too (#140).
 
+## Bug fixes
+
+* A click on a legend entry with a single target selected it without marking it
+  on the canvas: now it focuses it too, as a click on the target does.
+
 # targetsboard 0.3.0
 
 ## New features
