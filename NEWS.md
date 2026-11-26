@@ -32,6 +32,10 @@
   `tarchetypes::tar_map(descriptions = )`'s) shows when hovering it on the
   canvas, before why it is outdated, and at the top of its Value pane (#143).
 
+* The board redraws when a function changes in any file the script sources:
+  the literal paths of its `tar_source()` and `source()` calls (a folder, or
+  a file), not only `R/` (#152).
+
 * The Value pane has a Command section, closed at first: the target's
   command as it runs, from `tar_manifest()`, highlighted and copyable. For
   targets made by `tar_map()`, `tar_eval()`, `tar_combine()` or hooks, that
@@ -44,6 +48,11 @@
 
 * A click on a legend entry with a single target selected it without marking it
   on the canvas: now it focuses it too, as a click on the target does.
+
+* The Problems and Metadata tables could turn white after picking another
+  theme on the board, barely readable in a dark one: reactable's own
+  stylesheet, loaded again by the switch, won over the theme's colours.
+  The board's rules now win whatever the order (#165).
 
 * `tar_board(names = , allow = , exclude = , ...)` kept the subset only for
   the first drawing: the first change to the pipeline brought back the whole
