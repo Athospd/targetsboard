@@ -6,4 +6,5 @@ Run them from the repository root (the working directory of the .Rproj).
 - `dev.R`: rebuild the JS bundle and reload the package.
 - `app.R`: run the board in the foreground on an example pipeline.
 - `app_bg.R`: run the board in the background with `tar_board()`.
+- `projects/`: a sandbox of targets projects (`_targets.yaml`) and a step-by-step walk through the board's Project field. See its README.
 - `concurent_visnetworks.R`, `output_preview.R`: old experiments.

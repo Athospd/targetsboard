@@ -12,6 +12,7 @@
   (`format = "file"`), a Quarto or R Markdown report, a function or an
   object. A plain target has none. Hover it for its name. The icons take the
   node's text colour, so they read in every status, theme and mode (#103).
+
 * A run summary in the Control Panel, under the run buttons: while a run
   goes, its clock and how many targets it built, skipped, is running, saw
   error and has still to go; after it, the last run's time and counts,

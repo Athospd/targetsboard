@@ -281,6 +281,60 @@ def code_overlay(frame, tl, s):
     return frame
 
 
+_console_cache = {}
+
+
+def console_card(show):
+    """A card of R console lines, or a file's (title: "R console", "_targets.yaml"):
+    "> " lines in code colours, "#" lines as comments, the rest as output."""
+    key = (show["title"], tuple(show["lines"]))
+    if key in _console_cache: return _console_cache[key]
+    f, small = font("consola.ttf", 34), font("segoeuib.ttf", 26)
+    row = 54
+    w = max(int(max(f.getlength(t) for t in show["lines"])) + 96, 620)
+    h = 84 + row * len(show["lines"]) + 22
+    card = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(card)
+    d.rounded_rectangle([0, 0, w - 1, h - 1], 22, fill=(31, 26, 41, 255), outline=(70, 60, 88, 255), width=2)
+    d.text((40, 26), show["title"], font=small, fill=(190, 180, 205))
+    for k, t in enumerate(show["lines"]):
+        y = 84 + k * row
+        if t.startswith("> "):
+            d.text((40, y), ">", font=f, fill=(242, 201, 76))
+            d.text((40 + f.getlength("> "), y), t[2:], font=f, fill=(159, 211, 223))
+        elif t.lstrip().startswith("#"):
+            d.text((40, y), t, font=f, fill=(143, 132, 163))
+        else:
+            d.text((40, y), t, font=f, fill=(232, 226, 240))
+    _console_cache[key] = card
+    return card
+
+
+def console_overlay(frame, tl, s):
+    """The console card (record's console()), as the code card: fades in over a
+    dimmed board, above the caption band, and out when turned off."""
+    on = None
+    for e in tl.of("console"):
+        if e["t"] <= s: on = e
+    if not on: return frame
+    if on["on"]:
+        age, show = s - on["t"], on
+    else:
+        age = s - on["t"]
+        if age > 0.3: return frame
+        prev = [c for c in tl.of("console") if c["on"] and c["t"] <= on["t"]]
+        show = prev[-1]; age = 0.3 - age
+    a = min(1, age / 0.3)
+    frame = Image.blend(frame, Image.new("RGBA", (W, H), (18, 14, 24, 255)), 0.55 * a)
+    img = console_card(show)
+    if img.width > W - 120:  # too wide: scale to fit
+        img = img.resize((W - 120, int(img.height * (W - 120) / img.width)), Image.LANCZOS)
+    faded = img.copy()
+    faded.putalpha(img.getchannel("A").point(lambda v: int(v * a)))
+    frame.alpha_composite(faded, ((W - img.width) // 2, int((H * 0.80 - img.height) / 2)))
+    return frame
+
+
 def chapter_color(tl, s):
     e = tl.latest("chapter", s)
     return tuple(int(e["color"][i:i + 2], 16) for i in (1, 3, 5)) if e else (212, 149, 54)
@@ -301,6 +355,7 @@ def render(tl, out, s, cache):
     top = min(max(y * tl.scale - sh / 2, 0), img.height - sh)
     frame = img.resize((W, H), Image.BICUBIC, box=(left, top, left + sw, top + sh))
     frame = code_overlay(frame, tl, s)
+    frame = console_overlay(frame, tl, s)
     draw_caption(frame, tl, s, chapter_color(tl, s))
     for e in tl.of("chapter"):
         chapter_overlay(frame, e, s)
