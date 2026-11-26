@@ -28,7 +28,7 @@ const BaseNode = ({
     <div className={`base-node tb-status-${status}` + (kind ? ' tb-has-type-icon' : '')} title={nodeTitle(data)}>
       <FocusedNodeToolbar id={id} />
       <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
-      <TypeIcon kind={kind} />
+      <TypeIcon kind={kind} raw={data?.kind} />
       {data?.cost && (
         // Its time and size: each shows when the legend's switch is on
         // (the wrapper's tb-show-times, tb-show-sizes), in its corner.
