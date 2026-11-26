@@ -120,3 +120,25 @@ test_that("the poller draws a script that appears after it started", {
   wait_for(function() file.exists(poller$tar_vis_path))
   expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b"))
 })
+
+test_that("the poller keeps the board's filters on every redraw (#148)", {
+  skip_on_cran()
+  local_pipeline()
+  poller <- tar_visnetwork_bg(
+    "_targets.R", interval = 0.2, settle = 0.5, targets_only = TRUE,
+    filters = list(names = quote(any_of("b")))
+  )
+  withr::defer(poller$process$kill())
+  wait_for(function() file.exists(poller$tar_vis_path))
+  # b and what it depends on.
+  expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b"))
+
+  first <- written_at(poller)
+  Sys.sleep(1.1)
+  writeLines(
+    c("library(targets)", "list(tar_target(a, 1), tar_target(b, a + 1), tar_target(c, b * 2), tar_target(d, c))"),
+    "_targets.R"
+  )
+  wait_for_rewrite(poller, first)
+  expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b"))
+})
