@@ -757,20 +757,37 @@ function Flow({ configuration }) {
   // focused target, with its direct inputs and outputs and the edges to them,
   // as tar_visnetwork() does; the rest dims. The whole lineage is a menu
   // action away (Select its lineage).
-  const marked = group ?? (focusId ? [focusId] : null);
-  const markedIds = new Set(marked ?? []);
-  const near = marked ? neighboursOf(marked, edges) : null;
-  const shownNodes = near
-    ? nodes.map((n) => ({
-        ...n,
-        className: markedIds.has(n.id) ? 'tb-focused' : near.has(n.id) ? undefined : 'tb-dimmed',
-      }))
-    : nodes;
-  const shownEdges = edges.map((e) => ({
-    ...e,
-    type: options.edge_type,
-    className: !near || markedIds.has(e.source) || markedIds.has(e.target) ? undefined : 'tb-dimmed',
-  }));
+  // Renders come on every drag frame and status tick (#206): what doesn't
+  // change keeps its object, so React Flow draws again only what did.
+  const markedKey = group ? selectedKey : focusId;
+  const { markedIds, near } = useMemo(() => {
+    const marked = group ?? (focusId ? [focusId] : null);
+    return { markedIds: new Set(marked ?? []), near: marked ? neighboursOf(marked, edges) : null };
+  }, [markedKey, edges]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shownCache = useRef(new Map());
+  const shownNodes = useMemo(() => {
+    if (!near) return nodes;
+    const before = shownCache.current;
+    const after = new Map();
+    const shown = nodes.map((n) => {
+      const className = markedIds.has(n.id) ? 'tb-focused' : near.has(n.id) ? undefined : 'tb-dimmed';
+      const cached = before.get(n.id);
+      const out = cached?.node === n && cached.className === className ? cached.out : { ...n, className };
+      after.set(n.id, { node: n, className, out });
+      return out;
+    });
+    shownCache.current = after;
+    return shown;
+  }, [nodes, near, markedIds]);
+  const shownEdges = useMemo(
+    () =>
+      edges.map((e) => ({
+        ...e,
+        type: options.edge_type,
+        className: !near || markedIds.has(e.source) || markedIds.has(e.target) ? undefined : 'tb-dimmed',
+      })),
+    [edges, near, markedIds, options.edge_type],
+  );
 
   const menuActions = menu?.nodes.length > 1 ? options.node_group_actions : options.node_actions;
 

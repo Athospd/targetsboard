@@ -162,6 +162,11 @@
 
 ## Internal
 
+* Dragging with a target focused is smoother on large pipelines: the
+  highlighting no longer gives React Flow a new object for every target
+  and edge on each render. Measured on 400 targets: 17-20 ms frames, down
+  from 46-66 ms (#206).
+
 * Four fewer dependencies: dplyr, purrr, zeallot and digest. The widget's
   graph conversion is base R and about 15 times as fast (5,000 targets:
   1.2 s to 0.08 s), with the same JSON (#160).
