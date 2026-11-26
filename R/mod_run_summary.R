@@ -45,19 +45,23 @@ run_summary_server <- function(id, board, running, progress, tar_meta = shiny::r
         meta = tar_meta(), outdated = outdated_targets(nodes)
       )
     })
-    # The block is drawn again only when what it shows changes: the clock,
-    # which ticks every second, is an output of its own inside it. A
-    # reactiveVal ignores a value equal to the one it holds.
-    shown <- shiny::reactiveVal()
+    # The block is drawn once per shape (run_summary_shape()): Running or
+    # Last run, which counts it lists, whether it tells the time left. A
+    # reactiveVal ignores a value equal to the one it holds, so a new count
+    # or the clock's tick don't draw it again: they are sent to the block in
+    # place (run_summary_values(), srcjs/actions.js), so its nodes, the dot's
+    # animation and the bar's widths carry on (#173).
+    shape <- shiny::reactiveVal()
+    shiny::observe(shape(run_summary_shape(summary())))
+    output$summary <- shiny::renderUI({
+      shape()
+      run_summary_tags(shiny::isolate(summary()))
+    })
     shiny::observe({
       current <- summary()
-      if (!is.null(current)) current$elapsed <- !is.na(current$elapsed)
-      shown(current)
+      if (is.null(current)) return()
+      session$sendCustomMessage("tb-run-summary", c(list(id = session$ns("summary")), run_summary_values(current)))
     })
-    output$summary <- shiny::renderUI({
-      run_summary_tags(shown(), elapsed = shiny::textOutput(session$ns("elapsed"), inline = TRUE))
-    })
-    output$elapsed <- shiny::renderText(format_elapsed(summary()$elapsed))
     summary
   })
 }
@@ -120,36 +124,39 @@ format_elapsed <- function(seconds) {
 #' @noRd
 run_summary_tags <- function(summary, elapsed = NULL) {
   if (is.null(summary)) return(NULL)
-  # The clock: an output given by the server, or the time as text.
+  # The clock: the time as text, which the server then updates in place
+  # (run_summary_values()), or a tag given in its place.
   if (is.null(elapsed) && is.numeric(summary$elapsed) && !is.na(summary$elapsed)) {
     elapsed <- format_elapsed(summary$elapsed)
   }
-  if (isFALSE(summary$elapsed)) elapsed <- NULL
   state <- if (summary$running) "running" else if (summary$errored > 0) "errored" else "done"
-  item <- function(n, what, class = NULL) {
-    shiny::tags$span(class = c("tb-run-count", if (n > 0) class), shiny::tags$b(n), what)
+  # A count, marked for run_summary_values()'s updates; `class` while above 0.
+  item <- function(n, what, key, class = NULL) {
+    shiny::tags$span(
+      class = c("tb-run-count", if (n > 0) class), `data-count` = key, `data-active-class` = class,
+      shiny::tags$b(n), what
+    )
   }
-  counts <- list(
-    item(summary$built, "built"),
-    item(summary$skipped, "skipped"),
-    if (summary$running) item(summary$running_targets, "running", "tb-run-count-running"),
-    # Errored: during a run, once there is one.
-    if (!summary$running || summary$errored > 0) item(summary$errored, "errored", "tb-run-count-errored"),
-    if (summary$canceled > 0) item(summary$canceled, "canceled"),
-    if (summary$running) item(summary$to_go, "to go")
-  )
-  # Where the run is: each part's share of the targets, in a thin bar.
-  parts <- c(
-    built = summary$built, skipped = summary$skipped, errored = summary$errored + summary$canceled,
-    running = if (summary$running) summary$running_targets else 0
-  )
-  total <- sum(parts) + if (summary$running) summary$to_go else 0
-  bar <- if (total > 0) {
+  shown <- run_summary_shape(summary)$counts
+  counts <- lapply(shown, function(key) {
+    switch(key,
+      built = item(summary$built, "built", key),
+      skipped = item(summary$skipped, "skipped", key),
+      running = item(summary$running_targets, "running", key, "tb-run-count-running"),
+      errored = item(summary$errored, "errored", key, "tb-run-count-errored"),
+      canceled = item(summary$canceled, "canceled", key),
+      to_go = item(summary$to_go, "to go", key)
+    )
+  })
+  # Where the run is: each part's share of the targets, in a thin bar. Every
+  # part is there, at 0% while empty, so updates only change widths.
+  values <- run_summary_values(summary)
+  bar <- if (values$total > 0) {
     shiny::tags$div(
       class = "tb-run-bar", role = "progressbar",
-      `aria-valuenow` = sum(parts[c("built", "skipped", "errored")]), `aria-valuemin` = 0, `aria-valuemax` = total,
-      lapply(names(parts)[parts > 0], function(part) {
-        shiny::tags$span(class = paste0("tb-run-bar-", part), style = sprintf("width: %.2f%%", 100 * parts[[part]] / total))
+      `aria-valuenow` = values$done, `aria-valuemin` = 0, `aria-valuemax` = values$total,
+      lapply(names(values$bar), function(part) {
+        shiny::tags$span(class = paste0("tb-run-bar-", part), style = sprintf("width: %.2f%%", values$bar[[part]]))
       })
     )
   }
@@ -163,17 +170,68 @@ run_summary_tags <- function(summary, elapsed = NULL) {
       if (!is.null(elapsed)) shiny::tags$span(class = "tb-run-elapsed", elapsed)
     ),
     bar,
-    shiny::tags$div(class = "tb-run-counts", Filter(Negate(is.null), counts)),
-    if (!is.null(left) && (left$seconds > 0 || left$unknown > 0)) {
-      shiny::tags$div(
-        class = "tb-run-left",
-        title = "From the targets' last builds",
-        if (left$seconds > 0) {
-          paste0("About ", format_elapsed(left$seconds), if (left$unknown > 0) "+", " left")
-        } else {
-          "Time left unknown: never built before"
-        }
-      )
+    shiny::tags$div(class = "tb-run-counts", counts),
+    if (!is.null(values$left)) {
+      shiny::tags$div(class = "tb-run-left", title = "From the targets' last builds", values$left)
+    }
+  )
+}
+
+#' What the summary block is made of: drawn again only when this changes
+#'
+#' Whether a run goes and how it ended (the title and the dot), which counts
+#' it lists, whether it has a bar, a clock and a time left. The numbers in
+#' them are run_summary_values(), updated in place.
+#' @param summary run_summary(), or NULL.
+#' @noRd
+run_summary_shape <- function(summary) {
+  if (is.null(summary)) return(NULL)
+  running <- isTRUE(summary$running)
+  values <- run_summary_values(summary)
+  list(
+    state = if (running) "running" else if (summary$errored > 0) "errored" else "done",
+    counts = c(
+      "built", "skipped", if (running) "running",
+      # Errored: during a run, once there is one.
+      if (!running || summary$errored > 0) "errored",
+      if (summary$canceled > 0) "canceled",
+      if (running) "to_go"
+    ),
+    bar = values$total > 0,
+    clock = !is.null(values$elapsed),
+    left = !is.null(values$left)
+  )
+}
+
+#' The numbers of the summary block, as sent to update it in place
+#' @param summary run_summary().
+#' @return `counts`, `bar` (each part's width, in %), `done` and `total`
+#'   for the bar's aria values, `elapsed` (the clock's text, or NULL) and
+#'   `left` (the time left's text, or NULL).
+#' @noRd
+run_summary_values <- function(summary) {
+  running <- isTRUE(summary$running)
+  parts <- c(
+    built = summary$built, skipped = summary$skipped, errored = summary$errored + summary$canceled,
+    running = if (running) summary$running_targets else 0
+  )
+  total <- sum(parts) + if (running) summary$to_go else 0
+  left <- summary$left
+  list(
+    counts = list(
+      built = summary$built, skipped = summary$skipped, running = summary$running_targets,
+      errored = summary$errored, canceled = summary$canceled, to_go = summary$to_go
+    ),
+    bar = as.list(if (total > 0) round(100 * parts / total, 2) else parts),
+    done = sum(parts[c("built", "skipped", "errored")]),
+    total = total,
+    elapsed = if (is.numeric(summary$elapsed) && !is.na(summary$elapsed)) format_elapsed(summary$elapsed),
+    left = if (!is.null(left) && (left$seconds > 0 || left$unknown > 0)) {
+      if (left$seconds > 0) {
+        paste0("About ", format_elapsed(left$seconds), if (left$unknown > 0) "+", " left")
+      } else {
+        "Time left unknown: never built before"
+      }
     }
   )
 }

@@ -57,6 +57,10 @@
 
 ## Bug fixes
 
+* The run summary still flickered while a run went: each new count or
+  estimate drew the whole block again, blanking the clock and restarting the
+  running dot. The block is now drawn once and its numbers change in place;
+  the bar's parts slide to their new widths (#173).
 * The preview of a target that errored or warned took seconds to open,
   with the whole board waiting: it ran the pipeline's script for the
   target's command, and again for a pattern's branch positions, and did it
