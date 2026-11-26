@@ -23,8 +23,7 @@ test_that("settings_ui() bolds what differs from the defaults, and notes main st
   row <- data.frame(name = "a", pattern = NA, iteration = "list", memory = "auto", storage = "main",
                     retrieval = "main", deployment = "worker", resources = "crew (controller big)")
   html <- as.character(settings_ui(row))
-  expect_match(html, "<details class=\"tb-command tb-settings\">", fixed = TRUE)
-  expect_match(html, "<summary>Settings</summary>", fixed = TRUE)
+  expect_match(html, "<div class=\"tb-settings\">", fixed = TRUE)
   expect_match(html, "<th>memory</th>\n?\\s*<td>\n?\\s*<code>auto</code>")
   expect_match(html, "<strong>\n?\\s*<code>list</code>")
   expect_match(html, "<strong>\n?\\s*<code>crew \\(controller big\\)</code>")
@@ -33,8 +32,8 @@ test_that("settings_ui() bolds what differs from the defaults, and notes main st
 
   row$deployment <- "main"
   expect_no_match(as.character(settings_ui(row)), "runs on a worker", fixed = TRUE)
-  expect_null(settings_ui(row[0, ]))
-  expect_null(settings_ui(NULL))
+  expect_match(as.character(settings_ui(row[0, ])), "aren't known yet", fixed = TRUE)
+  expect_match(as.character(settings_ui(NULL)), "aren't known yet", fixed = TRUE)
 })
 
 test_that("the Value pane shows a target's settings, from tar_manifest()", {
@@ -51,8 +50,9 @@ test_that("the Value pane shows a target's settings, from tar_manifest()", {
   app$click(selector = ".react-flow__node[data-id='y']")
   app$wait_for_js("document.querySelector(\".tb-node-toolbar [data-action='value']\") !== null")
   app$click(selector = ".tb-node-toolbar [data-action='value']")
-  app$wait_for_js("document.querySelector('.tb-settings') !== null", timeout = 20000)
-  expect_false(app$get_js("document.querySelector('.tb-settings').open")) # closed at first
+  app$wait_for_js("document.querySelector(\".tb-preview a[data-value='Settings']\") !== null", timeout = 20000)
+  app$click(selector = ".tb-preview a[data-value='Settings']")
+  app$wait_for_js("document.querySelector('.tb-settings strong') !== null", timeout = 20000)
   bold <- app$get_js("Array.from(document.querySelectorAll('.tb-settings strong')).map(e => e.textContent).join(',')")
   expect_equal(bold, "map(x),list")
 })

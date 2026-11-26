@@ -289,7 +289,8 @@ branch_picker <- function(pattern, limit = preview_bytes_limit(), ns = identity)
 #' @param plot_ids The output ids of the plot views, in the order they come.
 #' @param ns The preview module's namespace, for the ids the frame writes.
 #' @noRd
-preview_frame <- function(target, built, plot_ids = character(), store = NULL, ns = identity) {
+preview_frame <- function(target, built, plot_ids = character(), store = NULL, ns = identity,
+                          tabs_for = function(titles) NULL) {
   i <- 0
   panels <- lapply(names(built$views), function(title) {
     view <- built$views[[title]]
@@ -312,7 +313,7 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL, n
     bslib::card_body(
       class = "tb-preview-body", padding = 0, gap = 0,
       lapply(c(stand_in_note(target), built$note), function(note) shiny::tags$p(class = "tb-preview-note", note)),
-      do.call(bslib::navset_underline, panels)
+      value_tabs(panels, tabs_for, ns)
     )
   )
 }

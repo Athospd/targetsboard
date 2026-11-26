@@ -819,9 +819,20 @@ html .Reactable .rt-page-size-select {
   color: var(--bs-secondary-color);
 }
 
+/* The Value pane's blocks (#217): the sidebar's gap alone spaces them. An
+   output with nothing to show takes no gap, and a block's own bottom margin
+   doesn't add to it. */
+.tb-preview-pane .sidebar-content > .shiny-html-output:empty {
+  display: none;
+}
+.tb-preview-pane .sidebar-content > .shiny-html-output > :last-child {
+  margin-bottom: 0;
+}
+
+/* A target's settings (settings_ui()), in its tab. */
 /* A target's settings (settings_ui()), in a Command-like section. */
 .tb-settings-table {
-  margin-top: 0.35rem;
+  margin: 0;
 }
 .tb-settings-table th {
   padding-right: 1rem;
