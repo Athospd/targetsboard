@@ -2,15 +2,17 @@
 #'
 #' Read from the store: its error or warnings (`tar_meta()`), its seed, its
 #' traceback when it left a workspace, and, for a pattern, the problems of
-#' its branches. The command comes from the script (`tar_manifest()`).
+#' its branches, in their order from the pattern's `children`. Nothing here
+#' runs the pipeline's script: the command is the one the poller already read
+#' (`tar_manifest()`, target_commands()), so a problem opens in milliseconds.
 #'
 #' @param name A target.
-#' @param script The targets script, for the command.
+#' @param command Its command, from target_commands(), or NULL.
 #' @return A list, or NULL when the target has no metadata.
 #' @noRd
-target_problem <- function(name, script = targets::tar_config_get("script")) {
+target_problem <- function(name, command = NULL) {
   meta <- tryCatch(
-    targets::tar_meta(fields = c("type", "parent", "error", "warnings", "seed")),
+    targets::tar_meta(fields = c("type", "parent", "error", "warnings", "seed", "children")),
     error = function(e) NULL
   )
   if (is.null(meta)) return(NULL)
@@ -18,15 +20,15 @@ target_problem <- function(name, script = targets::tar_config_get("script")) {
     # A pattern whose run stopped at a branch's error (targets' default) has
     # no row of its own, only its branches': stand one in for it.
     if (!name %in% meta$parent) return(NULL)
-    meta <- rbind(meta, data.frame(
+    stand_in <- data.frame(
       name = name, type = "pattern", parent = NA_character_,
       error = NA_character_, warnings = NA_character_, seed = NA_integer_
-    )[names(meta)])
+    )
+    if ("children" %in% names(meta)) stand_in$children <- list(NULL)
+    meta <- rbind(meta, stand_in[names(meta)])
   }
   row <- meta[meta$name == name, ]
-  # A target without a problem needs nothing more: the command and the
-  # branches' positions run the pipeline's script (tar_manifest(),
-  # tar_branches()), which took seconds on every preview.
+  # A target without a problem needs nothing more.
   troubled <- !is.na(meta$error) | !is.na(meta$warnings)
   if (!troubled[meta$name == name][1] && !any(troubled[meta$parent %in% name])) {
     return(list(name = name, type = row$type, error = NULL, warnings = NULL, branches = list()))
@@ -38,7 +40,7 @@ target_problem <- function(name, script = targets::tar_config_get("script")) {
   if (identical(row$type, "pattern")) {
     rows <- meta[meta$parent %in% name & (!is.na(meta$error) | !is.na(meta$warnings)), ]
     rows <- rows[order(is.na(rows$error)), ] # errored first
-    positions <- branch_positions(name)
+    positions <- branch_positions(if ("children" %in% names(row)) row$children[[1]])
     branches <- lapply(seq_len(nrow(rows)), function(i) {
       branch <- rows$name[i]
       list(
@@ -62,7 +64,7 @@ target_problem <- function(name, script = targets::tar_config_get("script")) {
     seed = na_null(row$seed),
     workspace = name %in% workspaces,
     traceback = if (name %in% workspaces) target_traceback(name),
-    command = target_command(name, script),
+    command = if (length(command) == 1 && !is.na(command)) unname(command),
     functions = functions,
     branches = branches
   )
@@ -81,20 +83,13 @@ target_traceback <- function(name) {
   tryCatch(rlang::inject(targets::tar_traceback(!!as.symbol(name))), error = function(e) NULL)
 }
 
-target_command <- function(name, script) {
-  manifest <- tryCatch(
-    targets::tar_manifest(names = targets::any_of(name), fields = "command", script = script),
-    error = function(e) NULL
-  )
-  if (is.null(manifest) || nrow(manifest) == 0) return(NULL)
-  manifest$command[[1]]
-}
-
-# Where each branch of a pattern sits among its branches, by branch name.
-branch_positions <- function(name) {
-  branches <- tryCatch(rlang::inject(targets::tar_branches(!!as.symbol(name))), error = function(e) NULL)
-  if (is.null(branches) || nrow(branches) == 0) return(list())
-  as.list(stats::setNames(seq_len(nrow(branches)), branches[[1]]))
+# Where each branch of a pattern sits among its branches, by branch name:
+# from the pattern's `children` in tar_meta(), in order. A pattern stopped at
+# a branch's error has no row, so none (tar_branches() can't tell either).
+branch_positions <- function(children) {
+  children <- unlist(children)
+  if (!length(children)) return(list())
+  as.list(stats::setNames(seq_along(children), children))
 }
 
 #' The traceback, split into the calls of the pipeline's own functions and
