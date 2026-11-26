@@ -9,7 +9,7 @@
 #' @param id The module's id.
 #' @noRd
 run_summary_ui <- function(id) {
-  shiny::uiOutput(shiny::NS(id, "summary"))
+  shiny::uiOutput(shiny::NS(id, "summary"), class = "tb-run-summary-output")
 }
 
 #' @rdname run_summary_ui
@@ -45,7 +45,19 @@ run_summary_server <- function(id, board, running, progress, tar_meta = shiny::r
         meta = tar_meta(), outdated = outdated_targets(nodes)
       )
     })
-    output$summary <- shiny::renderUI(run_summary_tags(summary()))
+    # The block is drawn again only when what it shows changes: the clock,
+    # which ticks every second, is an output of its own inside it. A
+    # reactiveVal ignores a value equal to the one it holds.
+    shown <- shiny::reactiveVal()
+    shiny::observe({
+      current <- summary()
+      if (!is.null(current)) current$elapsed <- !is.na(current$elapsed)
+      shown(current)
+    })
+    output$summary <- shiny::renderUI({
+      run_summary_tags(shown(), elapsed = shiny::textOutput(session$ns("elapsed"), inline = TRUE))
+    })
+    output$elapsed <- shiny::renderText(format_elapsed(summary()$elapsed))
     summary
   })
 }
@@ -106,10 +118,14 @@ format_elapsed <- function(seconds) {
 #' The summary as the Control Panel shows it
 #' @param summary run_summary(), or NULL.
 #' @noRd
-run_summary_tags <- function(summary) {
+run_summary_tags <- function(summary, elapsed = NULL) {
   if (is.null(summary)) return(NULL)
-  title <- if (summary$running) "Running" else "Last run"
-  elapsed <- format_elapsed(summary$elapsed)
+  # The clock: an output given by the server, or the time as text.
+  if (is.null(elapsed) && is.numeric(summary$elapsed) && !is.na(summary$elapsed)) {
+    elapsed <- format_elapsed(summary$elapsed)
+  }
+  if (isFALSE(summary$elapsed)) elapsed <- NULL
+  state <- if (summary$running) "running" else if (summary$errored > 0) "errored" else "done"
   item <- function(n, what, class = NULL) {
     shiny::tags$span(class = c("tb-run-count", if (n > 0) class), shiny::tags$b(n), what)
   }
@@ -117,24 +133,43 @@ run_summary_tags <- function(summary) {
     item(summary$built, "built"),
     item(summary$skipped, "skipped"),
     if (summary$running) item(summary$running_targets, "running", "tb-run-count-running"),
-    item(summary$errored, "errored", "tb-run-count-errored"),
+    # Errored: during a run, once there is one.
+    if (!summary$running || summary$errored > 0) item(summary$errored, "errored", "tb-run-count-errored"),
     if (summary$canceled > 0) item(summary$canceled, "canceled"),
     if (summary$running) item(summary$to_go, "to go")
   )
+  # Where the run is: each part's share of the targets, in a thin bar.
+  parts <- c(
+    built = summary$built, skipped = summary$skipped, errored = summary$errored + summary$canceled,
+    running = if (summary$running) summary$running_targets else 0
+  )
+  total <- sum(parts) + if (summary$running) summary$to_go else 0
+  bar <- if (total > 0) {
+    shiny::tags$div(
+      class = "tb-run-bar", role = "progressbar",
+      `aria-valuenow` = sum(parts[c("built", "skipped", "errored")]), `aria-valuemin` = 0, `aria-valuemax` = total,
+      lapply(names(parts)[parts > 0], function(part) {
+        shiny::tags$span(class = paste0("tb-run-bar-", part), style = sprintf("width: %.2f%%", 100 * parts[[part]] / total))
+      })
+    )
+  }
+  left <- summary$left
   shiny::tags$div(
-    class = c("tb-run-summary", if (summary$running) "tb-run-summary-running"),
+    class = c("tb-run-summary", paste0("tb-run-summary-", state)),
     shiny::tags$div(
       class = "tb-run-summary-title",
-      title,
-      if (!is.na(elapsed)) shiny::tags$span(class = "tb-run-elapsed", elapsed)
+      shiny::tags$span(class = "tb-run-dot", `aria-hidden` = "true"),
+      if (summary$running) "Running" else "Last run",
+      if (!is.null(elapsed)) shiny::tags$span(class = "tb-run-elapsed", elapsed)
     ),
+    bar,
     shiny::tags$div(class = "tb-run-counts", Filter(Negate(is.null), counts)),
-    if (!is.null(summary$left) && (summary$left$seconds > 0 || summary$left$unknown > 0)) {
+    if (!is.null(left) && (left$seconds > 0 || left$unknown > 0)) {
       shiny::tags$div(
         class = "tb-run-left",
         title = "From the targets' last builds",
-        if (summary$left$seconds > 0) {
-          paste0("About ", format_elapsed(summary$left$seconds), if (summary$left$unknown > 0) "+", " left")
+        if (left$seconds > 0) {
+          paste0("About ", format_elapsed(left$seconds), if (left$unknown > 0) "+", " left")
         } else {
           "Time left unknown: never built before"
         }

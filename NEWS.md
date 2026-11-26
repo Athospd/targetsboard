@@ -14,13 +14,14 @@
   node's text colour, so they read in every status, theme and mode (#103).
 * A run summary in the Control Panel, under the run buttons: while a run
   goes, its clock and how many targets it built, skipped, is running, saw
-  error and has still to go; after it, the last run's time and counts,
-  until the next one. As `tar_progress_summary()` counts, from targets' own
+  error and has still to go, with a thin bar of those parts; after it, the
+  last run's time and counts, until the next one. Only its clock ticks: the
+  rest is drawn again when a count changes. As `tar_progress_summary()` counts, from targets' own
   files, so a run started from the console shows too (#140).
 
 * Build times and sizes: two switches in the legend, Times and Sizes, show
   each built target's last build time and stored size in small text in its
-  bottom-right corner (a pattern's summed over its branches). The slowest
+  bottom-left corner (a pattern's summed over its branches). The slowest
   and largest tenth get a warm dot. The browser remembers the switches. The
   Metadata tab (was `tar_meta()`) shows `seconds` and `bytes` readably,
   slowest first, and the run summary estimates the time left from the

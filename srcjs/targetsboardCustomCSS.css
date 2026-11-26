@@ -211,6 +211,10 @@
   opacity: 0.85;
   line-height: 0;
 }
+/* A running target's spinner takes that corner. */
+.base-node.tb-status-running .tb-type-icon {
+  display: none;
+}
 .base-node.tb-has-type-icon {
   padding-inline: 1.5rem; /* the label stays clear of the icon */
 }
@@ -375,13 +379,13 @@
 }
 
 /* A built target's last build time and stored size (BaseNode.js): small,
-   quiet text in its bottom-right corner, as the legend's switches say. The
+   quiet text in its bottom-left corner, as the legend's switches say. The
    slowest and largest get a warm dot. */
 .tb-cost {
   display: none;
   position: absolute;
   bottom: 1px;
-  right: 5px; /* in line with the type icon's */
+  left: 5px; /* clear of a running target's spinner, on the right */
   gap: 0.25rem;
   white-space: nowrap;
   color: inherit;
