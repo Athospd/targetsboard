@@ -38,8 +38,8 @@ workers_server <- function(id, progress, manifest, controllers, crew) {
           running = reactable::colDef(name = "Running"),
           built = reactable::colDef(name = "Built"),
           errored = reactable::colDef(name = "Errored"),
-          targets = reactable::colDef(name = "Last run: targets", na = "—"),
-          seconds = reactable::colDef(name = "Last run: seconds", na = "—", format = reactable::colFormat(digits = 1))
+          targets = reactable::colDef(name = "Last run: targets", na = "\u2014"),
+          seconds = reactable::colDef(name = "Last run: seconds", na = "\u2014", format = reactable::colFormat(digits = 1))
         )
       )
     })
