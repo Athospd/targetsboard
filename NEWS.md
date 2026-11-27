@@ -102,6 +102,11 @@
 * A folder with no targets script yet: the board says no targets
   pipeline file was detected, links the targets manual's walkthrough, and
   draws the pipeline once the script exists. It writes nothing (#190).
+* Run uses `tar_make_future()` or `tar_make_clustermq()` for a project
+  whose script sets up future (`future::plan()`) or clustermq
+  (`options(clustermq.scheduler = )`), and the run summary and the Log say
+  which, with the workers: a literal `workers =` in `plan()`, or
+  `options(targetsboard.workers = )`, else 1 (#162).
 * A failing branch in a pattern's problems has the Inputs section too:
   the slices it failed on, and their values (#227).
 * More kinds of target get an icon, with a line in the Value pane that

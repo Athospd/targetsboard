@@ -122,6 +122,7 @@ body {
   animation: tb-pulse 1.2s ease-in-out infinite;
 }
 .tb-run-summary-errored .tb-run-dot { background: var(--bs-danger); }
+.tb-run-how { color: var(--bs-secondary-color); font-size: var(--tb-font-size-xs); margin-top: 0.25rem; }
 .tb-run-summary-stopped .tb-run-dot { background: var(--bs-secondary-color); }
 @keyframes tb-pulse {
   0%, 100% { opacity: 1; }
