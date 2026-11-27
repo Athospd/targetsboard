@@ -230,7 +230,8 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       shiny::req(is_open(), focused_target())
       name <- focused_target()
       records_changed()
-      if (is_function(name) || has_problem(focused_problem())) return(NULL)
+      # A global object or function (targets_only = FALSE) isn't a target (#243).
+      if (!debuggable(shiny::isolate(board())$x$nodes, name) || has_problem(focused_problem())) return(NULL)
       target <- preview_target(name, store(), branch = branch())
       if (is.null(target)) return(NULL)
       # A pattern: the branch picked, if one is (not all of them, branch 0).
@@ -543,4 +544,11 @@ debug_ui <- function(name, run = name, command = NULL, inputs = character(), see
     },
     run_block %||% debug_run_block(name, running, script, run = run, store = store, dir = dir)
   )
+}
+
+#' Whether the Value pane offers Reproduce and Debug run: for a target, not
+#' a function or global object the canvas shows with `targets_only = FALSE`
+#' @noRd
+debuggable <- function(nodes, name) {
+  !("type" %in% names(nodes) && any(nodes$type[nodes$id %in% name] %in% c("function", "object")))
 }
