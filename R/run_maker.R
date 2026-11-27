@@ -22,7 +22,7 @@ run_maker <- function(script) {
     if (identical(head, as.name("function"))) return() # a function's body isn't the script's
     name <- if (is.name(head)) {
       as.character(head)
-    } else if (is.call(head) && as.character(head[[1]]) %in% c("::", ":::")) {
+    } else if (is.call(head) && is.name(head[[1]]) && as.character(head[[1]]) %in% c("::", ":::")) {
       as.character(head[[3]])
     }
     if (identical(name, "plan") && is.null(found)) {
@@ -33,7 +33,7 @@ run_maker <- function(script) {
     if (identical(name, "options") && "clustermq.scheduler" %in% names(x) && is.null(found)) {
       found <<- "tar_make_clustermq"
     }
-    for (arg in as.list(x)[-1]) walk(arg)
+    for (arg in as.list(x)[-1]) if (!missing(arg)) walk(arg) # x[, 1] has an empty one (#253)
   }
   for (e in exprs) walk(e)
   if (is.null(found)) return(list(fun = "tar_make", workers = NULL))

@@ -88,3 +88,11 @@ test_that("the Value pane says a skipped target's rule, though it looks up to da
   expect_equal(app$get_js("document.querySelector('.tb-rule').innerText.trim()"),
                "Always skipped, even when what it depends on changes.")
 })
+
+test_that("cue_rules() and sourced_paths() read a pkg::f(...)(...) call (#238)", {
+  dir <- withr::local_tempdir()
+  script <- file.path(dir, "_targets.R")
+  writeLines(c("library(targets)", "purrr::partial(paste, sep = '-')('a', 'b')", "list(tar_target(a, 1))"), script)
+  expect_no_error(cue_rules(script))
+  expect_no_error(sourced_paths(script))
+})

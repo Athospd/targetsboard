@@ -96,3 +96,23 @@ test_that("a run notification's Show problem comes back as show_problem", {
     expect_equal(session$returned$show_problem(), "b")
   })
 })
+
+test_that("a run or an invalidation that errors says so, and the session lives on (#253)", {
+  skip_on_cran()
+  local_pipeline()
+  args <- run_args()
+  local_mocked_bindings(
+    start_run = function(...) stop("the run broke"),
+    invalidate_targets = function(names) stop("the store broke")
+  )
+  shiny::testServer(run_server, args = args, {
+    session$setInputs(all = 1)
+    expect_match(last_failure(), "the run broke", fixed = TRUE)
+    args$action(list(action = "invalidate", nodes = list("a")))
+    session$flushReact()
+    session$setInputs(invalidate_confirm = 1)
+    expect_match(last_failure(), "the store broke", fixed = TRUE)
+    session$setInputs(all = 2) # still answering
+    expect_match(last_failure(), "the run broke", fixed = TRUE)
+  })
+})
