@@ -2,6 +2,12 @@
 
 ## New features
 
+* torch targets (`tar_torch()`, `tar_aws_torch()`, #228): a model shows its
+  layers as a tree and a table of its parameters, with how many train; a
+  tensor its shape, dtype, device and first values. torch isn't a
+  dependency. A value whose format needs a package that isn't installed
+  (torch, keras, qs2, arrow, fst) says which to install, under its metadata,
+  instead of no value.
 * Which inputs a branch came from: a pattern's branch has an Inputs
   section in the Value pane. Opened, it names the slice of each target the
   branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
