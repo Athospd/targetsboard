@@ -85,3 +85,29 @@ function start() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
 else start();
+
+// Nested full-screen cards (#276): the Value pane's card sits in the board's,
+// and bslib expects one at a time. Every expanded card leaves on any Escape,
+// and the first to leave unmarks the page, though the other is still
+// expanded. Escape leaves the innermost only; a card that leaves while
+// another stays keeps the page marked.
+const FULL = '.bslib-card[data-full-screen="true"]';
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  // As bslib: Escape there closes an open select first.
+  if (event.target.matches?.("select[open], input[aria-expanded='true']")) return;
+  const open = Array.from(document.querySelectorAll(FULL));
+  if (open.length < 2) return;
+  const inner = open.find((card) => !card.querySelector(FULL));
+  const exit = inner?.previousElementSibling?.querySelector('.bslib-full-screen-exit');
+  if (!exit) return;
+  event.stopImmediatePropagation(); // before bslib's own listeners
+  exit.click();
+}, true);
+
+document.addEventListener('bslib.card', (event) => {
+  if (event.detail?.fullScreen === false && document.querySelector(FULL)) {
+    document.body.classList.add('bslib-has-full-screen');
+  }
+});
