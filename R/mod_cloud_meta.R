@@ -6,29 +6,11 @@
 #' `tar_meta_download()` once confirmed: it is billed per request and needs
 #' the cloud package and credentials. Nothing downloads on its own.
 #'
-#' @param cloud `list(repository, bucket, prefix)`, as poller_why() gives,
-#'   or NULL.
-#' @param button_id The download button's input id.
+#' @param id The module's id.
 #' @noRd
-cloud_meta_ui <- function(cloud, button_id) {
-  if (is.null(cloud)) return(NULL)
-  where <- paste(c(
-    cloud$repository,
-    if (!is.null(cloud$bucket)) paste("bucket", cloud$bucket),
-    if (!is.null(cloud$prefix)) paste("prefix", cloud$prefix)
-  ), collapse = ", ")
-  shiny::tags$div(
-    class = "tb-cloud-meta alert alert-info", role = "status",
-    shiny::tags$span(paste0(
-      "This pipeline's metadata lives in the cloud (", where, "): ",
-      "the board shows the local copy, which may be behind."
-    )),
-    shiny::actionButton(button_id, "Download metadata", class = "btn-sm ms-2")
-  )
-}
+cloud_meta_ui <- function(id) shiny::uiOutput(shiny::NS(id, "notice"))
 
-cloud_meta_output <- function(id) shiny::uiOutput(shiny::NS(id, "notice"))
-
+#' @rdname cloud_meta_ui
 #' @param cloud Reactive: where the metadata lives, or NULL.
 #' @param script Reactive: the board's script, for `tar_meta_download()`.
 #' @param download `function(script)`: downloads the metadata, in a process
@@ -39,7 +21,7 @@ cloud_meta_output <- function(id) shiny::uiOutput(shiny::NS(id, "notice"))
 cloud_meta_server <- function(id, cloud, script, download = download_cloud_meta, refresh = function() NULL) {
   stopifnot(shiny::is.reactive(cloud), shiny::is.reactive(script))
   shiny::moduleServer(id, function(input, output, session) {
-    output$notice <- shiny::renderUI(cloud_meta_ui(cloud(), session$ns("download")))
+    output$notice <- shiny::renderUI(cloud_meta_notice(cloud(), session$ns("download")))
 
     shiny::observeEvent(input$download, {
       shiny::showModal(shiny::modalDialog(
@@ -75,6 +57,29 @@ cloud_meta_server <- function(id, cloud, script, download = download_cloud_meta,
 
     list(last_error = shiny::reactive(last_error()))
   })
+}
+
+#' The notice: where the metadata lives, and the download button
+#'
+#' @param cloud `list(repository, bucket, prefix)`, as poller_why() gives,
+#'   or NULL.
+#' @param button_id The download button's input id.
+#' @noRd
+cloud_meta_notice <- function(cloud, button_id) {
+  if (is.null(cloud)) return(NULL)
+  where <- paste(c(
+    cloud$repository,
+    if (!is.null(cloud$bucket)) paste("bucket", cloud$bucket),
+    if (!is.null(cloud$prefix)) paste("prefix", cloud$prefix)
+  ), collapse = ", ")
+  shiny::tags$div(
+    class = "tb-cloud-meta alert alert-info", role = "status",
+    shiny::tags$span(paste0(
+      "This pipeline's metadata lives in the cloud (", where, "): ",
+      "the board shows the local copy, which may be behind."
+    )),
+    shiny::actionButton(button_id, "Download metadata", class = "btn-sm ms-2")
+  )
 }
 
 # In a process of its own: tar_meta_download() runs the script for its options.

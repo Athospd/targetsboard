@@ -24,12 +24,12 @@ test_that("the poller finds where a pipeline's metadata lives in the cloud", {
   expect_null(poller_why("_targets.R")$cloud) # local metadata: nothing to say
 })
 
-test_that("cloud_meta_ui() says where the metadata is, and offers the download", {
-  html <- as.character(cloud_meta_ui(list(repository = "aws", bucket = "b", prefix = "p"), button_id = "x"))
+test_that("cloud_meta_notice() says where the metadata is, and offers the download", {
+  html <- as.character(cloud_meta_notice(list(repository = "aws", bucket = "b", prefix = "p"), button_id = "x"))
   expect_match(html, "metadata lives in the cloud", fixed = TRUE)
   expect_match(html, "(aws, bucket b, prefix p):", fixed = TRUE) # no stray spaces
   expect_match(html, "Download metadata", fixed = TRUE)
-  expect_null(cloud_meta_ui(NULL, button_id = "x"))
+  expect_null(cloud_meta_notice(NULL, button_id = "x"))
 })
 
 test_that("Download metadata asks first, then downloads, and says what went wrong", {

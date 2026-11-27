@@ -46,7 +46,7 @@ board_tabs_ui <- function(ns, metadata, layout) {
         class = "tb-board-pane", padding = 0, gap = 0,
         script_loading_ui(ns("script")),
         no_script_output(ns("no_script")),
-        cloud_meta_output(ns("cloud_meta")),
+        cloud_meta_ui(ns("cloud_meta")),
         bslib::layout_sidebar(
           class = "p-0",
           sidebar = preview_ui(ns("preview")),
