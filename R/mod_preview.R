@@ -185,26 +185,41 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       )
     })
 
+    # The focused target, once per change: focused() fires again with each
+    # redraw, its value seldom (#242).
+    focused_target <- shiny::reactiveVal(NULL)
+    shiny::observe(focused_target(focused()), priority = 1)
+
     # The focused target's command, once per change: commands() changes with
     # every recompute of the poller, the target's command seldom.
     focused_command <- shiny::reactiveVal(NULL)
     shiny::observe({
       command <- if (!is.null(focused())) unname(commands()[focused()])
       focused_command(if (length(command) == 1 && !is.na(command)) command)
-    })
+    }, priority = 1) # before the outputs that read it: they render once
     # Its problem follows the target, its records and its command, not the
     # graph: a redraw or a run starting doesn't build it again.
     focused_problem <- shiny::reactive({
-      shiny::req(focused())
+      shiny::req(focused_target())
       records_changed()
-      target_problem(focused(), command = focused_command())
+      target_problem(focused_target(), command = focused_command())
     })
 
-    # Reproduce and debug any target, not only one that failed: the Problems
-    # part gives the same code for those, so they don't get it twice.
-    output$debug <- shiny::renderUI({
-      shiny::req(is_open(), focused())
+    # The focused target's inputs, once per change: the board redraws often.
+    focused_inputs <- shiny::reactiveVal(character())
+    shiny::observe({
+      edges <- board()$x$edges
       name <- focused()
+      focused_inputs(if (!is.null(name)) intersect(edges$from[edges$to == name], board_targets(board()$x$nodes)) else character())
+    }, priority = 1)
+
+    # Reproduce and debug any target, not only one that failed: the Problems
+    # part gives the same code for those, so they don't get it twice. It
+    # follows its target, not the board: a redraw or a run starting would
+    # build it again, closed (#242). The debug run's block follows the run.
+    debug_target <- shiny::reactive({
+      shiny::req(is_open(), focused_target())
+      name <- focused_target()
       records_changed()
       if (is_function(name) || has_problem(focused_problem())) return(NULL)
       target <- preview_target(name, store(), branch = branch())
@@ -212,18 +227,28 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       # A pattern: the branch picked, if one is (not all of them, branch 0).
       own <- target$pattern$branch_name %||% if (is.null(target$pattern)) name
       if (is.null(own)) return(NULL)
-      # records_changed() above follows this target's records: another
-      # target's new metadata doesn't read the store again.
+      list(name = name, own = own, branch = !is.null(target$pattern))
+    })
+    output$debug <- shiny::renderUI({
+      debug <- debug_target()
+      if (is.null(debug)) return(NULL)
+      # records_changed() in debug_target() follows this target's records:
+      # another target's new metadata doesn't read the store again.
       meta <- shiny::isolate(tar_meta())
-      seed <- if (!is.null(meta) && "seed" %in% names(meta)) na_null(meta$seed[meta$name %in% own][1])
-      edges <- board()$x$edges
+      seed <- if (!is.null(meta) && "seed" %in% names(meta)) na_null(meta$seed[meta$name %in% debug$own][1])
       debug_ui(
-        own, run = name, command = unname(commands()[name]),
-        inputs = intersect(edges$from[edges$to == name], board_targets(board()$x$nodes)),
-        seed = seed, workspace = own %in% tryCatch(targets::tar_workspaces(), error = function(e) character()),
-        branch = !is.null(target$pattern), running = running(), script = backend$poller$script,
-        store = store(), dir = normalizePath(getwd(), winslash = "/")
+        debug$own, run = debug$name, command = focused_command(), inputs = focused_inputs(),
+        seed = seed, workspace = debug$own %in% tryCatch(targets::tar_workspaces(), error = function(e) character()),
+        branch = debug$branch, script = backend$poller$script,
+        store = store(), dir = normalizePath(getwd(), winslash = "/"),
+        run_block = shiny::uiOutput(session$ns("debug_run"))
       )
+    })
+    output$debug_run <- shiny::renderUI({
+      debug <- debug_target()
+      if (is.null(debug)) return(NULL)
+      debug_run_block(debug$own, running(), backend$poller$script, run = debug$name,
+                      store = store(), dir = normalizePath(getwd(), winslash = "/"))
     })
 
     # A tarchetypes rerun rule (cue_rules()), whatever the status: a skipped
@@ -266,22 +291,15 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     # The pane hides an empty block (index.css), and Shiny doesn't render a
     # hidden output: these render anyway, or a block once empty stays so.
     # Each waits for the pane to be open (is_open()).
-    for (id in c("description", "rule", "kind", "why", "branch_inputs", "debug")) {
+    for (id in c("description", "rule", "kind", "why", "branch_inputs", "debug", "debug_run")) {
       shiny::outputOptions(output, id, suspendWhenHidden = FALSE)
     }
 
     # The tab the user last picked in the value's card, kept across targets
-    # where it exists (target_tabs()). A card without it falls back to its
-    # first tab: that isn't a pick, so it's not kept.
-    value_tab <- shiny::reactiveVal(NULL)
-    shown_tabs <- character()
-    shiny::observeEvent(input$value_tab, {
-      if (is.null(value_tab()) || value_tab() %in% shown_tabs) value_tab(input$value_tab)
-    })
-    tabs_for <- function(titles) {
-      shown_tabs <<- titles
-      shiny::isolate(value_tab())
-    }
+    # where it exists (target_tabs(), tab_memory()).
+    tabs <- tab_memory()
+    shiny::observeEvent(input$value_tab, tabs$picked(input$value_tab))
+    tabs_for <- tabs$tabs_for
 
     output$content <- shiny::renderUI({
       shiny::req(is_open(), focused())
@@ -413,6 +431,31 @@ value_tabs <- function(panels = list(), tabs_for = function(titles) NULL, ns = i
   ))
 }
 
+#' The tab the user last picked, across the cards of targets
+#'
+#' A card without it falls back to its first tab, which the browser then
+#' reports as selected: that one report isn't a pick, the user's next are
+#' (#241).
+#' @return A list: `picked(title)`, for each tab the browser reports; and
+#'   `tabs_for(titles)`, for value_tabs(), the tab to select.
+#' @noRd
+tab_memory <- function() {
+  kept <- NULL
+  fallback <- NULL
+  list(
+    picked = function(title) {
+      ignore <- identical(title, fallback)
+      fallback <<- NULL
+      if (!ignore) kept <<- title
+      invisible()
+    },
+    tabs_for = function(titles) {
+      fallback <<- if (!is.null(kept) && !kept %in% titles) titles[1]
+      kept
+    }
+  )
+}
+
 # A nav_panel()'s title.
 nav_title <- function(panel) as.character(panel$attribs$`data-value` %||% "")
 
@@ -478,7 +521,7 @@ settings_ui <- function(row) {
 #' @noRd
 debug_ui <- function(name, run = name, command = NULL, inputs = character(), seed = NULL,
                      workspace = FALSE, branch = FALSE, running = FALSE, script = NULL,
-                     store = NULL, dir = NULL) {
+                     store = NULL, dir = NULL, run_block = NULL) {
   if (length(command) != 1 || is.na(command)) command <- NULL
   shiny::tags$details(
     class = "tb-command tb-debug",
@@ -487,6 +530,6 @@ debug_ui <- function(name, run = name, command = NULL, inputs = character(), see
       code_block("Reproduce", "reproduce",
                  reproduce_code(name, command, workspace, inputs, seed, script = script, store = store, dir = dir))
     },
-    debug_run_block(name, running, script, run = run, store = store, dir = dir)
+    run_block %||% debug_run_block(name, running, script, run = run, store = store, dir = dir)
   )
 }

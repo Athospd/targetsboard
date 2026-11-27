@@ -126,6 +126,12 @@
 
 ## Bug fixes
 
+* The Value pane keeps a tab picked on a card that fell back to its first
+  tab: after Plot on one target, Settings on one without a plot is kept
+  for the next (#241).
+* An open Debug section stays open while the board redraws: it follows
+  its target, not each redraw, and its debug run part follows the run on
+  its own (#242).
 * `tar_board()`'s filters work as in `tar_visnetwork()`: bare target names
   that are also functions (`names = c(raw, data)`) stay target names, and a
   session variable in a selection (`names = any_of(my_targets)`) reaches
