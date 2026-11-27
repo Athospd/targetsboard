@@ -48,6 +48,20 @@ test_that("start_run() runs a future project with tar_make_future()", {
   expect_equal(targets::tar_read(b), 2)
 })
 
+test_that("start_run() runs a clustermq project with tar_make_clustermq()", {
+  skip_on_cran()
+  skip_if_not_installed("clustermq")
+  local_pipeline()
+  # multiprocess: workers as callr processes, on every OS.
+  writeLines(c("library(targets)", "options(clustermq.scheduler = 'multiprocess')",
+               "list(tar_target(a, 1), tar_target(b, a + 1))"), "_targets.R")
+  process <- start_run("_targets.R")
+  process$wait(120000)
+  expect_null(run_error(process))
+  expect_match(attr(process, "header"), "tar_make_clustermq(), 1 worker", fixed = TRUE)
+  expect_equal(targets::tar_read(b), 2)
+})
+
 test_that("the run summary says how the board's run runs, when it isn't tar_make()", {
   progress <- data.frame(name = "a", type = "stem", parent = "a", progress = "completed")
   now <- as.POSIXct("2026-11-26 10:00:10")
