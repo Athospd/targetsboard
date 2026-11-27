@@ -93,7 +93,15 @@ run_server <- function(id, backend, board, running, action, log = function(code)
         runner$process$kill_tree() # the board's own run: its whole tree
       } else {
         handle <- active_run()
-        if (!is.null(handle)) stop_run(handle)
+        if (is.null(handle)) return()
+        if (interactive_r(handle)) {
+          # A run in someone's R session: killing it would close their IDE (#257).
+          fail("stop the run")(simpleError(paste0(
+            "it is in your R session (pid ", run_pid(handle), "): stop it there, with Esc, or Q in the debugger."
+          )))
+          return()
+        }
+        stop_run(handle)
       }
     })
 
