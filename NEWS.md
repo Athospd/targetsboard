@@ -117,6 +117,12 @@
 
 ## Bug fixes
 
+* The Value pane keeps a tab picked on a card that fell back to its first
+  tab: after Plot on one target, Settings on one without a plot is kept
+  for the next (#241).
+* An open Debug section stays open while the board redraws: it follows
+  its target, not each redraw, and its debug run part follows the run on
+  its own (#242).
 * Run no longer ends the board's session on a script with an empty
   subscript, such as `x[, 1]`: reading the script for its parallel setup
   skips empty arguments, and falls back to `tar_make()` if it fails. A run

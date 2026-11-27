@@ -57,3 +57,55 @@ test_that("Command and Settings are tabs for every target, and the picked tab is
   )))
   expect_equal(empty_shown, 0)
 })
+
+test_that("a fallback tab isn't a pick, and every pick after it is kept (#241)", {
+  memory <- tab_memory()
+  expect_null(memory$tabs_for(c("Preview", "Printed", "Command", "Settings")))
+  memory$picked("Printed")
+  expect_equal(memory$tabs_for(c("Preview", "Printed", "Command", "Settings")), "Printed")
+  # No Printed here: the card falls back to its first tab, which isn't a pick.
+  expect_equal(memory$tabs_for(c("Command", "Settings")), "Printed")
+  memory$picked("Command")
+  expect_equal(memory$tabs_for(c("Preview", "Printed", "Command", "Settings")), "Printed")
+  # The user's pick on that card is.
+  memory$tabs_for(c("Command", "Settings"))
+  memory$picked("Command")
+  memory$picked("Settings")
+  expect_equal(memory$tabs_for(c("Preview", "Printed", "Command", "Settings")), "Settings")
+})
+
+test_that("on the board, a tab picked on a card that fell back is kept (#241), and Debug stays open on a redraw (#242)", {
+  dir <- local_pipeline(make = TRUE) # a, b, c built
+  writeLines(c(
+    "library(targets)",
+    "list(tar_target(a, 1), tar_target(b, a + 1), tar_target(c, b * 2), tar_target(d, c + 1))"
+  ), file.path(dir, "_targets.R"))
+  app <- local_board_app(dir, "value-tabs-fallback")
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='d']\") !== null", timeout = 30000)
+  tab <- function(title) sprintf(".tb-preview a[data-value='%s']", title)
+  active <- "document.querySelector('.tb-preview .nav-link.active')?.dataset.value"
+  mouse_event(app, "b", "dblclick")
+  app$wait_for_js(sprintf("document.querySelector(\"%s\") !== null", tab("Printed")), timeout = preview_timeout)
+  app$click(selector = tab("Printed"))
+  # d has no value: its card falls back to Command; the user picks Settings.
+  mouse_event(app, "d", "dblclick")
+  app$wait_for_js("document.querySelector('.tb-target-tabs') !== null", timeout = 20000)
+  app$wait_for_js(sprintf("%s === 'Command'", active), timeout = 20000)
+  app$click(selector = tab("Settings"))
+  app$wait_for_js(sprintf("%s === 'Settings'", active), timeout = 20000)
+  mouse_event(app, "c", "dblclick")
+  app$wait_for_js("document.querySelector('.tb-preview-pane')?.innerText.includes('tar_read(c)')", timeout = 20000)
+  app$wait_for_js(sprintf("%s === 'Settings'", active), timeout = 20000)
+  expect_equal(app$get_js(active), "Settings")
+
+  # Debug, opened, stays open while the script changes and the board redraws.
+  app$wait_for_js("document.querySelector('details.tb-debug')?.textContent.includes('b * 2')", timeout = 20000)
+  app$run_js("document.querySelector('details.tb-debug').open = true")
+  writeLines(c(
+    "library(targets)",
+    "list(tar_target(a, 1), tar_target(b, a + 1), tar_target(c, b * 2), tar_target(d, c + 1), tar_target(e, 5))"
+  ), file.path(dir, "_targets.R"))
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='e']\") !== null", timeout = 30000)
+  Sys.sleep(2) # the pane's outputs follow the redraw
+  expect_true(app$get_js("document.querySelector('details.tb-debug')?.open === true"))
+})
