@@ -29,6 +29,10 @@ preview_gallery:
   script: inst/examples/pipelines/targets_preview_gallery.R
   store: _targets_examples/preview_gallery
 
+quarto_outputs:
+  script: inst/examples/pipelines/targets_quarto_outputs.R
+  store: _targets_examples/quarto_outputs
+
 randomly_breaking:
   script: inst/examples/pipelines/targets_randomly_breaking.R
   store: _targets_examples/randomly_breaking
