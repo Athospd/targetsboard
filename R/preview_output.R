@@ -16,7 +16,10 @@ serve_html_report <- function(path) {
   root <- html_root(path)
   prefix <- paste0("report_", substr(rlang::hash(root), 1, 12))
   shiny::addResourcePath(prefix, root)
-  paste0(prefix, "/", utils::URLencode(substring(path, nchar(root) + 2)))
+  # Its time in the URL: rendered again, the frame loads it fresh, not a
+  # cached copy that points to assets Quarto has since renamed (#251).
+  version <- format(round(as.numeric(file.mtime(path)) * 1000), scientific = FALSE)
+  paste0(prefix, "/", utils::URLencode(substring(path, nchar(root) + 2)), "?v=", version)
 }
 
 # The folder a page is served from: the nearest folder above it, at most
