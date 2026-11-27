@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { FocusedNodeToolbar } from './NodeActions';
+import { FocusedNodeToolbar, UnfoldedBranches } from './NodeActions';
 import TypeIcon, { targetKind } from './TypeIcon';
 
 // A target, drawn in the colours of its status: uptodate, outdated, errored
@@ -26,7 +26,8 @@ const BaseNode = ({
   const kind = targetKind(data?.target_type, data?.kind);
   return (
     <div className={`base-node tb-status-${status}` + (kind ? ' tb-has-type-icon' : '')} title={nodeTitle(data)}>
-      <FocusedNodeToolbar id={id} />
+      <FocusedNodeToolbar id={id} pattern={data?.target_type === 'pattern'} />
+      <UnfoldedBranches id={id} />
       <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
       <TypeIcon kind={kind} raw={data?.kind} />
       {data?.cost && (

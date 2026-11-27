@@ -114,6 +114,15 @@
   `tar_rep2()`, `tar_map_rep()`), URLs (`format = "url"`), grouped data
   (`iteration = "group"`, as `tar_group_by()` gives) and storage formats
   other than rds (`qs`, `parquet`, ...), from `tar_manifest()` (#157).
+* "Open in editor", in a target's right-click menu: its `tar_*()` call, or
+  a function's definition, in the script or `R/`, opened at its line in
+  RStudio, Positron or VS Code. Without one of them (a plain browser and
+  terminal), the item isn't there (#189).
+* A pattern unfolds into its branches: its toolbar's Branches button shows
+  them under it as small nodes in their status's colours, failing ones
+  first, up to 50 and then how many more. A click on one opens the
+  pattern's Value pane on that branch; Fold folds it. One pattern at a
+  time (#147).
 
 ## Bug fixes
 
@@ -123,6 +132,12 @@
 * An open Debug section stays open while the board redraws: it follows
   its target, not each redraw, and its debug run part follows the run on
   its own (#242).
+* `tar_board()`'s filters work as in `tar_visnetwork()`: bare target names
+  that are also functions (`names = c(raw, data)`) stay target names, and a
+  session variable in a selection (`names = any_of(my_targets)`) reaches
+  the board's redraws, which run in another process (#239).
+* A `tar_age()` target says its last build is too old only when that is
+  why it is outdated, not beside another reason (#240).
 * Run no longer ends the board's session on a script with an empty
   subscript, such as `x[, 1]`: reading the script for its parallel setup
   skips empty arguments, and falls back to `tar_make()` if it fails. A run
