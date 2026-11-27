@@ -126,6 +126,8 @@
 
 ## Bug fixes
 
+* A `tar_age()` target says its last build is too old only when that is
+  why it is outdated, not beside another reason (#240).
 * Run no longer ends the board's session on a script with an empty
   subscript, such as `x[, 1]`: reading the script for its parallel setup
   skips empty arguments, and falls back to `tar_make()` if it fails. A run
