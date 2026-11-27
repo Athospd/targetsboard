@@ -134,6 +134,16 @@
 
 ## Bug fixes
 
+* Four smaller fixes from a code review (#243):
+  - The run summary no longer gives a console run the scope of a board run
+    that ended between two polls.
+  - The Value pane offers Debug for targets only, not for a global object
+    shown with `targets_only = FALSE`.
+  - The rule line, the skipped "why" and the Metadata tab's leftovers
+    notice no longer redraw on every metadata write during a run, which
+    reset their Copy buttons.
+  - Rerun rules read positional arguments as R matches them:
+    `tar_force(x, command = f(), TRUE)` is Forced.
 * The Value pane follows the focused target's value, not each redraw:
   sections opened in it, a failing branch's Inputs among them, stay open
   when the board redraws (#264).

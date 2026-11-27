@@ -270,13 +270,18 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       if (!is.null(hint)) shiny::tags$p(class = "tb-rule tb-kind-hint", hint)
     })
 
+    # The focused target's build times, once per change: tar_meta() is read
+    # again on every metadata write during a run, which would redraw the
+    # lines below and reset their Copy (#243). `own`, its record's; `latest`,
+    # its or its branches' latest.
+    focused_built <- shiny::reactiveVal(list(own = NA, latest = NA))
+    shiny::observe(focused_built(build_times(tar_meta(), focused())), priority = 1)
+
     output$rule <- shiny::renderUI({
       shiny::req(is_open(), focused())
       rule <- target_rule(rules(), focused())
       shiny::req(rule)
-      meta <- tar_meta()
-      built <- if (!is.null(meta) && "time" %in% names(meta)) meta$time[meta$name %in% focused()][1] else NA
-      rule_ui(rule_sentence(rule, built))
+      rule_ui(rule_sentence(rule, focused_built()$own))
     })
 
     # Why it is outdated, or why a run skips it.
@@ -287,15 +292,7 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       if (length(reasons)) return(reasons_ui(reasons, functions()))
       sentences <- skipped()[[name]]
       shiny::req(sentences)
-      meta <- tar_meta()
-      built <- NA
-      if (!is.null(meta) && "time" %in% names(meta)) {
-        parent <- if ("parent" %in% names(meta)) meta$parent else NA_character_
-        times <- meta$time[meta$name %in% name | parent %in% name]
-        times <- times[!is.na(times)]
-        if (length(times)) built <- max(times)
-      }
-      skipped_ui(sentences, built)
+      skipped_ui(sentences, focused_built()$latest)
     })
 
     # The pane hides an empty block (index.css), and Shiny doesn't render a
@@ -551,4 +548,18 @@ debug_ui <- function(name, run = name, command = NULL, inputs = character(), see
 #' @noRd
 debuggable <- function(nodes, name) {
   !("type" %in% names(nodes) && any(nodes$type[nodes$id %in% name] %in% c("function", "object")))
+}
+
+#' A target's build times in tar_meta(): `own`, its record's, and `latest`,
+#' its or its branches' latest; NA when unknown
+#' @noRd
+build_times <- function(meta, name) {
+  out <- list(own = NA, latest = NA)
+  if (is.null(meta) || is.null(name) || !"time" %in% names(meta)) return(out)
+  out$own <- meta$time[meta$name %in% name][1]
+  parent <- if ("parent" %in% names(meta)) meta$parent else NA_character_
+  times <- meta$time[meta$name %in% name | parent %in% name]
+  times <- times[!is.na(times)]
+  if (length(times)) out$latest <- max(times)
+  out
 }

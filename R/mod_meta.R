@@ -24,9 +24,10 @@ meta_server <- function(id, tar_meta, script_targets = shiny::reactive(NULL)) {
   stopifnot(shiny::is.reactive(tar_meta), shiny::is.reactive(script_targets))
   shiny::moduleServer(id, function(input, output, session) {
     # Stored targets the script no longer has (#112).
-    output$leftovers <- shiny::renderUI({
-      leftovers_ui(leftover_targets(tar_meta(), script_targets()))
-    })
+    # Once per change of the leftovers, not on every metadata write (#243).
+    leftovers <- shiny::reactiveVal(NULL)
+    shiny::observe(leftovers(leftover_targets(tar_meta(), script_targets())), priority = 1)
+    output$leftovers <- shiny::renderUI(leftovers_ui(leftovers()))
 
     output$table <- reactable::renderReactable({
       shiny::req(tar_meta())
