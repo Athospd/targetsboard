@@ -16,6 +16,7 @@ preview_ui <- function(id) {
     # Apart from the value's output: new reasons don't rebuild the value.
     shiny::uiOutput(ns("description")),
     shiny::uiOutput(ns("rule")),
+    shiny::uiOutput(ns("kind")),
     shiny::uiOutput(ns("why")),
     shiny::uiOutput(ns("branch_inputs")),
     shiny::uiOutput(ns("debug")),
@@ -51,12 +52,13 @@ preview_ui <- function(id) {
 preview_server <- function(id, backend, focused, open_request, board, running, tar_meta, methods,
                            outdated = shiny::reactive(list()), commands = shiny::reactive(character()),
                            rules = shiny::reactive(NULL), skipped = shiny::reactive(list()),
-                           settings = shiny::reactive(NULL)) {
+                           settings = shiny::reactive(NULL), kinds = shiny::reactive(character())) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
     shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(commands),
-    shiny::is.reactive(rules), shiny::is.reactive(skipped), shiny::is.reactive(settings)
+    shiny::is.reactive(rules), shiny::is.reactive(skipped), shiny::is.reactive(settings),
+    shiny::is.reactive(kinds)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -210,6 +212,13 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
 
     # A tarchetypes rerun rule (cue_rules()), whatever the status: a skipped
     # target looks up to date, an aged one gives no hint of when it is due.
+    # What its kind means, for kinds whose icon doesn't say enough (#157).
+    output$kind <- shiny::renderUI({
+      shiny::req(is_open(), focused())
+      hint <- kind_hint(unname(kinds()[focused()]))
+      if (!is.null(hint)) shiny::tags$p(class = "tb-rule tb-kind-hint", hint)
+    })
+
     output$rule <- shiny::renderUI({
       shiny::req(is_open(), focused())
       rule <- target_rule(rules(), focused())
@@ -241,7 +250,7 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     # The pane hides an empty block (index.css), and Shiny doesn't render a
     # hidden output: these render anyway, or a block once empty stays so.
     # Each waits for the pane to be open (is_open()).
-    for (id in c("description", "rule", "why", "branch_inputs", "debug")) {
+    for (id in c("description", "rule", "kind", "why", "branch_inputs", "debug")) {
       shiny::outputOptions(output, id, suspendWhenHidden = FALSE)
     }
 

@@ -93,6 +93,14 @@ document.addEventListener('toggle', (event) => {
   const details = event.target;
   if (!details.matches?.('details[data-tb-output]') || !details.open) return;
   if (details.querySelector('.shiny-html-output')) return;
+  // Sections can share an output (a failing branch's Inputs, #227): one
+  // open at a time, the output moves to the one opened.
+  const other = document.getElementById(details.dataset.tbOutput);
+  if (other) {
+    window.Shiny?.unbindAll?.(other);
+    other.closest('details[data-tb-output]')?.removeAttribute('open');
+    other.remove();
+  }
   const output = document.createElement('div');
   output.id = details.dataset.tbOutput;
   output.className = 'shiny-html-output tb-preview-file-body';

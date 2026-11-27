@@ -1,29 +1,61 @@
 #' What kind of target each one is, beyond tar_visnetwork()'s type
 #'
 #' The graph knows a target's type (stem, pattern, function, object). Its
-#' icon also tells files and reports apart, which only its definition says:
-#' `tar_manifest()`'s `format` and `command`. A report's command runs
-#' tarchetypes' renderer; a file target has `format = "file"`.
+#' icon also tells other kinds apart, which only its definition says:
+#' `tar_manifest()`'s `format`, `iteration` and `command`. The first that
+#' applies wins:
+#' - a report: its command runs tarchetypes' renderer (`"quarto"`,
+#'   `"rmarkdown"`);
+#' - batched replications: `tar_rep()`, `tar_rep2()`, `tar_map_rep()`
+#'   (`"rep"`, #157);
+#' - a file: `format = "file"` (`"file"`);
+#' - a URL: `format = "url"` (`"url"`);
+#' - grouped data: `iteration = "group"`, as `tar_group_by()` gives
+#'   (`"group"`);
+#' - a storage format other than rds: `"format:<format>"`, e.g. `"format:qs"`.
 #'
-#' @param manifest `targets::tar_manifest(fields = c("name", "format",
-#'   "command"))`, as the poller writes it, or NULL.
-#' @return A named character vector, by target: `"quarto"`, `"rmarkdown"` or
-#'   `"file"`, for the targets of those kinds only.
+#' @param manifest `targets::tar_manifest()` with `name`, `format`,
+#'   `iteration` and `command`, as the poller writes it, or NULL.
+#' @return A named character vector, by target, for the targets of those
+#'   kinds only.
 #' @noRd
 target_kinds <- function(manifest) {
   none <- stats::setNames(character(), character())
   if (is.null(manifest) || !nrow(manifest) || !"name" %in% names(manifest)) return(none)
-  command <- if ("command" %in% names(manifest)) manifest$command else rep("", nrow(manifest))
-  format <- if ("format" %in% names(manifest)) manifest$format else rep("", nrow(manifest))
-  kind <- ifelse(
-    grepl("tar_quarto(_rep)?_run", command), "quarto",
-    ifelse(
-      grepl("tar_render(_rep)?_run", command), "rmarkdown",
-      ifelse(format %in% c("file", "file_fast"), "file", NA_character_)
-    )
-  )
+  column <- function(name) if (name %in% names(manifest)) as.character(manifest[[name]]) else rep("", nrow(manifest))
+  command <- column("command")
+  format <- column("format")
+  iteration <- column("iteration")
+  kind <- rep(NA_character_, nrow(manifest))
+  set <- function(which, value) kind[is.na(kind) & which] <<- value
+  set(grepl("tar_quarto(_rep)?_run", command), "quarto")
+  set(grepl("tar_render(_rep)?_run", command), "rmarkdown")
+  set(grepl("tar_rep2?_run[(]", command), "rep")
+  set(format %in% c("file", "file_fast"), "file")
+  set(format %in% "url", "url")
+  set(iteration %in% "group", "group")
+  stored <- !is.na(format) & nzchar(format) & !format %in% c("rds", "file", "file_fast", "url")
+  kind[is.na(kind) & stored] <- paste0("format:", format[is.na(kind) & stored])
   keep <- !is.na(kind)
   stats::setNames(kind[keep], manifest$name[keep])
+}
+
+#' What a target's kind means, in a line for the Value pane (#157)
+#' @param kind A target_kinds() value, or NULL.
+#' @return Text, or NULL for a kind its icon says enough about.
+#' @noRd
+kind_hint <- function(kind) {
+  if (length(kind) != 1 || is.na(kind)) return(NULL)
+  if (startsWith(kind, "format:")) {
+    format <- sub("^format:", "", kind)
+    return(paste0("Stored as ", format, " (format = \"", format, "\"), not rds: reading it needs that format's package."))
+  }
+  switch(kind,
+    rep = "Batched replications: each branch is a batch of reps, and its value has a row per rep.",
+    url = "A URL: targets reruns it when the URL's ETag or last-modified time changes.",
+    group = "Grouped data (iteration = \"group\"): a pattern that maps over it gets one branch per group.",
+    NULL
+  )
 }
 
 #' Each target's command, as it runs

@@ -44,3 +44,50 @@ test_that("target_kinds() reads a real pipeline's manifest", {
   expect_equal(target_kinds(manifest)[c("path", "report")], c(path = "file", report = "rmarkdown"))
   expect_false(any(c("x", "y") %in% names(target_kinds(manifest))))
 })
+
+test_that("target_kinds() names batched reps, URLs, grouped data and storage formats (#157)", {
+  manifest <- data.frame(
+    name = c("reps", "reps2", "site", "groups", "fast", "plain", "report_grouped", "path", "rep_url"),
+    format = c("rds", "rds", "url", "rds", "qs", "rds", "file", "file", "url"),
+    iteration = c("vector", "vector", "vector", "group", "vector", "vector", "group", "vector", "vector"),
+    command = c(
+      "tarchetypes::tar_rep_run(command = f(), batches = 2)", "tarchetypes::tar_rep2_run(command = g(r))",
+      "\"https://example.com\"", "tarchetypes::tar_group_by_run(data = d)", "1", "1",
+      "tarchetypes::tar_quarto_run(args = list())", "\"a.csv\"", "tarchetypes::tar_rep_run(command = h())"
+    )
+  )
+  expect_equal(target_kinds(manifest), c(
+    reps = "rep", reps2 = "rep", site = "url", groups = "group", fast = "format:qs",
+    report_grouped = "quarto", path = "file", rep_url = "rep" # first kind wins: report, rep, file, url, group, format
+  ))
+})
+
+test_that("kind_hint() says what a kind means, for the Value pane", {
+  expect_match(kind_hint("rep"), "batch", fixed = TRUE)
+  expect_match(kind_hint("url"), "ETag", fixed = TRUE)
+  expect_match(kind_hint("group"), "one branch per group", fixed = TRUE)
+  expect_match(kind_hint("format:parquet"), "Stored as parquet", fixed = TRUE)
+  expect_null(kind_hint(NULL))
+  expect_null(kind_hint("pattern"))
+  expect_null(kind_hint(NA_character_))
+})
+
+test_that("target_kinds() reads tarchetypes' factories from a real manifest (#157)", {
+  skip_on_cran()
+  skip_if_not_installed("tarchetypes")
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  writeLines(c(
+    "library(targets); library(tarchetypes)",
+    "list(",
+    "  tar_rep(r1, data.frame(x = 1), batches = 2, reps = 2),",
+    "  tar_url(u, 'https://example.com'),",
+    "  tar_group_by(g, data.frame(k = c(1, 2), v = 3:4), k),",
+    "  tar_target(pq, data.frame(a = 1), format = 'parquet'),",
+    "  tar_target(plain, 1)",
+    ")"
+  ), "_targets.R")
+  kinds <- target_kinds(targets::tar_manifest(fields = c("name", "format", "iteration", "command")))
+  expect_equal(kinds[c("r1", "u", "g", "pq")], c(r1 = "rep", u = "url", g = "group", pq = "format:parquet"))
+  expect_false("plain" %in% names(kinds))
+})
