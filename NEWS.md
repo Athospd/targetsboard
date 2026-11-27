@@ -126,6 +126,12 @@
 
 ## Bug fixes
 
+* Stop no longer kills your R session. A run in an interactive R session
+  (a debug run, or `tar_make(callr_function = NULL)` in the console) is
+  left alone, with a note to stop it there. The debug run code now marks
+  its end on exit, even when left with `Q` in the debugger, so the board
+  no longer takes your session for a run still going. New
+  `mark_run_ended()` does this for your own code (#257).
 * "Open in editor" is offered only in an interactive session with an
   IDE. A script started from Positron's or VS Code's terminal inherits the
   IDE's variables but can't open files in it, and offered it anyway. The

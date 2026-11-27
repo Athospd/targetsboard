@@ -182,13 +182,17 @@ debug_run_code <- function(name, script = NULL, run = name, store = NULL, dir = 
     folder_comment(dir),
     "# Restart R first: a debug run uses this session, and objects left in it\n",
     "# can change what the pipeline builds.\n",
-    "targets::tar_make(\n",
-    "  names = \"", run, "\",\n",
-    "  script = targetsboard::debug_run_script(",
+    "# Left with Q in the debugger, it still tells the board the run ended.\n",
+    "local({\n",
+    "  on.exit(targetsboard::mark_run_ended(", store_arg(store), "))\n",
+    "  targets::tar_make(\n",
+    "    names = \"", run, "\",\n",
+    "    script = targetsboard::debug_run_script(",
     paste(c(deparse(name), script_arg(script)), collapse = ", "), "),\n",
-    if (!is.null(store_arg(store))) paste0("  ", store_arg(store), ",\n"),
-    "  callr_function = NULL, use_crew = FALSE, as_job = FALSE\n",
-    ")"
+    if (!is.null(store_arg(store))) paste0("    ", store_arg(store), ",\n"),
+    "    callr_function = NULL, use_crew = FALSE, as_job = FALSE\n",
+    "  )\n",
+    "})"
   )
 }
 

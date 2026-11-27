@@ -22,6 +22,12 @@ active_run <- function() {
   started <- tryCatch(ps::ps_create_time(handle), error = function(e) NA)
   if (is.na(started) || abs(as.numeric(difftime(started, created, units = "secs"))) > 2)
     return(NULL)
+  # A run in an R session (tar_make(callr_function = NULL), a debug run)
+  # that ended without targets recording it, left with Q in the debugger:
+  # its session lives on. Its end is marked (mark_run_ended(), #257).
+  marker <- file.path(targets::tar_config_get("store"), "user", "targetsboard_ended")
+  ended <- if (file.exists(marker)) tryCatch(readLines(marker, warn = FALSE), error = function(e) NULL)
+  if (identical(ended, info$value[match(c("pid", "created"), info$name)])) return(NULL)
   handle
 }
 # targets and ps only: the poller runs it in its own process (tar_visnetwork_bg()).
@@ -106,6 +112,50 @@ run_error <- function(process) {
   }
   NULL
 }
+
+#' Mark the latest run as ended
+#'
+#' For a run in your own R session, `tar_make(callr_function = NULL)`, as
+#' the board's debug run code does: leaving it with `Q` in the debugger
+#' ends it without targets recording the end, and the board would take your
+#' session for a run still going. The debug run code calls this on exit.
+#'
+#' @param store The targets data store.
+#' @return Nothing, invisibly.
+#' @examples
+#' \dontrun{
+#' local({
+#'   on.exit(targetsboard::mark_run_ended())
+#'   targets::tar_make(callr_function = NULL)
+#' })
+#' }
+#' @export
+mark_run_ended <- function(store = targets::tar_config_get("store")) {
+  info <- tryCatch(targets::tar_process(store = store), error = function(e) NULL)
+  if (is.null(info) || !all(c("pid", "created") %in% info$name)) return(invisible())
+  dir <- file.path(store, "user")
+  dir.create(dir, showWarnings = FALSE, recursive = TRUE)
+  writeLines(info$value[match(c("pid", "created"), info$name)], file.path(dir, "targetsboard_ended"))
+  invisible()
+}
+
+#' Whether a process is an interactive R session: one never killed (#257)
+#'
+#' RStudio's rsession, Positron's ark, Rgui, or R or Rterm not running a
+#' file (callr's processes, the board's runs, run one with `-f`). One that
+#' can't be read counts as one.
+#' @noRd
+interactive_r <- function(handle) {
+  tryCatch({
+    name <- tolower(sub("[.]exe$", "", ps::ps_name(handle), ignore.case = TRUE))
+    if (name %in% c("rsession", "ark", "rgui", "positron")) return(TRUE)
+    if (!name %in% c("r", "rterm")) return(FALSE)
+    args <- ps::ps_cmdline(handle)
+    !any(args == "-f" | startsWith(args, "--file="))
+  }, error = function(e) TRUE)
+}
+
+run_pid <- function(handle) tryCatch(ps::ps_pid(handle), error = function(e) NA)
 
 #' Stop a run: kill the pipeline process
 #'
