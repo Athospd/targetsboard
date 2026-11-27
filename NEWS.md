@@ -117,6 +117,10 @@
 
 ## Bug fixes
 
+* `tar_board()`'s filters work as in `tar_visnetwork()`: bare target names
+  that are also functions (`names = c(raw, data)`) stay target names, and a
+  session variable in a selection (`names = any_of(my_targets)`) reaches
+  the board's redraws, which run in another process (#239).
 * Run no longer ends the board's session on a script with an empty
   subscript, such as `x[, 1]`: reading the script for its parallel setup
   skips empty arguments, and falls back to `tar_make()` if it fails. A run
