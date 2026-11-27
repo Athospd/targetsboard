@@ -134,6 +134,9 @@
 
 ## Bug fixes
 
+* The Value pane follows the focused target's value, not each redraw:
+  sections opened in it, a failing branch's Inputs among them, stay open
+  when the board redraws (#264).
 * "Open in editor" is offered only in an interactive session with an
   IDE. A script started from Positron's or VS Code's terminal inherits the
   IDE's variables but can't open files in it, and offered it anyway. The

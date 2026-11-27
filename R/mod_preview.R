@@ -311,8 +311,10 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     tabs_for <- tabs$tabs_for
 
     output$content <- shiny::renderUI({
-      shiny::req(is_open(), focused())
-      name <- focused()
+      # The deduplicated focus: focused() fires again with each redraw, which
+      # rebuilt the pane and closed what was open in it (#242, #264).
+      shiny::req(is_open(), focused_target())
+      name <- focused_target()
       if (is_function(name)) {
         all <- functions()
         return(function_ui(all[all$name == name, , drop = FALSE], open = TRUE) %||%
