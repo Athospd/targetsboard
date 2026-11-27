@@ -93,3 +93,40 @@ test_that("the problem pane's input links come back as target_link", {
     expect_equal(session$returned$target_link(), "a")
   })
 })
+
+test_that("the rule and skip lines don't redraw on a metadata write that leaves the target as it was (#243)", {
+  skip_on_cran()
+  local_pipeline(make = TRUE)
+  args <- preview_args()
+  # An age rule: its line says how long ago c built.
+  args$rules <- shiny::reactiveVal(data.frame(name = "c", rule = "age", arg = "as.difftime(1, units = \"days\")",
+                                              `for` = NA, check.names = FALSE))
+  args$skipped <- shiny::reactiveVal(list(c = "Skipped: its rule says so."))
+  drawn <- c(rule = 0, why = 0)
+  rule_ui <- get("rule_ui", asNamespace("targetsboard"))
+  skipped_ui <- get("skipped_ui", asNamespace("targetsboard"))
+  local_mocked_bindings(
+    rule_ui = function(...) { drawn[["rule"]] <<- drawn[["rule"]] + 1; rule_ui(...) },
+    skipped_ui = function(...) { drawn[["why"]] <<- drawn[["why"]] + 1; skipped_ui(...) }
+  )
+  shiny::testServer(preview_server, args = args, {
+    args$focused("c")
+    args$open_request(1)
+    session$flushReact()
+    output$rule
+    output$why
+    before <- drawn
+    # Another target's record changes: c's build time doesn't.
+    meta <- args$tar_meta()
+    meta$time[meta$name == "a"] <- meta$time[meta$name == "a"] + 60
+    args$tar_meta(meta)
+    session$flushReact()
+    expect_equal(drawn, before)
+    # c built again: they say its new time.
+    meta$time[meta$name == "c"] <- meta$time[meta$name == "c"] + 60
+    args$tar_meta(meta)
+    session$flushReact()
+    output$rule
+    expect_gt(drawn[["rule"]], before[["rule"]])
+  })
+})
