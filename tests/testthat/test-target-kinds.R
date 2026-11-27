@@ -91,3 +91,11 @@ test_that("target_kinds() reads tarchetypes' factories from a real manifest (#15
   expect_equal(kinds[c("r1", "u", "g", "pq")], c(r1 = "rep", u = "url", g = "group", pq = "format:parquet"))
   expect_false("plain" %in% names(kinds))
 })
+
+test_that("a custom storage format (tar_format()) is named as one, not by its encoded code", {
+  format <- "format_custom&read=cmVhZFJEUyhwYXRoKQ&write=c2F2ZVJEUyhvYmplY3QsIHBhdGgp"
+  kinds <- target_kinds(data.frame(name = "a", format = format, iteration = "vector", command = "1"))
+  expect_equal(kinds, c(a = "format:custom"))
+  expect_match(kind_hint("format:custom"), "tar_format()", fixed = TRUE)
+  expect_no_match(kind_hint("format:custom"), "format = ", fixed = TRUE)
+})

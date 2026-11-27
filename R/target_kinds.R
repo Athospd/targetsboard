@@ -35,6 +35,8 @@ target_kinds <- function(manifest) {
   set(format %in% "url", "url")
   set(iteration %in% "group", "group")
   stored <- !is.na(format) & nzchar(format) & !format %in% c("rds", "file", "file_fast", "url")
+  # tar_format()'s carries its code, encoded: named only as custom.
+  format[startsWith(format, "format_custom")] <- "custom"
   kind[is.na(kind) & stored] <- paste0("format:", format[is.na(kind) & stored])
   keep <- !is.na(kind)
   stats::setNames(kind[keep], manifest$name[keep])
@@ -48,6 +50,9 @@ kind_hint <- function(kind) {
   if (length(kind) != 1 || is.na(kind)) return(NULL)
   if (startsWith(kind, "format:")) {
     format <- sub("^format:", "", kind)
+    if (format == "custom") {
+      return("Stored in a custom format (tar_format()): reading it runs the pipeline's own code.")
+    }
     return(paste0("Stored as ", format, " (format = \"", format, "\"), not rds: reading it needs that format's package."))
   }
   switch(kind,
