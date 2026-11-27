@@ -54,6 +54,7 @@ Imports:
 Suggests:
     broom,
     chromote,
+    crew,
     ggplot2,
     later,
     pdftools,

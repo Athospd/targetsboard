@@ -108,6 +108,15 @@ graph_data_server <- function(id, backend) {
     script_targets <- shiny::reactive(after_graph()$manifest$name)
     settings <- shiny::reactive(target_settings(after_graph()$manifest))
     cloud <- shiny::reactive(after_graph()$cloud) # metadata in a bucket (#111)
+    # crew (#137): its controllers, as the script sets them, and the last
+    # run's totals, which targets writes to the store when the run ends.
+    manifest <- shiny::reactive(after_graph()$manifest)
+    controllers <- shiny::reactive(after_graph()$controllers)
+    crew <- shiny::reactivePoll(
+      1000, session,
+      checkFunc = function() file.mtime(store_file("crew")),
+      valueFunc = function() tryCatch(as.data.frame(targets::tar_crew()), error = function(e) NULL)
+    )
 
     list(
       poller_board = poller_board,
@@ -124,7 +133,10 @@ graph_data_server <- function(id, backend) {
       script_targets = script_targets,
       settings = settings,
       cloud = cloud,
-      rules = rules
+      rules = rules,
+      manifest = manifest,
+      controllers = controllers,
+      crew = crew
     )
   })
 }
