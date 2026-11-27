@@ -54,7 +54,7 @@ test_that("on the board, Run during a run queues the target with a clock, and th
   dir <- local_pipeline()
   writeLines(c(
     "library(targets)",
-    "list(tar_target(slow, {Sys.sleep(8); 1}), tar_target(quick, 2))"
+    "list(tar_target(slow, {Sys.sleep(15); 1}), tar_target(quick, 2))" # long enough for a slow runner
   ), file.path(dir, "_targets.R"))
   app <- local_board_app(dir, "run-queue")
   node <- function(id) sprintf("document.querySelector(\".react-flow__node[data-id='%s']\")", id)
@@ -69,7 +69,8 @@ test_that("on the board, Run during a run queues the target with a clock, and th
   app$wait_for_js("document.querySelector(\".tb-node-menu [data-action='run']\") !== null", timeout = 10000)
   app$click(selector = ".tb-node-menu [data-action='run']")
   app$wait_for_js(sprintf("%s.querySelector('.queued-mark') !== null", node("quick")), timeout = 10000)
-  expect_match(app$get_text(".tb-run-queue"), "Queued: quick", fixed = TRUE)
+  # The line is its own output: it can come a moment after the clock (macOS CI).
+  app$wait_for_js("(document.querySelector('.tb-run-queue') || {}).innerText?.includes('Queued: quick') === true", timeout = 10000)
   mouse_event(app, "quick", "contextmenu")
   app$wait_for_js("document.querySelector(\".tb-node-menu [data-action='run']\") !== null", timeout = 10000)
   expect_equal(app$get_text(".tb-node-menu [data-action='run']"), "Unqueue")
