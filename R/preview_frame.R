@@ -33,6 +33,8 @@ preview_target <- function(name, store = targets::tar_config_get("store"), branc
   target$stand_in <- stand_in(row)
   children <- if ("children" %in% names(row)) row$children[[1]] else NULL
   children <- children[!is.na(children)]
+  # Reading it runs the store's custom R code: targets asks first (#237).
+  target$custom_code <- has_custom_code(meta[meta$name %in% c(name, children), , drop = FALSE])
   if (!identical(field(row, "type"), "pattern") || !length(children)) return(target)
 
   # A pattern shows one branch at a time, as tar_read(name, branches = i)
@@ -87,6 +89,52 @@ stand_in_note <- function(target) {
 branch_arg <- function(target) {
   branch <- target$pattern$branch
   if (is.null(branch) || branch == 0L) NULL else paste("branches =", branch)
+}
+
+#' A store's custom R code (#237)
+#'
+#' targets runs the read code of `tar_format()` and `tar_repository_cas()`
+#' targets, and asks first unless the `TAR_ASK` environment variable is
+#' "false": at a console prompt in an interactive session, which the
+#' browser doesn't see and which blocks the board; an error otherwise. The
+#' board asks in the preview instead, and its reads of a store the author
+#' trusted run with `TAR_ASK` "false", for those reads only: it never sets
+#' `TAR_ASK` for the author.
+#' @param meta `tar_meta()` rows with `format` and `repository`.
+#' @noRd
+has_custom_code <- function(meta) {
+  any(grepl("^format_custom", meta$format)) || any(grepl("^repository_cas", meta$repository))
+}
+
+# Whether reading custom code needs the author's word: as targets decides.
+store_needs_trust <- function(custom_code) {
+  isTRUE(custom_code) && !identical(trimws(tolower(Sys.getenv("TAR_ASK"))), "false")
+}
+
+# One of the board's reads of a store the author trusted.
+read_trusted <- function(expr) withr::with_envvar(c(TAR_ASK = "false"), expr)
+
+#' The preview's question before running a store's custom code
+#' @noRd
+trust_gate <- function(target, store = NULL, ns = identity) {
+  bslib::card(
+    class = "tb-preview",
+    preview_header(target, store = store, ns = ns),
+    bslib::card_body(
+      class = "tb-preview-gate",
+      shiny::tags$p(
+        "This store holds custom R code, from ", shiny::tags$code("tar_format()"), " or ",
+        shiny::tags$code("tar_repository_cas()"), ", and reading this value runs it. ",
+        "Read it only if you trust where the store came from."
+      ),
+      shiny::tags$p(
+        class = "text-muted small",
+        "The board then reads this store for the rest of the session. Your R session still asks: ",
+        "targets' ", shiny::tags$code("TAR_ASK"), " setting is left as it is."
+      ),
+      shiny::actionButton(ns("trust"), "Trust this store and read", class = "btn-sm")
+    )
+  )
 }
 
 #' Reads the value the preview shows: a target's, or one branch of a pattern
@@ -220,7 +268,8 @@ preview_header <- function(target, facts = NULL, store = NULL, ns = identity) {
   built <- if (!is.null(target$time)) format(as.POSIXct(target$time), "%Y-%m-%d %H:%M")
   items <- c(
     facts$class, facts$shape, format_bytes(target$bytes),
-    if (!is.null(target$format)) paste(target$format, "format"),
+    # tar_format()'s format is its code, encoded: name it instead (#237).
+    if (!is.null(target$format)) paste(sub("^format_custom.*$", "custom (tar_format())", target$format), "format"),
     if (!is.null(built)) paste("built", built)
   )
   code <- read_code(target$name, store, branch_arg(target))

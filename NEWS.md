@@ -146,9 +146,21 @@
   `tar_make(names = )` that starts by itself when the run ends. Run on a
   queued target reads Unqueue and takes it out; Clear queue, under the run
   summary, and Stop empty the queue (#106).
+* A Workers tab, shown when the pipeline uses crew: one row per controller,
+  and one for `deployment = "main"` targets, with how many of their targets
+  run, are built and errored, live during a run, and the last run's targets
+  and seconds from `tar_crew()`. targets records nothing finer: no
+  per-worker counts, and no worker per target (#137).
 
 ## Bug fixes
 
+* A store with custom R code (`tar_format()`, `tar_repository_cas()`) no
+  longer blocks the board. targets asked before each read at a console
+  prompt the browser doesn't show. The preview now asks instead, with
+  **Trust this store and read**, and the board's own reads of a trusted
+  store skip the prompt; your `TAR_ASK` setting is left as it is. The
+  header names the format "custom (tar_format())" instead of its encoded
+  code (#237).
 * Stop no longer kills your R session. A run in an interactive R session
   (a debug run, or `tar_make(callr_function = NULL)` in the console) is
   left alone, with a note to stop it there. The debug run code now marks

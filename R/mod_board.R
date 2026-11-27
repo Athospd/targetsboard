@@ -6,7 +6,8 @@
 #' tabs: Board, the graph with the value preview beside it;
 #' Problems, what errored or warned, with a count in its title; Log, the
 #' output of the board's latest run; Script, the script as it is on disk and
-#' where things are; tar_visnetwork(), the graph as that
+#' where things are; Workers, crew's controllers, when the pipeline uses
+#' crew; tar_visnetwork(), the graph as that
 #' function draws it; and tar_meta(). With `options(targetsboard.dev =
 #' TRUE)`, an Internals tab shows the board's own inputs. Each tab's `value`
 #' is its snake_case id.
@@ -62,6 +63,8 @@ board_tabs_ui <- function(ns, metadata, layout) {
     bslib::nav_panel("Log", value = "log", log_ui(ns("log"))),
     bslib::nav_panel("Console", value = "console", console_ui(ns("console"))),
     bslib::nav_panel("Script", value = "script", script_view_ui(ns("script_view"))),
+    # Shown only when the pipeline uses crew (#137).
+    bslib::nav_panel("Workers", value = "workers", workers_ui(ns("workers"))),
     bslib::nav_panel("tar_visnetwork()", value = "tar_visnetwork", visnetwork_ui(ns("visnetwork"))),
     bslib::nav_panel("Metadata", value = "tar_meta", meta_ui(ns("meta"))),
     if (board_dev_mode()) {
@@ -113,6 +116,9 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     cloud_meta_server("cloud_meta", data$cloud, backend$loaded_script, refresh = backend$request_refresh)
     visnetwork_server("visnetwork", board, color_mode)
     meta_clicked <- meta_server("meta", data$tar_meta, data$script_targets)
+    # Workers shows only when the pipeline uses crew (#137).
+    uses_crew <- workers_server("workers", data$progress, data$manifest, data$controllers, data$crew)
+    shiny::observe(if (uses_crew()) bslib::nav_show("view", "workers") else bslib::nav_hide("view", "workers"))
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
 
     # The value preview: opened by a double-click on a target, its Value, or
