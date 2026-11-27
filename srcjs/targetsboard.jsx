@@ -643,14 +643,17 @@ function Flow({ configuration }) {
     const onKey = (event) => {
       if (event.key !== 'Escape' || menuRef.current) return;
       if (event.target?.closest?.('input, textarea, select, [contenteditable="true"], .modal, .tb-preview')) return;
+      // In full screen, Escape leaves it, and only that (#276): seen before
+      // bslib's own listener leaves, hence the capture below.
+      if (document.querySelector('.bslib-card[data-full-screen="true"]')) return;
       const unselect = (items) =>
         items.some((x) => x.selected) ? items.map((x) => (x.selected ? { ...x, selected: false } : x)) : items;
       setFocusId(null);
       setNodes(unselect);
       setEdges(unselect);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, []);
 
   // A focused target that left the pipeline is no longer focused.
