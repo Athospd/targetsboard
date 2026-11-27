@@ -106,6 +106,11 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     }, priority = 10, ignoreNULL = FALSE)
     shiny::observeEvent(input$branch, branch(as.integer(input$branch)))
 
+    # A store whose custom R code the author trusted, this session (#237).
+    trusted <- shiny::reactiveVal(character())
+    shiny::observeEvent(input$trust, trusted(union(trusted(), normalizePath(store(), winslash = "/", mustWork = FALSE))))
+    is_trusted <- function() normalizePath(store(), winslash = "/", mustWork = FALSE) %in% trusted()
+
     # A large value is read only when asked: it can take long and fill the
     # board's memory.
     read_anyway <- shiny::reactiveVal(character())
@@ -184,13 +189,16 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
         )
         branches_of[[name]] <- known
       }
-      meta <- tryCatch(targets::tar_meta(fields = c("type", "children", "bytes"), store = store()),
+      meta <- tryCatch(targets::tar_meta(fields = c("type", "children", "bytes", "format", "repository"), store = store()),
                        error = function(e) NULL)
+      # A store with custom R code: the slices are read once it is trusted
+      # (#237), as the preview's value is; until then, only their code shows.
+      custom <- store_needs_trust(has_custom_code(meta))
       all <- settings()
       iterations <- if (!is.null(all) && "iteration" %in% names(all)) stats::setNames(all$iteration, all$name)
       branch_inputs_ui(
         branch_inputs(known, branch, meta), iterations, store = store(),
-        read = function(code) eval(parse(text = code), envir = baseenv())
+        read = if (!custom || is_trusted()) function(code) read_trusted(eval(parse(text = code), envir = baseenv()))
       )
     })
 
@@ -344,6 +352,10 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       target <- preview_target(name, store(), branch = branch())
       if (is.null(target)) return(no_value())
       key <- preview_key(target)
+      if (store_needs_trust(target$custom_code) && !is_trusted()) {
+        return(shiny::tagList(problem_part, trust_gate(target, store = store(), ns = session$ns),
+                              target_tabs_card(tabs_for, session$ns)))
+      }
       if ((preview_too_large(target) || preview_in_cloud(target)) && !key %in% read_anyway()) {
         return(shiny::tagList(problem_part, preview_gate(target, store = store(), ns = session$ns),
                               target_tabs_card(tabs_for, session$ns)))
@@ -352,7 +364,7 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       if (is.null(built)) {
         missing <- new.env() # a value can be NULL itself
         failed <- NULL
-        value <- tryCatch(suppressWarnings(read_preview_value(target, store())), error = function(e) {
+        value <- tryCatch(suppressWarnings(read_trusted(read_preview_value(target, store()))), error = function(e) {
           failed <<- conditionMessage(e)
           missing
         })
