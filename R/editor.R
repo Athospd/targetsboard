@@ -65,12 +65,15 @@ definitions_in <- function(file) {
 
 #' How to open a file at a line in the IDE this session runs in, or NULL
 #'
-#' RStudio and Positron through rstudioapi; VS Code through its `code`
-#' command. Without one (a plain browser and terminal), there is none.
+#' RStudio and Positron through rstudioapi (Positron's console answers
+#' `isAvailable()` too); VS Code through its `code` command. Only in an
+#' interactive session: a script started from an IDE's terminal inherits
+#' its variables, `POSITRON` or `TERM_PROGRAM`, but has no IDE (#263).
+#' Without one (a plain browser and terminal), there is none.
 #' @noRd
 editor_opener <- function() {
-  if (requireNamespace("rstudioapi", quietly = TRUE) &&
-      (rstudioapi::isAvailable() || nzchar(Sys.getenv("POSITRON")))) {
+  if (!interactive()) return(NULL)
+  if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
     return(function(file, line) rstudioapi::navigateToFile(file, line = line))
   }
   code <- Sys.which("code")
@@ -105,7 +108,8 @@ board_editor <- function() {
 editor_bridge <- function(requests, open, alive) {
   active <- TRUE
   tick <- function() {
-    if (!active || !isTRUE(alive())) return(invisible())
+    # A board whose process can't be asked (#263) is no longer running.
+    if (!active || !isTRUE(tryCatch(alive(), error = function(e) FALSE))) return(invisible())
     if (file.exists(requests)) {
       request <- tryCatch(readRDS(requests), error = function(e) NULL)
       unlink(requests)

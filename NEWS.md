@@ -126,6 +126,10 @@
 
 ## Bug fixes
 
+* "Open in editor" is offered only in an interactive session with an
+  IDE. A script started from Positron's or VS Code's terminal inherits the
+  IDE's variables but can't open files in it, and offered it anyway. The
+  editor bridge stops when the board's process can't be asked (#263).
 * The Value pane keeps a tab picked on a card that fell back to its first
   tab: after Plot on one target, Settings on one without a plot is kept
   for the next (#241).
