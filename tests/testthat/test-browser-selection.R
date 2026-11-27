@@ -109,6 +109,8 @@ test_that("the menu selects what a target depends on, what depends on it, or bot
     app$wait_for_js("document.querySelector('.tb-node-menu') !== null")
     app$click(selector = sprintf(".tb-node-menu [data-action='%s']", action))
     app$wait_for_js(sprintf("document.querySelectorAll('.react-flow__node.selected').length === %d", n))
+    # The input reaches the server a moment after the page shows it (R-devel CI).
+    wait_for(function() length(selected()) == n, timeout = 10)
     selected()
   }
   expect_equal(choose("c", "select_upstream", 3), c("a", "b", "c"))

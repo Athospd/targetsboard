@@ -154,6 +154,10 @@
 
 ## Bug fixes
 
+* CI runs the tests it skipped: tarchetypes, future and clustermq are in
+  Suggests, the example-pipelines test reads the installed package's
+  examples, and a test skipped for a package CI didn't install now fails
+  the job (#282).
 * The Value pane's Expand button shows while the board is expanded, and
   Escape leaves one level at a time: the pane, then the board, which no
   longer also closes the Value pane (#276).

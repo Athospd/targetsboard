@@ -27,3 +27,4 @@ demo/**/*-thumbnail.png
 demo/**/cards/.render-*.html
 __pycache__/
 dev/logo/concepts/
+testthat-problems.rds
