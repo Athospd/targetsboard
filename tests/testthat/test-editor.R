@@ -79,3 +79,21 @@ test_that("Open in editor, in the browser: the board asks the bridge for the tar
   expect_equal(basename(request$file), "_targets.R")
   expect_equal(request$line, 4L)
 })
+
+test_that("an IDE's variables, inherited by a script's process, aren't an IDE (#263)", {
+  withr::local_envvar(POSITRON = "1", TERM_PROGRAM = "vscode")
+  skip_if(interactive()) # as a script runs: tests do
+  expect_null(editor_opener())
+})
+
+test_that("the bridge stops when it can't tell whether the board runs (#263)", {
+  skip_if_not_installed("later")
+  ticks <- 0
+  stop_bridge <- editor_bridge(tempfile(), open = function(file, line) NULL, alive = function() {
+    ticks <<- ticks + 1
+    stop("no process")
+  })
+  withr::defer(stop_bridge())
+  for (i in 1:4) later::run_now(0.6)
+  expect_equal(ticks, 1)
+})
