@@ -44,7 +44,9 @@ test_that("batched reps, URLs, grouped data and storage formats show their icons
     "  tar_rep(r1, data.frame(x = 1), batches = 2, reps = 2),",
     "  tar_url(u, 'https://example.com'),",
     "  tar_group_by(g, data.frame(k = c(1, 2), v = 3:4), k),",
-    "  tar_target(pq, data.frame(a = 1), format = 'parquet')",
+    "  tar_target(pq, data.frame(a = 1), format = 'parquet'),",
+    "  tar_target(packed, 1, format = tar_format(read = function(path) readRDS(path),",
+    "    write = function(object, path) saveRDS(object, path)))",
     ")"
   ), file.path(dir, "_targets.R"))
   app <- local_board_app(dir, "more_kinds")
@@ -57,6 +59,9 @@ test_that("batched reps, URLs, grouped data and storage formats show their icons
   expect_equal(kind_of("pq"), "format")
   expect_equal(app$get_js(paste0(icon("pq"), ".title")), "Stored as parquet")
   expect_equal(app$get_js(paste0(icon("r1"), ".title")), "Batched replications (tar_rep())")
+  # A custom format is named as one, never by the code targets encodes in it.
+  expect_equal(kind_of("packed"), "format")
+  expect_equal(app$get_js(paste0(icon("packed"), ".title")), "Custom storage format (tar_format())")
   # The Value pane says what the kind means.
   mouse_event(app, "u", "dblclick")
   app$wait_for_js("document.querySelector('.tb-kind-hint') !== null", timeout = 20000)
