@@ -121,6 +121,17 @@ run summary says which. Their workers are a literal \verb{workers =} in the
 The script is read for these calls, never run.
 }
 
+\section{Your editor}{
+
+Started from RStudio, Positron (with the rstudioapi package) or VS Code's
+terminal (with its \code{code} command), a target's right-click menu has "Open
+in editor": its \verb{tar_*()} call, or a function's definition, in the script
+or the \verb{R/} folder, opened at its line. The board runs in the background,
+so it asks this session to open it: this works while the session is idle
+at its prompt (it needs the later package). Without an editor, the menu
+has no such item.
+}
+
 \section{Value previews}{
 
 A double-click on a target opens its value in a frame, with a tab per view

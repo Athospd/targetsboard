@@ -55,9 +55,11 @@ Suggests:
     broom,
     chromote,
     ggplot2,
+    later,
     pdftools,
     plotly,
     ragg,
+    rstudioapi,
     shinytest2,
     testthat (>= 3.0.0),
     withr
