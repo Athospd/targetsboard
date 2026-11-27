@@ -111,7 +111,7 @@ test_that("stop_run() kills a run", {
   expect_false(process$is_alive())
 })
 
-test_that("the board runs, refuses a second run, stops and tells how it went", {
+test_that("the board runs, queues a second run, stops and tells how it went", {
   skip_on_cran()
   local_slow_pipeline()
   args <- local_board_args()
@@ -139,14 +139,17 @@ test_that("the board runs, refuses a second run, stops and tells how it went", {
     session$elapse(600)
     expect_true(data$running())
 
+    # A second run waits in the queue (#106); Stop empties it.
     session$setInputs(`graph-flow_node_action` = list(action = "run", node = "c", nodes = "c"))
-    expect_match(notes, "already going", all = FALSE)
+    expect_match(notes, "Queued c: it runs when this run ends.", all = FALSE, fixed = TRUE)
 
     session$setInputs(`run-stop` = 1)
     wait_for(function() !runner$process$is_alive())
     session$elapse(600)
     expect_false(data$running())
     expect_match(notes, "warning Run stopped", all = FALSE)
+    session$elapse(1500)
+    expect_false(inherits(runner$process, "process") && runner$process$is_alive()) # the queue didn't start
   })
 })
 

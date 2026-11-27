@@ -238,6 +238,23 @@
   box-shadow: 0 0 0 2px var(--tb-canvas-bg);
 }
 
+/* In the run queue (#106): a clock in the warning mark's place, in the
+   canvas' own colours, so every theme covers it. */
+.queued-mark {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--tb-canvas-marks);
+  color: var(--tb-canvas-bg);
+  box-shadow: 0 0 0 2px var(--tb-canvas-bg);
+}
+
 /* Focus: the focused target, what it depends on and what depends on it stay
    bright; the rest of the graph dims. */
 .react-flow__node.tb-dimmed,

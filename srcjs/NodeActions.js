@@ -11,21 +11,29 @@ export const NodeActionsContext = createContext({
   onAction: () => {},
   unfold: null,
   onBranch: () => {},
+  queued: new Set(),
 });
 
 // A group action's label, with `{n}` as the number of targets.
 export const groupLabel = (label, n) => label.replace(/\{n\}/g, String(n));
 
+// An action's label on targets: Run on targets all in the run queue takes
+// them out of it, and says so (#106).
+export const actionLabel = (action, ids, queued) => {
+  const label = ids.length > 1 ? groupLabel(action.label, ids.length) : action.label;
+  return action.id === 'run' && ids.length > 0 && ids.every((id) => queued?.has(id)) ? 'Unqueue' : label;
+};
+
 // Buttons over the focused target. Shown only when there are actions.
 // A pattern's toolbar also unfolds it into its branches, or folds it.
 export const FocusedNodeToolbar = ({ id, pattern = false }) => {
-  const { focusId, actions, onAction, unfold } = useContext(NodeActionsContext);
+  const { focusId, actions, onAction, unfold, queued } = useContext(NodeActionsContext);
   if (!actions.length) return null;
   return (
     <NodeToolbar isVisible={focusId === id} position={Position.Top} className="tb-node-toolbar">
       {actions.map((action) => (
         <button key={action.id} data-action={action.id} onClick={() => onAction(action.id, id, [id])}>
-          {action.label}
+          {actionLabel(action, [id], queued)}
         </button>
       ))}
       {pattern && (
@@ -66,13 +74,13 @@ export const UnfoldedBranches = ({ id }) => {
 // Buttons over a selected group of targets, centred over all of them.
 // `node` is the one the action is reported on: the focused target, if in
 // the group.
-export const GroupToolbar = ({ ids, node, actions, onAction }) => {
+export const GroupToolbar = ({ ids, node, actions, onAction, queued }) => {
   if (!ids || !actions.length) return null;
   return (
     <NodeToolbar nodeId={ids} isVisible position={Position.Top} className="tb-node-toolbar tb-group-toolbar">
       {actions.map((action) => (
         <button key={action.id} data-action={action.id} onClick={() => onAction(action.id, node, ids)}>
-          {groupLabel(action.label, ids.length)}
+          {actionLabel(action, ids, queued)}
         </button>
       ))}
     </NodeToolbar>

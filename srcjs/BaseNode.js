@@ -14,6 +14,14 @@ const nodeTitle = (data) => {
   return parts.length ? parts.join('\n\n') : undefined;
 };
 
+
+// A small clock, in the mark's colour.
+const clockIcon = (
+  <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
+    <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M8 4.5V8l2.5 1.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
 const BaseNode = ({
   id,
   data,
@@ -41,7 +49,10 @@ const BaseNode = ({
         </span>
       )}
       {status === 'running' && <div className="extra-content"><div className="spinner"></div></div>}
-      {data?.warning && (
+      {/* In the run queue, a clock takes the warning's place until the queued run starts (#106). */}
+      {data?.queued ? (
+        <span className="queued-mark" title="In the run queue: it runs when the current run ends">{clockIcon}</span>
+      ) : data?.warning && (
         <span className="warning-mark" title="Its last build raised warnings">!</span>
       )}
       {data?.branches && (

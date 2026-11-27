@@ -152,6 +152,9 @@ full_id <- function(session, inputId) {
 #'   targets' kinds as they are; else a named character vector, by target,
 #'   of the targets that are a `"file"`, a `"quarto"` report or an
 #'   `"rmarkdown"` report, for their icons. The others are none of these.
+#' @param queued For `update_targetsboard_status()`: `NULL` leaves the
+#'   targets' run-queue marks as they are; else the ids of every target in
+#'   the run queue, which shows a clock in place of its warning mark.
 #' @param costs For `update_targetsboard_status()`: `NULL` leaves the
 #'   targets' time and size badges as they are; else a named list, by
 #'   target, of `list(time, size, title, slow, large)`: the badge's text
@@ -164,7 +167,8 @@ full_id <- function(session, inputId) {
 #'   none, so a data frame without rows clears them all.
 #' @export
 update_targetsboard_status <- function(session, inputId, statuses = character(), warnings = NULL,
-                                       branches = NULL, reasons = NULL, kinds = NULL, costs = NULL) {
+                                       branches = NULL, reasons = NULL, kinds = NULL, costs = NULL,
+                                       queued = NULL) {
   stopifnot(is.character(statuses), !is.null(names(statuses)) || length(statuses) == 0)
   message <- list(
     id = full_id(session, inputId),
@@ -182,6 +186,7 @@ update_targetsboard_status <- function(session, inputId, statuses = character(),
   if (!is.null(kinds)) {
     message$kinds <- json_object(as.list(kinds))
   }
+  if (!is.null(queued)) message$queued <- I(as.character(queued)) # always an array
   if (!is.null(costs)) {
     message$costs <- json_object(costs)
   }
