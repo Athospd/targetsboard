@@ -27,8 +27,12 @@ test_that("a run in this R session is no longer going once it marks its end", {
   expect_false(is.null(active_run()))
   mark_run_ended()
   expect_null(active_run())
-  # A newer run in a callr process records its own pid: the old mark is no match.
-  expect_true(file.exists(file.path("_targets", "user", "targetsboard_ended")))
+  # A store marked by mark_run_ended() before #279, its lock left: still ended.
+  targets::tar_make(callr_function = NULL, reporter = "silent")
+  info <- targets::tar_process()
+  dir.create(file.path("_targets", "user"), showWarnings = FALSE)
+  writeLines(info$value[match(c("pid", "created"), info$name)], file.path("_targets", "user", "targetsboard_ended"))
+  expect_null(active_run())
 })
 
 test_that("the debug run's code marks its end, even when left with Q", {
@@ -52,6 +56,8 @@ test_that("Stop refuses a run in an R session, and says where to stop it", {
     stop_run = function(handle) killed <<- killed + 1,
     run_pid = function(handle) 1234L
   )
+  unblocked <- 0
+  local_mocked_bindings(tar_unblock_process = function(...) unblocked <<- unblocked + 1, .package = "targets")
   shiny::testServer(run_server, args = list(
     backend = backend, board = shiny::reactiveVal(NULL), running = shiny::reactiveVal(TRUE),
     action = shiny::reactiveVal(NULL)
@@ -59,5 +65,10 @@ test_that("Stop refuses a run in an R session, and says where to stop it", {
     session$setInputs(stop = 1)
     expect_equal(killed, 0)
     expect_match(last_failure(), "your R session (pid 1234)", fixed = TRUE)
+    # Its lock may be a debug run's, left with Q: unblocked when asked (#279).
+    expect_false(is.null(blocked()))
+    session$setInputs(unblock = 1)
+    expect_equal(unblocked, 1)
+    expect_null(blocked())
   })
 })

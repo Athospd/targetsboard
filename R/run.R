@@ -24,7 +24,8 @@ active_run <- function() {
     return(NULL)
   # A run in an R session (tar_make(callr_function = NULL), a debug run)
   # that ended without targets recording it, left with Q in the debugger:
-  # its session lives on. Its end is marked (mark_run_ended(), #257).
+  # its session lives on. mark_run_ended() now removes its lock (#279); a
+  # store it marked before, with this file, still counts as ended (#257).
   marker <- file.path(targets::tar_config_get("store"), "user", "targetsboard_ended")
   ended <- if (file.exists(marker)) tryCatch(readLines(marker, warn = FALSE), error = function(e) NULL)
   if (identical(ended, info$value[match(c("pid", "created"), info$name)])) return(NULL)
@@ -106,19 +107,58 @@ run_modes_label <- function(modes) {
 #' @noRd
 run_error <- function(process) {
   result <- tryCatch(process$get_result(), error = function(e) e)
-  if (inherits(result, "error")) return(conditionMessage(result))
+  # targets colours its messages: the page shows them plain (#280).
+  if (inherits(result, "error")) return(cli::ansi_strip(conditionMessage(result)))
   if (inherits(result, "tar_condition_traced")) {
-    return(result$condition$message %||% "the pipeline errored")
+    return(cli::ansi_strip(result$condition$message %||% "the pipeline errored"))
   }
   NULL
+}
+
+#' The R session whose lock refused a run (#279)
+#'
+#' targets refuses a run while the process recorded in `<store>/meta/process`
+#' is alive. An R session that ran `tar_make(callr_function = NULL)` and lives
+#' on, a debug run left with `Q`, holds it until it closes.
+#' @param error The run's error, from run_error().
+#' @return The session's pid, or `NULL` when the error is another, or the
+#'   lock is a pipeline process's, which may well be running.
+#' @noRd
+session_lock <- function(error, store = targets::tar_config_get("store")) {
+  if (is.null(error) || !grepl("is already running a {targets} pipeline", error, fixed = TRUE)) return(NULL)
+  handle <- recorded_handle(store)
+  if (is.null(handle) || !interactive_r(handle)) return(NULL)
+  run_pid(handle)
+}
+
+# The live process tar_process() records, or NULL.
+recorded_handle <- function(store = targets::tar_config_get("store")) {
+  info <- tryCatch(targets::tar_process(store = store), error = function(e) NULL)
+  pid <- if (!is.null(info)) suppressWarnings(as.integer(info$value[info$name == "pid"]))
+  if (length(pid) != 1 || is.na(pid)) return(NULL)
+  tryCatch(ps::ps_handle(pid), error = function(e) NULL)
+}
+
+#' A targets metadata table, its errors and warnings without colour codes (#280)
+#' @noRd
+plain_meta <- function(meta) {
+  for (field in intersect(c("error", "warnings"), names(meta))) {
+    meta[[field]] <- ifelse(is.na(meta[[field]]), NA_character_, cli::ansi_strip(meta[[field]]))
+  }
+  meta
 }
 
 #' Mark the latest run as ended
 #'
 #' For a run in your own R session, `tar_make(callr_function = NULL)`, as
 #' the board's debug run code does: leaving it with `Q` in the debugger
-#' ends it without targets recording the end, and the board would take your
-#' session for a run still going. The debug run code calls this on exit.
+#' ends it without targets recording the end. targets would then refuse
+#' every later run on the store while your session lives (its process lock,
+#' `<store>/meta/process`), and the board would take your session for a run
+#' still going. The debug run code calls this on exit: when the store
+#' records this session, it removes the lock
+#' ([targets::tar_unblock_process()]), as the run here has ended. A lock of
+#' another process is left as it is.
 #'
 #' @param store The targets data store.
 #' @return Nothing, invisibly.
@@ -132,10 +172,8 @@ run_error <- function(process) {
 #' @export
 mark_run_ended <- function(store = targets::tar_config_get("store")) {
   info <- tryCatch(targets::tar_process(store = store), error = function(e) NULL)
-  if (is.null(info) || !all(c("pid", "created") %in% info$name)) return(invisible())
-  dir <- file.path(store, "user")
-  dir.create(dir, showWarnings = FALSE, recursive = TRUE)
-  writeLines(info$value[match(c("pid", "created"), info$name)], file.path(dir, "targetsboard_ended"))
+  pid <- if (!is.null(info)) info$value[info$name == "pid"]
+  if (identical(pid, as.character(Sys.getpid()))) targets::tar_unblock_process(store = store)
   invisible()
 }
 

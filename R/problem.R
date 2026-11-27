@@ -12,7 +12,7 @@
 #' @noRd
 target_problem <- function(name, command = NULL) {
   meta <- tryCatch(
-    targets::tar_meta(fields = c("type", "parent", "error", "warnings", "seed", "children")),
+    plain_meta(targets::tar_meta(fields = c("type", "parent", "error", "warnings", "seed", "children"))),
     error = function(e) NULL
   )
   if (is.null(meta)) return(NULL)
