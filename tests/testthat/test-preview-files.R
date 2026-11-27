@@ -280,7 +280,7 @@ test_that("a rendered site shows its front page, served from its root", {
   # ../site_libs/.
   url <- serve_html_report(file.path(site, "_site", "posts", "first.html"))
   prefix <- sub("/.*", "", url)
-  expect_equal(url, paste0(prefix, "/posts/first.html"))
+  expect_match(url, paste0("^", prefix, "/posts/first[.]html[?]v=[0-9]+$"))
   expect_equal(
     normalizePath(shiny::resourcePaths()[[prefix]], winslash = "/"),
     normalizePath(file.path(site, "_site"), winslash = "/")
@@ -288,7 +288,7 @@ test_that("a rendered site shows its front page, served from its root", {
   # A report outside a site is served from its own folder, as before.
   report <- file.path(withr::local_tempdir(), "report.html")
   writeLines("<p>report</p>", report)
-  expect_match(serve_html_report(report), "^report_[a-z0-9]+/report[.]html$")
+  expect_match(serve_html_report(report), "^report_[a-z0-9]+/report[.]html[?]v=[0-9]+$")
 })
 
 test_that("a source in a Quarto project shows the page it rendered to", {

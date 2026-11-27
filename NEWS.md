@@ -134,6 +134,10 @@
 
 ## Bug fixes
 
+* A rendered report (Quarto, R Markdown, a site's page) is framed at a URL
+  that carries its file's time, so after it renders again the Value pane
+  loads it fresh: a cached copy could point to assets Quarto had renamed,
+  and show the report unstyled (#251).
 * The Value pane follows the focused target's value, not each redraw:
   sections opened in it, a failing branch's Inputs among them, stay open
   when the board redraws (#264).
