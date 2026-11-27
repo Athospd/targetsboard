@@ -106,14 +106,20 @@ test_that("a failing branch's Inputs open in the Problems list, one at a time (#
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='p']\") !== null", timeout = 30000)
   mouse_event(app, "p", "dblclick")
   app$wait_for_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs').length === 2", timeout = preview_timeout)
-  open_inputs <- function(i) {
-    app$run_js(sprintf("document.querySelectorAll('.tb-problem-branch')[%d].open = true;", i))
-    app$run_js(sprintf("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs summary')[%d].click()", i))
-  }
+  # The branch and its Inputs open in one go: nothing can render between
+  # them (#264). Text is read with textContent, which a closed section
+  # doesn't hide.
+  open_inputs <- function(i) app$run_js(sprintf(paste(
+    "document.querySelectorAll('.tb-problem-branch')[%d].open = true;",
+    "document.querySelectorAll('.tb-problem-branch .tb-branch-inputs summary')[%d].click();"
+  ), i, i))
+  input_shown <- function(text) sprintf(
+    "[...document.querySelectorAll('.tb-problem-branch .tb-branch-input p')].some(p => p.textContent.trim() === '%s')", text
+  )
   open_inputs(0)
-  app$wait_for_js("document.querySelector('.tb-problem-branch .tb-branch-input p')?.innerText === 'x, slice 2 of 3'", timeout = 30000)
+  app$wait_for_js(input_shown("x, slice 2 of 3"), timeout = 30000)
   open_inputs(1)
-  app$wait_for_js("[...document.querySelectorAll('.tb-problem-branch .tb-branch-input p')].some(p => p.innerText === 'x, slice 3 of 3')", timeout = 30000)
+  app$wait_for_js(input_shown("x, slice 3 of 3"), timeout = 30000)
   # One output, in the section opened last; the first one closed.
   expect_equal(app$get_js("document.querySelectorAll('[id$=\"-inputs\"]').length"), 1)
   expect_false(app$get_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs')[0].open"))
