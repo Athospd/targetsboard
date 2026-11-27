@@ -110,3 +110,21 @@ test_that("a tar_age() target says it is too old only when its age cue fired (#2
   expect_equal(outdated_reasons(reasons(always = TRUE, command = TRUE), rules)$aged,
                c(age = "Its last build is older than 1 day.", command = "Its command changed."))
 })
+
+test_that("positional arguments are matched as R matches them, around named ones (#243)", {
+  script <- withr::local_tempfile(fileext = ".R")
+  writeLines(c(
+    "list(",
+    "  tarchetypes::tar_force(x, command = f(), TRUE),",
+    "  tarchetypes::tar_age(y, age = as.difftime(1, units = 'days'), g()),",
+    "  tarchetypes::tar_skip(command = h(), z, skip = cond),",
+    "  targets::tar_target(w, k(), cue = tarchetypes::tar_cue_age(age = as.difftime(2, units = 'hours'), w))",
+    ")"
+  ), script)
+  rules <- cue_rules(script)
+  expect_equal(rules$arg[rules$name == "x"], "TRUE")
+  expect_equal(rules$rule[rules$name == "x"], "force")
+  expect_equal(rules$arg[rules$name == "y"], "as.difftime(1, units = \"days\")")
+  expect_equal(rules$arg[rules$name == "z"], "cond")
+  expect_equal(rules$arg[rules$name == "w"], "as.difftime(2, units = \"hours\")")
+})
