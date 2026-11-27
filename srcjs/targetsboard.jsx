@@ -331,6 +331,8 @@ function Flow({ configuration }) {
   const directionRef = useRef(direction);
   directionRef.current = direction;
   const [focusId, setFocusId] = useState(null);
+  const [unfold, setUnfold] = useState(null); // {pattern, branches, more}: R's
+
   const focusRef = useRef(focusId);
   focusRef.current = focusId;
   const [options, setOptions] = useState({ ...DEFAULT_OPTIONS, ...configuration.options });
@@ -601,6 +603,9 @@ function Flow({ configuration }) {
         setFocusId(message.node ?? null);
         selectOnly(message.node ? [message.node] : []);
         setMenu(null);
+      } else if (message.command === 'unfold') {
+        // A pattern's branches, or null to fold it (#147).
+        setUnfold(message.pattern ? message : null);
       } else if (message.command === 'select') {
         const known = new Set(nodesRef.current.map((n) => n.id));
         selectOnly((message.nodes ?? []).filter((id) => known.has(id)));
@@ -748,9 +753,13 @@ function Flow({ configuration }) {
   // target for the toolbar and the highlighting.
   const group = useMemo(() => (selectedKey.includes('|') ? selectedKey.split('|') : null), [selectedKey]);
   const toolbarFocus = group ? null : focusId;
+  const onBranch = useCallback(
+    (pattern, position) => sendEvent(`${inputId}_branch_click`, { pattern, position }),
+    [inputId],
+  );
   const nodeActions = useMemo(
-    () => ({ focusId: toolbarFocus, actions: options.toolbar_actions, onAction: onMenuAction }),
-    [toolbarFocus, options.toolbar_actions, onMenuAction],
+    () => ({ focusId: toolbarFocus, actions: options.toolbar_actions, onAction: onMenuAction, unfold, onBranch }),
+    [toolbarFocus, options.toolbar_actions, onMenuAction, unfold, onBranch],
   );
 
   // Highlighting is derived, never stored: the selected group, or else the
