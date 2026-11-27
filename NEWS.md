@@ -114,6 +114,14 @@
   `tar_rep2()`, `tar_map_rep()`), URLs (`format = "url"`), grouped data
   (`iteration = "group"`, as `tar_group_by()` gives) and storage formats
   other than rds (`qs`, `parquet`, ...), from `tar_manifest()` (#157).
+* A Console tab: every run, invalidation and value read from the board, as
+  the R call that does it in the console (`targets::tar_make(names = a)`,
+  `targets::tar_read(a)`, ...), in the order of the session. Each has a
+  Copy button, and Copy all gives the session as a script (#185).
+* A pipeline whose metadata lives in the cloud (`repository_meta = "aws"`
+  or `"gcp"`): a notice says the board shows the local copy, and a button
+  runs `tar_meta_download()` once confirmed. It never downloads on its own
+  (#111).
 * "Open in editor", in a target's right-click menu: its `tar_*()` call, or
   a function's definition, in the script or `R/`, opened at its line in
   RStudio, Positron or VS Code. Without one of them (a plain browser and
@@ -132,6 +140,23 @@
   its end on exit, even when left with `Q` in the debugger, so the board
   no longer takes your session for a run still going. New
   `mark_run_ended()` does this for your own code (#257).
+* Four smaller fixes from a code review (#243):
+  - The run summary no longer gives a console run the scope of a board run
+    that ended between two polls.
+  - The Value pane offers Debug for targets only, not for a global object
+    shown with `targets_only = FALSE`.
+  - The rule line, the skipped "why" and the Metadata tab's leftovers
+    notice no longer redraw on every metadata write during a run, which
+    reset their Copy buttons.
+  - Rerun rules read positional arguments as R matches them:
+    `tar_force(x, command = f(), TRUE)` is Forced.
+* A rendered report (Quarto, R Markdown, a site's page) is framed at a URL
+  that carries its file's time, so after it renders again the Value pane
+  loads it fresh: a cached copy could point to assets Quarto had renamed,
+  and show the report unstyled (#251).
+* The Value pane follows the focused target's value, not each redraw:
+  sections opened in it, a failing branch's Inputs among them, stay open
+  when the board redraws (#264).
 * "Open in editor" is offered only in an interactive session with an
   IDE. A script started from Positron's or VS Code's terminal inherits the
   IDE's variables but can't open files in it, and offered it anyway. The

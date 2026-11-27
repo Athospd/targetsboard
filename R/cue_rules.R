@@ -30,16 +30,17 @@ cue_rules <- function(script) {
     if (is.call(fn) && length(fn) == 3 && is.name(fn[[1]]) && as.character(fn[[1]]) %in% c("::", ":::")) return(as.character(fn[[3]]))
     ""
   }
-  # An argument by name, or else by position among the unnamed ones.
-  arg_of <- function(x, name, position) {
-    args <- as.list(x)[-1]
-    named <- names(args) %||% rep("", length(args))
-    if (name %in% named) return(args[[name]])
-    unnamed <- args[!nzchar(named)]
-    if (length(unnamed) >= position) unnamed[[position]]
+  # An argument as R matches it to `formals`, the function's first ones in
+  # order: by name, partly named, or by position among the formals left
+  # (#243). The factory needn't be installed: a stub has its formals.
+  arg_of <- function(x, name, formals) {
+    stub <- function() NULL
+    formals(stub) <- c(stats::setNames(rep(list(quote(expr = )), length(formals)), formals), alist(... = ))
+    matched <- tryCatch(as.list(match.call(stub, x))[-1], error = function(e) list())
+    matched[[name]]
   }
   target_name <- function(x) {
-    name <- arg_of(x, "name", 1)
+    name <- arg_of(x, "name", "name")
     if (is.name(name)) as.character(name) else if (is.character(name) && length(name) == 1) name
   }
   code <- function(arg) if (!is.null(arg)) paste(deparse(arg, width.cutoff = 500L), collapse = " ")
@@ -51,7 +52,7 @@ cue_rules <- function(script) {
     if (fn %in% names(factories)) {
       rule <- factories[[fn]]
       name <- target_name(x)
-      arg <- code(arg_of(x, rule, 3))
+      arg <- code(arg_of(x, rule, c("name", "command", rule)))
       if (!is.null(name) && !is.null(arg)) {
         add(name, rule, arg)
         if (rule %in% c("force", "change")) add(paste0(name, "_change"), "helper", arg, name)
@@ -61,7 +62,7 @@ cue_rules <- function(script) {
       if (is.call(cue) && fname(cue) %in% names(cues)) {
         rule <- cues[[fname(cue)]]
         name <- target_name(x)
-        arg <- code(if (rule == "age") arg_of(cue, "age", 2) else arg_of(cue, "condition", 1))
+        arg <- code(if (rule == "age") arg_of(cue, "age", c("name", "age")) else arg_of(cue, "condition", "condition"))
         if (!is.null(name) && !is.null(arg)) add(name, rule, arg)
       }
     }

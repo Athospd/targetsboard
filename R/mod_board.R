@@ -46,6 +46,7 @@ board_tabs_ui <- function(ns, metadata, layout) {
         class = "tb-board-pane", padding = 0, gap = 0,
         script_loading_ui(ns("script")),
         no_script_output(ns("no_script")),
+        cloud_meta_ui(ns("cloud_meta")),
         bslib::layout_sidebar(
           class = "p-0",
           sidebar = preview_ui(ns("preview")),
@@ -58,6 +59,7 @@ board_tabs_ui <- function(ns, metadata, layout) {
       problems_ui(ns("problems"))
     ),
     bslib::nav_panel("Log", value = "log", log_ui(ns("log"))),
+    bslib::nav_panel("Console", value = "console", console_ui(ns("console"))),
     bslib::nav_panel("Script", value = "script", script_view_ui(ns("script_view"))),
     bslib::nav_panel("tar_visnetwork()", value = "tar_visnetwork", visnetwork_ui(ns("visnetwork"))),
     bslib::nav_panel("Metadata", value = "tar_meta", meta_ui(ns("meta"))),
@@ -91,6 +93,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     # A target to show on the graph: from a table, a problem's links, or a
     # run's notification.
     shown <- shiny::reactiveVal(NULL)
+    # Every action's R code, for the Console tab (#185).
+    console <- console_log()
     graph <- graph_server(
       "graph", board, data$progress, data$running, data$warned_targets,
       show = shiny::reactive(shown()), color_mode = color_mode, outdated = data$outdated,
@@ -100,8 +104,10 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     # The tabs beside the board. The tables' clicks show a target on it.
     problem_clicked <- problems_server("problems", board, data$tar_meta)
     log_server("log", backend)
+    console_server("console", console$entries)
     script_view_server("script_view", backend$loaded_script)
     no_script_server("no_script", backend$loaded_script)
+    cloud_meta_server("cloud_meta", data$cloud, backend$loaded_script, refresh = backend$request_refresh)
     visnetwork_server("visnetwork", board, color_mode)
     meta_clicked <- meta_server("meta", data$tar_meta, data$script_targets)
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
@@ -136,11 +142,12 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
       board = board, running = data$running, tar_meta = data$tar_meta,
       methods = loaded$methods, outdated = data$outdated, commands = data$commands,
       rules = data$rules, skipped = data$skipped, settings = data$settings, kinds = data$kinds,
-      branch_request = graph$branch_clicked
+      branch_request = graph$branch_clicked,
+      log = console$add
     )
 
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.
-    run <- run_server("run", backend, board, data$running, action = graph$node_action)
+    run <- run_server("run", backend, board, data$running, action = graph$node_action, log = console$add)
     # Under the run buttons: the run going, or the last one.
     run_summary_server("run_summary", board, data$running, data$progress, data$tar_meta, scope = run$scope, maker = run$maker)
 

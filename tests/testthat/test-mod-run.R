@@ -46,17 +46,31 @@ test_that("the run's scope: what the board's run was asked for, none for a run f
   local_pipeline()
   args <- run_args()
   local_mocked_bindings(start_run = function(...) NULL)
+  alive <- FALSE # the board's run process
+  args$backend$run_alive <- function() alive
   shiny::testServer(run_server, args = args, {
     args$action(list(action = "run", nodes = list("a", "b")))
     session$flushReact()
+    alive <<- TRUE
     args$running(TRUE)
     session$flushReact()
     expect_equal(session$returned$scope(), c("a", "b"))
+    alive <<- FALSE
     args$running(FALSE)
     session$flushReact()
     expect_equal(session$returned$scope(), c("a", "b")) # the last run's, until the next
 
     args$running(TRUE) # one the board didn't start
+    session$flushReact()
+    expect_null(session$returned$scope())
+    args$running(FALSE)
+    session$flushReact()
+
+    # A board run over between two polls: running() never saw it. The next
+    # run, from the console, is still not the board's (#243).
+    args$action(list(action = "run", nodes = list("c")))
+    session$flushReact()
+    args$running(TRUE)
     session$flushReact()
     expect_null(session$returned$scope())
   })
