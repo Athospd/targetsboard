@@ -17,7 +17,7 @@ test_that("serve_html_report() serves only the report's folder", {
   url <- serve_html_report(report)
   prefix <- sub("/.*", "", url)
 
-  expect_match(url, "^report_[0-9a-f]{12}/my%20report[.]html$")
+  expect_match(url, "^report_[0-9a-f]{12}/my%20report[.]html[?]v=[0-9]+$")
   expect_equal(
     normalizePath(shiny::resourcePaths()[[prefix]]),
     normalizePath(dir)
@@ -414,4 +414,18 @@ test_that("the preview follows its target's records: invalidated, then built aga
     session$elapse(1100)
     expect_match(output[["board-preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
   })
+})
+
+test_that("a report's URL changes when it is rendered again, so no browser shows a stale copy (#251)", {
+  dir <- withr::local_tempdir()
+  report <- file.path(dir, "report.html")
+  writeLines("<html>one</html>", report)
+  Sys.setFileTime(report, as.POSIXct("2026-01-01 10:00:00", tz = "UTC"))
+  first <- serve_html_report(report)
+  withr::defer(shiny::removeResourcePath(sub("/.*", "", first)))
+  expect_match(first, "^report_[0-9a-f]{12}/report[.]html[?]v=[0-9]+$")
+  expect_identical(serve_html_report(report), first) # unchanged: the same URL, cached as before
+  writeLines("<html>two</html>", report)
+  Sys.setFileTime(report, as.POSIXct("2026-01-01 10:00:01", tz = "UTC"))
+  expect_false(identical(serve_html_report(report), first))
 })

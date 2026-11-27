@@ -193,3 +193,19 @@ test_that("absolute_path() gives a path not created yet as the system names its 
   expect_equal(absolute_path("_targets.R"), paste0(here, "/_targets.R"))
   expect_false(startsWith(absolute_path("~/x"), here)) # a home path is already absolute
 })
+
+test_that("the leftovers notice doesn't redraw on a metadata write that leaves the leftovers as they were (#243)", {
+  meta <- shiny::reactiveVal(fake_meta())
+  drawn <- 0
+  leftovers_ui <- get("leftovers_ui", asNamespace("targetsboard"))
+  local_mocked_bindings(leftovers_ui = function(...) { drawn <<- drawn + 1; leftovers_ui(...) })
+  shiny::testServer(meta_server, args = list(tar_meta = meta, script_targets = shiny::reactiveVal(fake_meta()$name[-1])), {
+    output$leftovers
+    before <- drawn
+    changed <- fake_meta()
+    changed$warnings[2] <- "a new warning" # a write that changes no leftover
+    meta(changed)
+    session$flushReact()
+    expect_equal(drawn, before)
+  })
+})

@@ -50,3 +50,11 @@ test_that("the Value pane of any target can reproduce and debug it; a failed one
   app$wait_for_js("document.querySelector('.tb-problem') !== null", timeout = 20000)
   expect_null(app$get_js("document.querySelector('.tb-debug')"))
 })
+
+test_that("Debug is offered for targets, not for the functions and objects shown with them (#243)", {
+  nodes <- data.frame(id = c("t", "f", "cfg"), type = c("stem", "function", "object"))
+  expect_true(debuggable(nodes, "t"))
+  expect_false(debuggable(nodes, "f"))
+  expect_false(debuggable(nodes, "cfg"))
+  expect_true(debuggable(data.frame(id = "t"), "t")) # targets_only: no type column
+})
