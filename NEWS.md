@@ -154,6 +154,15 @@
 
 ## Bug fixes
 
+* A debug run left with `Q` no longer blocks the board's next Run with
+  targets' "Process ID ... is already running a {targets} pipeline" (#279).
+  `mark_run_ended()`, which the debug run code calls on exit, now removes
+  the store's lock (`tar_unblock_process()`) when it is this session's. A
+  store an R session still blocks, as one from an older snippet: Run, or
+  Stop, says so and offers **Unblock and run** (or **Unblock**); never
+  without asking, as the session might really be running.
+* targets' messages show without terminal colour codes: in "Run failed",
+  the Problems pane and the Value pane (#280).
 * A store with custom R code (`tar_format()`, `tar_repository_cas()`) no
   longer blocks the board. targets asked before each read at a console
   prompt the browser doesn't show. The preview now asks instead, with

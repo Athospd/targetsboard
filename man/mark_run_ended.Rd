@@ -15,8 +15,13 @@ Nothing, invisibly.
 \description{
 For a run in your own R session, \code{tar_make(callr_function = NULL)}, as
 the board's debug run code does: leaving it with \code{Q} in the debugger
-ends it without targets recording the end, and the board would take your
-session for a run still going. The debug run code calls this on exit.
+ends it without targets recording the end. targets would then refuse
+every later run on the store while your session lives (its process lock,
+\verb{<store>/meta/process}), and the board would take your session for a run
+still going. The debug run code calls this on exit: when the store
+records this session, it removes the lock
+(\code{\link[targets:tar_unblock_process]{targets::tar_unblock_process()}}), as the run here has ended. A lock of
+another process is left as it is.
 }
 \examples{
 \dontrun{

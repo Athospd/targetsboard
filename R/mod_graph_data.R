@@ -70,7 +70,7 @@ graph_data_server <- function(id, backend) {
       1000, session,
       checkFunc = function() file.mtime(store_file("meta")),
       valueFunc = function() {
-        tryCatch(targets::tar_meta(targets_only = TRUE), error = function(e) NULL)
+        tryCatch(plain_meta(targets::tar_meta(targets_only = TRUE)), error = function(e) NULL)
       }
     )
 

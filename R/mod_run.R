@@ -104,14 +104,43 @@ run_server <- function(id, backend, board, running, action, log = function(code)
         handle <- active_run()
         if (is.null(handle)) return()
         if (interactive_r(handle)) {
-          # A run in someone's R session: killing it would close their IDE (#257).
-          fail("stop the run")(simpleError(paste0(
-            "it is in your R session (pid ", run_pid(handle), "): stop it there, with Esc, or Q in the debugger."
-          )))
+          # A run in someone's R session: killing it would close their IDE
+          # (#257). Its lock may outlive the run, left with Q (#279).
+          message <- paste0(
+            "Couldn't stop the run: it is in your R session (pid ", run_pid(handle), "): ",
+            "stop it there, with Esc, or Q in the debugger. If nothing runs there now, ",
+            "a debug run left its lock on the store: unblock it."
+          )
+          last_failure(message)
+          offer_unblock(message)
           return()
         }
         stop_run(handle)
       }
+    })
+
+    # An R session's lock on the store (#279): removed only when asked, as
+    # the session might really be running tar_make(). `run`, the run it
+    # refused, to start once unblocked, or NULL.
+    blocked <- shiny::reactiveVal(NULL)
+    offer_unblock <- function(text, run = NULL, details = NULL) {
+      blocked(list(run = run))
+      shiny::showNotification(
+        shiny::tagList(
+          shiny::tags$p(text), details,
+          shiny::actionButton(session$ns("unblock"), if (is.null(run)) "Unblock" else "Unblock and run",
+                              class = "btn-sm mt-1")
+        ),
+        id = session$ns("blocked"), type = "error", duration = NULL
+      )
+    }
+    shiny::observeEvent(input$unblock, {
+      asked <- blocked()
+      shiny::req(asked)
+      blocked(NULL)
+      shiny::removeNotification(session$ns("blocked"))
+      done <- tryCatch(targets::tar_unblock_process(), error = fail("unblock the store"))
+      if (!identical(done, failed) && !is.null(asked$run)) launch_run(asked$run$names)
     })
 
     # Tell how the board's own run ended, once per session.
@@ -131,8 +160,20 @@ run_server <- function(id, backend, board, running, action, log = function(code)
         shiny::tags$a(href = "#", class = "tb-show-problem ms-1", "Show problem") |>
           send_on_click(session$ns("show_problem"), errored[1])
       }
+      locked_by <- session_lock(error)
       if (isTRUE(runner$stopped)) {
         shiny::showNotification("Run stopped.", type = "warning")
+      } else if (!is.null(locked_by)) {
+        # An R session holds targets' lock: a debug run left with Q (#279).
+        offer_unblock(
+          paste0(
+            "Run refused: targets says your R session (pid ", locked_by, ") is running this pipeline. ",
+            "A debug run left with Q leaves that lock until the session closes. ",
+            "If nothing is running there now, unblock the store and run."
+          ),
+          run = list(names = scope()),
+          details = shiny::tags$details(shiny::tags$summary("targets' message"), shiny::tags$code(error))
+        )
       } else if (is.null(error) && length(errored) == 0) {
         shiny::showNotification("Run finished.", type = "message")
       } else if (is.null(error)) {
