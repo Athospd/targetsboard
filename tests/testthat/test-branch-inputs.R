@@ -81,3 +81,40 @@ test_that("a branch's Inputs section, opened, names its slice and shows it", {
   expect_equal(app$get_js("document.querySelector('.tb-branch-input p').innerText"), "x, slice 1 of 3")
   expect_match(app$get_js("document.querySelector('.tb-branch-input-value').innerText"), "10")
 })
+
+test_that("problem_ui() gives each failing branch its Inputs section (#227)", {
+  problem <- list(
+    name = "p", type = "pattern", error = NULL, warnings = NULL, functions = list(),
+    branches = list(
+      list(name = "p_a", position = 1, of = 3, error = "boom", warnings = NULL, workspace = FALSE),
+      list(name = "p_b", position = 2, of = 3, error = "boom", warnings = NULL, workspace = FALSE)
+    )
+  )
+  html <- as.character(problem_ui(problem, ns = shiny::NS("x")))
+  expect_equal(lengths(regmatches(html, gregexpr("tb-branch-inputs", html, fixed = TRUE))), 2)
+  expect_match(html, "data-tb-value=\"&quot;p_b&quot;\"", fixed = TRUE)
+})
+
+test_that("a failing branch's Inputs open in the Problems list, one at a time (#227)", {
+  dir <- local_pipeline()
+  writeLines(c(
+    "library(targets)", "tar_option_set(error = 'continue')",
+    "list(tar_target(x, c(1, 2, 3)), tar_target(p, if (x > 1) stop('too big') else x, pattern = map(x)))"
+  ), file.path(dir, "_targets.R"))
+  withr::with_dir(dir, try(targets::tar_make(reporter = "silent"), silent = TRUE))
+  app <- local_board_app(dir, "problem-branch-inputs")
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='p']\") !== null", timeout = 30000)
+  mouse_event(app, "p", "dblclick")
+  app$wait_for_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs').length === 2", timeout = preview_timeout)
+  open_inputs <- function(i) {
+    app$run_js(sprintf("document.querySelectorAll('.tb-problem-branch')[%d].open = true;", i))
+    app$run_js(sprintf("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs summary')[%d].click()", i))
+  }
+  open_inputs(0)
+  app$wait_for_js("document.querySelector('.tb-problem-branch .tb-branch-input p')?.innerText === 'x, slice 2 of 3'", timeout = 30000)
+  open_inputs(1)
+  app$wait_for_js("[...document.querySelectorAll('.tb-problem-branch .tb-branch-input p')].some(p => p.innerText === 'x, slice 3 of 3')", timeout = 30000)
+  # One output, in the section opened last; the first one closed.
+  expect_equal(app$get_js("document.querySelectorAll('[id$=\"-inputs\"]').length"), 1)
+  expect_false(app$get_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs')[0].open"))
+})
