@@ -48,6 +48,7 @@ preview_ui <- function(id) {
 #' @param settings Reactive: each target's settings (target_settings()).
 #' @param branch_request Reactive event: `list(pattern, position)`, a branch
 #'   clicked on the canvas, for the preview to show.
+#' @param log `function(code)`: logs the value's tar_read() (console_log()).
 #' @return A list of reactives: `target_link`, the target a link in the
 #'   problem pane asks to show.
 #' @noRd
@@ -55,7 +56,8 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
                            outdated = shiny::reactive(list()), commands = shiny::reactive(character()),
                            rules = shiny::reactive(NULL), skipped = shiny::reactive(list()),
                            settings = shiny::reactive(NULL), kinds = shiny::reactive(character()),
-                           branch_request = shiny::reactive(NULL)) {
+                           branch_request = shiny::reactive(NULL),
+                           log = function(code) NULL) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
@@ -77,6 +79,13 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     })
     shiny::observe({
       bslib::toggle_sidebar("sidebar", open = is_open() && !is.null(focused()))
+    })
+
+    # The value it shows, as the console reads it (#185).
+    shiny::observe({
+      shiny::req(is_open(), focused())
+      target <- preview_target(focused(), store(), branch = branch())
+      if (!is.null(target)) log(read_code(target$name, store(), branch_arg(target)))
     })
 
     # A pattern's preview opens on its first branch, or on the branch asked

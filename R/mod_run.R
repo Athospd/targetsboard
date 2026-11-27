@@ -20,10 +20,11 @@ run_ui <- function(id) {
 #' @param running Reactive: whether the pipeline is running.
 #' @param action Reactive event: an action chosen on the graph, a list of
 #'   `action` and `nodes` (or `node`). It handles `run` and `invalidate`.
+#' @param log `function(code)`: logs an action's R code (console_log()).
 #' @return A list of reactives: `show_problem`, the target whose problem a
 #'   run's notification asks to show.
 #' @noRd
-run_server <- function(id, backend, board, running, action) {
+run_server <- function(id, backend, board, running, action, log = function(code) NULL) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(board), shiny::is.reactive(running),
     shiny::is.reactive(action)
@@ -73,15 +74,14 @@ run_server <- function(id, backend, board, running, action) {
         shiny::showNotification("A run is already going.", type = "warning")
         return()
       }
-      process <- tryCatch(start_run(backend$poller$script, names, modes = list(
-        keep_going = isTRUE(input$keep_going),
-        stop_at_warnings = isTRUE(input$stop_at_warnings)
-      )), error = fail("start the run"))
+      modes <- list(keep_going = isTRUE(input$keep_going), stop_at_warnings = isTRUE(input$stop_at_warnings))
+      process <- tryCatch(start_run(backend$poller$script, names, modes = modes), error = fail("start the run"))
       if (identical(process, failed)) return()
       scope(names)
       launched <<- TRUE
       runner$process <- process
       maker(attr(runner$process, "maker"))
+      log(run_code(names, modes, attr(runner$process, "maker"), backend$poller$script))
       runner$stopped <- FALSE
     }
     shiny::observeEvent(input$all, launch_run())
@@ -145,6 +145,7 @@ run_server <- function(id, backend, board, running, action) {
     shiny::observeEvent(input$invalidate_all, {
       names <- board_targets(board()$x$nodes)
       shiny::req(length(names) > 0)
+      attr(names, "all") <- TRUE # for the Console: tar_invalidate(everything())
       ask_to_invalidate(names)
     })
     shiny::observeEvent(input$invalidate_confirm, {
@@ -157,6 +158,7 @@ run_server <- function(id, backend, board, running, action) {
       shiny::req(names)
       to_invalidate(NULL)
       if (identical(tryCatch(invalidate_targets(names), error = fail("invalidate")), failed)) return()
+      log(invalidate_code(names))
       backend$request_refresh()
       shiny::showNotification(
         paste0("Invalidated ", length(names), if (length(names) == 1) " target." else " targets."),
