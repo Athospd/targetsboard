@@ -104,6 +104,11 @@
   draws the pipeline once the script exists. It writes nothing (#190).
 * A failing branch in a pattern's problems has the Inputs section too:
   the slices it failed on, and their values (#227).
+* More kinds of target get an icon, with a line in the Value pane that
+  says what the kind means: batched replications (`tar_rep()`,
+  `tar_rep2()`, `tar_map_rep()`), URLs (`format = "url"`), grouped data
+  (`iteration = "group"`, as `tar_group_by()` gives) and storage formats
+  other than rds (`qs`, `parquet`, ...), from `tar_manifest()` (#157).
 
 ## Bug fixes
 
