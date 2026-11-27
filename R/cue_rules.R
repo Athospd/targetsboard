@@ -27,7 +27,7 @@ cue_rules <- function(script) {
   fname <- function(x) {
     fn <- x[[1]]
     if (is.name(fn)) return(as.character(fn))
-    if (is.call(fn) && length(fn) == 3 && as.character(fn[[1]]) %in% c("::", ":::")) return(as.character(fn[[3]]))
+    if (is.call(fn) && length(fn) == 3 && is.name(fn[[1]]) && as.character(fn[[1]]) %in% c("::", ":::")) return(as.character(fn[[3]]))
     ""
   }
   # An argument by name, or else by position among the unnamed ones.
