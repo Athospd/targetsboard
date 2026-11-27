@@ -44,6 +44,15 @@
 #' `plan()` call, or 1; set them with `options(targetsboard.workers = )`.
 #' The script is read for these calls, never run.
 #'
+#' @section Your editor:
+#' Started from RStudio, Positron (with the rstudioapi package) or VS Code's
+#' terminal (with its `code` command), a target's right-click menu has "Open
+#' in editor": its `tar_*()` call, or a function's definition, in the script
+#' or the `R/` folder, opened at its line. The board runs in the background,
+#' so it asks this session to open it: this works while the session is idle
+#' at its prompt (it needs the later package). Without an editor, the menu
+#' has no such item.
+#'
 #' @section Value previews:
 #' A double-click on a target opens its value in a frame, with a tab per view
 #' of it and a last tab with what `print()` shows. A class gets its own views
@@ -126,11 +135,18 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
   board_theme_option() # an unknown theme errors here, not in the board
 
   log_file <- tempfile("targetsboard_", fileext = ".log")
+  # Your IDE, if any: the board asks this session to open definitions in it.
+  opener <- editor_opener()
+  editor <- if (!is.null(opener) && requireNamespace("later", quietly = TRUE)) {
+    tempfile("targetsboard_editor_", fileext = ".rds")
+  }
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme, filters) {
+    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme, filters,
+      editor) {
       options(
         targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes,
-        targetsboard.preview_bytes = preview_bytes, targetsboard.theme = theme
+        targetsboard.preview_bytes = preview_bytes, targetsboard.theme = theme,
+        targetsboard.editor = editor
       )
       # The filters as arguments again: values, or expressions for tidyselect.
       print(do.call(targetsboard::tar_board_app, c(list(
@@ -154,13 +170,15 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
       confirm_nodes = confirm_nodes_limit(),
       preview_bytes = preview_bytes_limit(),
       theme = getOption("targetsboard.theme"),
-      filters = filters
+      filters = filters,
+      editor = editor
     ),
     supervise = TRUE,
     poll_connection = TRUE,
     stdout = log_file,
     stderr = "2>&1"
   )
+  if (!is.null(editor)) editor_bridge(editor, opener, alive = bg_process$is_alive)
   url <- board_url(host, port)
   attr(bg_process, "url") <- url
 

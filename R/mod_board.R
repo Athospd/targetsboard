@@ -114,6 +114,21 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     shiny::observeEvent(graph$node_action(), {
       if (identical(graph$node_action()$action, "value")) request_preview()
     })
+    # A target's or a function's definition, in the author's editor (#189).
+    shiny::observeEvent(graph$node_action(), {
+      chosen <- graph$node_action()
+      if (!identical(chosen$action, "open_editor")) return()
+      name <- chosen$node
+      open <- board_editor()
+      where <- definition_location(name, backend$loaded_script())
+      if (is.null(open) || is.null(where)) {
+        return(shiny::showNotification(
+          paste0("Couldn't tell where ", name, " is defined, in the script or in R/."), type = "warning"
+        ))
+      }
+      open(where$file, where$line)
+      shiny::showNotification(paste0("Opened ", basename(where$file), ", line ", where$line, ", in your editor."), type = "message")
+    })
     preview <- preview_server(
       "preview", backend,
       focused = graph$focused,

@@ -114,6 +114,10 @@
   `tar_rep2()`, `tar_map_rep()`), URLs (`format = "url"`), grouped data
   (`iteration = "group"`, as `tar_group_by()` gives) and storage formats
   other than rds (`qs`, `parquet`, ...), from `tar_manifest()` (#157).
+* "Open in editor", in a target's right-click menu: its `tar_*()` call, or
+  a function's definition, in the script or `R/`, opened at its line in
+  RStudio, Positron or VS Code. Without one of them (a plain browser and
+  terminal), the item isn't there (#189).
 * A pattern unfolds into its branches: its toolbar's Branches button shows
   them under it as small nodes in their status's colours, failing ones
   first, up to 50 and then how many more. A click on one opens the

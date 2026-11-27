@@ -36,6 +36,8 @@ board_options <- function() {
       run = "Run this target",
       invalidate = "Invalidate this target",
       value = "Show its value",
+      # With an editor to open it in only (#189).
+      open_editor = if (!is.null(board_editor())) "Open in editor",
       copy_name = "Copy its name",
       select_upstream = "Select what it depends on",
       select_downstream = "Select what depends on it",
