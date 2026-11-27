@@ -866,6 +866,20 @@ html .Reactable .rt-page-size-select {
 
 /* No targets script yet (no_script_ui(), #190): over the empty canvas. */
 .tb-board-pane { position: relative; }
+/* Metadata in a cloud bucket (R/cloud_meta.R, #111): a notice at the
+   top of the board, over the canvas. */
+.tb-cloud-meta {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  max-width: min(40rem, 70%);
+  margin: 0;
+  padding: 0.375rem 0.75rem;
+  font-size: var(--tb-font-size-xs);
+}
+
 .tb-no-script {
   position: absolute;
   top: 1.5rem;

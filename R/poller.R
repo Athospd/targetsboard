@@ -125,6 +125,7 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
           if (!is.null(reasons) || !is.null(manifest)) {
             if (is.null(reasons)) reasons <- list(progress_mtime = progress_mtime)
             reasons$manifest <- manifest
+            reasons$cloud <- found$cloud
             tmp <- paste0(reasons_path, ".tmp")
             saveRDS(reasons, file = tmp)
             if (!file.rename(tmp, reasons_path)) unlink(tmp)
@@ -160,7 +161,9 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
 #' only, in `baseenv()`: it runs in another process.
 #' @param script Path to the targets script.
 #' @return A list: `reasons` (`sitrep`, `vertices`, `edges`, `parents`) and
-#'   `manifest`, each `NULL` if it failed, and `errors`, the messages.
+#'   `manifest`, each `NULL` if it failed; `cloud`, where the metadata lives
+#'   when in a cloud bucket (`repository`, `bucket`, `prefix`), else `NULL`
+#'   (#111); and `errors`, the messages.
 #' @noRd
 poller_why <- function(script) {
   # The script runs in its own environment each time, apart from this one.
@@ -204,7 +207,15 @@ poller_why <- function(script) {
       paste(kinds, collapse = ", ")
     }, character(1))
   }
-  list(reasons = reasons, manifest = manifest, errors = errors)
+  # The script's options, set when tar_manifest() ran it above.
+  cloud <- tryCatch({
+    repository <- targets::tar_option_get("repository_meta")
+    if (is.character(repository) && length(repository) == 1 && repository %in% c("aws", "gcp")) {
+      where <- targets::tar_option_get("resources")[[repository]]
+      list(repository = repository, bucket = where$bucket, prefix = where$prefix)
+    }
+  }, error = function(e) NULL)
+  list(reasons = reasons, manifest = manifest, cloud = cloud, errors = errors)
 }
 environment(poller_why) <- baseenv()
 

@@ -107,6 +107,7 @@ graph_data_server <- function(id, backend) {
     # The script's targets, NULL until the manifest is read.
     script_targets <- shiny::reactive(after_graph()$manifest$name)
     settings <- shiny::reactive(target_settings(after_graph()$manifest))
+    cloud <- shiny::reactive(after_graph()$cloud) # metadata in a bucket (#111)
 
     list(
       poller_board = poller_board,
@@ -122,6 +123,7 @@ graph_data_server <- function(id, backend) {
       commands = commands,
       script_targets = script_targets,
       settings = settings,
+      cloud = cloud,
       rules = rules
     )
   })
