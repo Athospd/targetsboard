@@ -20,6 +20,8 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #'   (target_costs()), for its badge.
 #' @param kinds Reactive: the targets that are files or reports
 #'   (target_kinds()), for their icons.
+#' @param script Reactive: the board's script, for its tar_map() families
+#'   (add_families()).
 #' @param show Reactive event: `list(name)`, a target to focus and bring into
 #'   view with what it depends on and what depends on it directly.
 #' @param color_mode Reactive: `"light"` or `"dark"`, the page's mode.
@@ -34,12 +36,13 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
                          outdated = shiny::reactive(list()),
                          kinds = shiny::reactive(character()),
                          costs = shiny::reactive(list()),
-                         tar_meta = shiny::reactive(NULL)) {
+                         tar_meta = shiny::reactive(NULL),
+                         script = shiny::reactive(NULL)) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(progress), shiny::is.reactive(running),
     shiny::is.reactive(warned_targets), shiny::is.reactive(show), shiny::is.reactive(color_mode),
     shiny::is.reactive(outdated), shiny::is.reactive(kinds), shiny::is.reactive(costs),
-    shiny::is.reactive(tar_meta)
+    shiny::is.reactive(tar_meta), shiny::is.reactive(script)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # A new graph: send it whole, with the live statuses on top.
@@ -48,6 +51,7 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
       is_running <- shiny::isolate(running())
       nodes <- clear_invalidated_errors(current$x$nodes, recorded_errors())
       nodes$status <- settle_statuses(nodes$status, is_running)
+      nodes <- add_families(nodes, shiny::isolate(script()))
       statuses <- live_statuses(shiny::isolate(progress()), current$progress_mtime)
       update_targetsboard(
         session,

@@ -441,6 +441,7 @@ board_configuration <- function(inputId, nodes, edges, height, width, warnings =
 dataframe_to_reactflow_node_data <- function(dataframe, warnings = character()) {
   types <- status_to_node_type(dataframe$status) # picks the node component
   warned <- dataframe$id %in% warnings
+  has_family <- "family" %in% names(dataframe)
   lapply(seq_len(nrow(dataframe)), function(i) {
     list(
       id = dataframe$id[[i]],
@@ -451,7 +452,8 @@ dataframe_to_reactflow_node_data <- function(dataframe, warnings = character()) 
         description = dataframe$description[[i]],
         target_type = dataframe$type[[i]],
         target_status = dataframe$status[[i]],
-        warning = warned[[i]]
+        warning = warned[[i]],
+        family = if (has_family && !is.na(dataframe$family[[i]])) dataframe$family[[i]] # tar_map()'s (#113)
       ),
       type = types[[i]],
       deletable = FALSE # the board is read-only: no target can be deleted from it
