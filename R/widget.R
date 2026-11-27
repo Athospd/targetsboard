@@ -443,18 +443,20 @@ dataframe_to_reactflow_node_data <- function(dataframe, warnings = character()) 
   warned <- dataframe$id %in% warnings
   has_family <- "family" %in% names(dataframe)
   lapply(seq_len(nrow(dataframe)), function(i) {
+    data <- list(
+      label = dataframe$label[[i]],
+      level = dataframe$level[[i]],
+      description = dataframe$description[[i]],
+      target_type = dataframe$type[[i]],
+      target_status = dataframe$status[[i]],
+      warning = warned[[i]]
+    )
+    # tar_map()'s (#113): only for a family's targets, so the others' data is as before.
+    if (has_family && !is.na(dataframe$family[[i]])) data$family <- dataframe$family[[i]]
     list(
       id = dataframe$id[[i]],
       position = list(x = 0, y = 0),
-      data = list(
-        label = dataframe$label[[i]],
-        level = dataframe$level[[i]],
-        description = dataframe$description[[i]],
-        target_type = dataframe$type[[i]],
-        target_status = dataframe$status[[i]],
-        warning = warned[[i]],
-        family = if (has_family && !is.na(dataframe$family[[i]])) dataframe$family[[i]] # tar_map()'s (#113)
-      ),
+      data = data,
       type = types[[i]],
       deletable = FALSE # the board is read-only: no target can be deleted from it
     )
