@@ -42,7 +42,8 @@ environment(active_run) <- baseenv()
 #' @noRd
 start_run <- function(script, names = NULL, modes = list()) {
   log <- tempfile("targetsboard_run_", fileext = ".log")
-  maker <- run_maker(script) # the author's script, not the wrapper
+  # The author's script, not the wrapper. Reading it must never stop a run (#253).
+  maker <- tryCatch(run_maker(script), error = function(e) list(fun = "tar_make", workers = NULL))
   if (any_run_mode(modes)) {
     script <- write_run_wrapper(
       script,

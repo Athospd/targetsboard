@@ -57,17 +57,30 @@ run_server <- function(id, backend, board, running, action) {
       launched <<- FALSE
     }, ignoreInit = TRUE)
 
+    # An error here would end the session, unseen: say it instead (#253).
+    # `failed` marks it: a call may well return NULL.
+    last_failure <- shiny::reactiveVal(NULL)
+    failed <- structure(list(), class = "tb_failed")
+    fail <- function(what) function(e) {
+      message <- cli::ansi_strip(conditionMessage(e))
+      last_failure(message)
+      shiny::showNotification(paste0("Couldn't ", what, ": ", message), type = "error", duration = NULL)
+      failed
+    }
+
     launch_run <- function(names = NULL) {
       if (busy()) {
         shiny::showNotification("A run is already going.", type = "warning")
         return()
       }
-      scope(names)
-      launched <<- TRUE
-      runner$process <- start_run(backend$poller$script, names, modes = list(
+      process <- tryCatch(start_run(backend$poller$script, names, modes = list(
         keep_going = isTRUE(input$keep_going),
         stop_at_warnings = isTRUE(input$stop_at_warnings)
-      ))
+      )), error = fail("start the run"))
+      if (identical(process, failed)) return()
+      scope(names)
+      launched <<- TRUE
+      runner$process <- process
       maker(attr(runner$process, "maker"))
       runner$stopped <- FALSE
     }
@@ -143,7 +156,7 @@ run_server <- function(id, backend, board, running, action) {
       names <- to_invalidate()
       shiny::req(names)
       to_invalidate(NULL)
-      invalidate_targets(names)
+      if (identical(tryCatch(invalidate_targets(names), error = fail("invalidate")), failed)) return()
       backend$request_refresh()
       shiny::showNotification(
         paste0("Invalidated ", length(names), if (length(names) == 1) " target." else " targets."),

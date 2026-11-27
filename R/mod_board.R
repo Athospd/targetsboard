@@ -94,7 +94,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     graph <- graph_server(
       "graph", board, data$progress, data$running, data$warned_targets,
       show = shiny::reactive(shown()), color_mode = color_mode, outdated = data$outdated,
-      kinds = data$kinds, costs = data$costs
+      kinds = data$kinds, costs = data$costs, tar_meta = data$tar_meta
     )
 
     # The tabs beside the board. The tables' clicks show a target on it.
@@ -135,7 +135,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
       open_request = shiny::reactive(if (preview_request() > 0) preview_request()),
       board = board, running = data$running, tar_meta = data$tar_meta,
       methods = loaded$methods, outdated = data$outdated, commands = data$commands,
-      rules = data$rules, skipped = data$skipped, settings = data$settings, kinds = data$kinds
+      rules = data$rules, skipped = data$skipped, settings = data$settings, kinds = data$kinds,
+      branch_request = graph$branch_clicked
     )
 
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.
@@ -154,6 +155,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     shiny::observeEvent(meta_clicked(), show_on_board(meta_clicked()))
     shiny::observeEvent(preview$target_link(), show_on_board(preview$target_link()))
     shiny::observeEvent(problem_clicked(), show_on_board(problem_clicked(), preview = TRUE))
+    # A branch of the unfolded pattern: the pattern, its preview on that branch.
+    shiny::observeEvent(graph$branch_clicked(), show_on_board(graph$branch_clicked()$pattern, preview = TRUE))
     shiny::observeEvent(run$show_problem(), show_on_board(run$show_problem(), preview = TRUE))
 
     list(focused = graph$focused)

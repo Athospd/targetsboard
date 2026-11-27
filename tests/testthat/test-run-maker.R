@@ -70,3 +70,37 @@ test_that("the run summary says how the board's run runs, when it isn't tar_make
   expect_equal(run_summary_shape(with_how)$how, "tar_make_future(), 2 workers") # drawn again when it changes
   expect_no_match(as.character(run_summary_tags(run_summary(progress, "a", started = now - 5, ended = now))), "tb-run-how")
 })
+
+test_that("run_maker() reads scripts with empty subscripts and calls of calls (#253, #238)", {
+  dir <- withr::local_tempdir()
+  script <- file.path(dir, "_targets.R")
+  for (code in c("x[, 1]", "x[1, ]", "f(a)(b)", "pkg::f(a)(b)", "list(tar_target(a, d[, 2:3]))")) {
+    writeLines(c("library(targets)", code), script)
+    expect_equal(run_maker(script), list(fun = "tar_make", workers = NULL), label = code)
+  }
+  writeLines(c("future::plan(future::multisession, workers = 2)", "y <- m[, 1]", "g(1)(2)"), script)
+  expect_equal(run_maker(script), list(fun = "tar_make_future", workers = 2L))
+})
+
+test_that("run_maker() reads every example pipeline", {
+  for (script in list.files(test_path("..", "..", "inst", "examples", "pipelines"), "[.]R$", full.names = TRUE)) {
+    expect_no_error(run_maker(script), message = basename(script))
+  }
+})
+
+test_that("start_run() falls back to tar_make() when run_maker() fails", {
+  local_pipeline()
+  local_mocked_bindings(run_maker = function(script) stop("cannot read"))
+  local_mocked_bindings(r_bg = function(...) structure(list(), class = "fake_process"), .package = "callr")
+  expect_equal(attr(start_run("_targets.R"), "maker"), list(fun = "tar_make", workers = NULL))
+})
+
+test_that("on the board, Run all builds a script with an empty subscript (#253)", {
+  dir <- local_pipeline()
+  writeLines(c("library(targets)", "list(tar_target(m, matrix(1:4, 2)), tar_target(col, m[, 1]))"), file.path(dir, "_targets.R"))
+  app <- local_board_app(dir, "run-empty-subscript")
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='col']\") !== null", timeout = 30000)
+  app$click(input = "board-run-all")
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='col'] .base-node.tb-status-uptodate\") !== null", timeout = 90000)
+  expect_true(app$get_js("!document.querySelector('#shiny-disconnected-overlay')"))
+})

@@ -118,9 +118,21 @@
   a function's definition, in the script or `R/`, opened at its line in
   RStudio, Positron or VS Code. Without one of them (a plain browser and
   terminal), the item isn't there (#189).
+* A pattern unfolds into its branches: its toolbar's Branches button shows
+  them under it as small nodes in their status's colours, failing ones
+  first, up to 50 and then how many more. A click on one opens the
+  pattern's Value pane on that branch; Fold folds it. One pattern at a
+  time (#147).
 
 ## Bug fixes
 
+* Run no longer ends the board's session on a script with an empty
+  subscript, such as `x[, 1]`: reading the script for its parallel setup
+  skips empty arguments, and falls back to `tar_make()` if it fails. A run
+  or an invalidation that errors says so in a notification, and the board
+  goes on (#253).
+* A script with a call of a call, such as `purrr::partial(f)(x)`, no
+  longer stops the poller or the rerun rules (#238).
 * A target stored in a custom format (`tar_format()`) is named as one,
   not by its encoded code ("Stored as format_custom&read=...").
 * A target new in the pipeline no longer lands on top of a target the

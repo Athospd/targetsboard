@@ -256,7 +256,7 @@ sourced_paths <- function(script) {
     fn <- x[[1]]
     name <- if (is.name(fn)) {
       as.character(fn)
-    } else if (is.call(fn) && length(fn) == 3 && as.character(fn[[1]]) %in% c("::", ":::")) {
+    } else if (is.call(fn) && length(fn) == 3 && is.name(fn[[1]]) && as.character(fn[[1]]) %in% c("::", ":::")) {
       as.character(fn[[3]])
     } else {
       ""
