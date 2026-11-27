@@ -40,7 +40,8 @@ update_targetsboard_status(
   branches = NULL,
   reasons = NULL,
   kinds = NULL,
-  costs = NULL
+  costs = NULL,
+  queued = NULL
 )
 
 update_targetsboard_focus(session, inputId, node = NULL)
@@ -122,6 +123,10 @@ targets' time and size badges as they are; else a named list, by
 target, of \code{list(time, size, title, slow, large)}: the badge's text
 ("42 s", "1.2 MB"), its hover text, and whether to accent each part.
 The targets it doesn't list show no badge.}
+
+\item{queued}{For \code{update_targetsboard_status()}: \code{NULL} leaves the
+targets' run-queue marks as they are; else the ids of every target in
+the run queue, which shows a clock in place of its warning mark.}
 
 \item{node}{For \code{update_targetsboard_focus()}: the id of the target to
 focus and select alone, as a click does, or \code{NULL} to clear the focus

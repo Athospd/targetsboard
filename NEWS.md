@@ -141,6 +141,11 @@
   first, up to 50 and then how many more. A click on one opens the
   pattern's Value pane on that branch; Fold folds it. One pattern at a
   time (#147).
+* A run queue: Run on targets while a run goes queues them, with a clock
+  on each in the warning mark's place. Requests merge into one
+  `tar_make(names = )` that starts by itself when the run ends. Run on a
+  queued target reads Unqueue and takes it out; Clear queue, under the run
+  summary, and Stop empty the queue (#106).
 
 ## Bug fixes
 

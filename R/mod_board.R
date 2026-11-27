@@ -15,7 +15,8 @@
 board_sidebar_ui <- function(id) {
   shiny::tagList(
     run_ui(shiny::NS(id, "run")),
-    run_summary_ui(shiny::NS(id, "run_summary"))
+    run_summary_ui(shiny::NS(id, "run_summary")),
+    run_queue_output(shiny::NS(id, "run"))
   )
 }
 
@@ -99,7 +100,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
       "graph", board, data$progress, data$running, data$warned_targets,
       show = shiny::reactive(shown()), color_mode = color_mode, outdated = data$outdated,
       kinds = data$kinds, costs = data$costs, tar_meta = data$tar_meta,
-      script = backend$loaded_script
+      script = backend$loaded_script,
+      queued = shiny::reactive(run$queued()) # run is made below: read when the graph runs
     )
 
     # The tabs beside the board. The tables' clicks show a target on it.

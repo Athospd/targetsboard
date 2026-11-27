@@ -22,7 +22,7 @@ import './targetsboardCustomCSS.css';
 import LayoutButtons from './LayoutButtons';
 import StatusLegend, { readCostsShown, writeCostsShown } from './StatusLegend';
 import { layoutGraph, SIBLING_GAP } from './layout';
-import { NodeActionsContext, GroupToolbar, groupLabel } from './NodeActions';
+import { NodeActionsContext, GroupToolbar, actionLabel } from './NodeActions';
 
 import BaseNode from './BaseNode';
 import FamilyBoxes, { foldFamilies } from './FamilyBoxes';
@@ -106,7 +106,7 @@ const rNames = (ids) => {
 // (`menu.nodes`). `copy_name` and the selection actions are done here: the
 // server can't reach the clipboard, and selecting is the widget's own. Every
 // other action goes to Shiny as <id>_node_action.
-function NodeMenu({ menu, actions, onAction, onClose }) {
+function NodeMenu({ menu, actions, onAction, onClose, queued }) {
   // Opened where the click was, then moved back inside the widget if it
   // overflows: measured once drawn, before the browser paints it.
   const ref = useRef(null);
@@ -136,7 +136,7 @@ function NodeMenu({ menu, actions, onAction, onClose }) {
           data-action={action.id}
           onClick={() => onAction(action.id, menu.node, menu.nodes)}
         >
-          {menu.nodes.length > 1 ? groupLabel(action.label, menu.nodes.length) : action.label}
+          {actionLabel(action, menu.nodes, queued)}
         </button>
       ))}
     </div>
@@ -682,6 +682,8 @@ function Flow({ configuration }) {
       // (target_costs()), by id; the others show none.
       const costs = message.costs == null ? null
         : (Array.isArray(message.costs) ? {} : message.costs);
+      // `queued`, when sent, lists every target in the run queue (#106).
+      const inQueue = Array.isArray(message.queued) ? new Set(message.queued) : null;
       setNodes((current) =>
         current.map((node) => {
           const update = updates.get(node.id);
@@ -692,8 +694,9 @@ function Flow({ configuration }) {
           const kind = kinds ? (kinds[node.id] ?? null) : (node.data?.kind ?? null);
           const cost = costs ? (costs[node.id] ?? null) : (node.data?.cost ?? null);
           const sameCost = JSON.stringify(cost) === JSON.stringify(node.data?.cost ?? null);
+          const isQueued = inQueue ? inQueue.has(node.id) : Boolean(node.data?.queued);
           if (!update && warning === node.data?.warning && sameBranches && why === (node.data?.why ?? null) &&
-            kind === (node.data?.kind ?? null) && sameCost) return node;
+            kind === (node.data?.kind ?? null) && sameCost && isQueued === Boolean(node.data?.queued)) return node;
           return {
             ...node,
             type: update ? update.type : node.type,
@@ -705,6 +708,7 @@ function Flow({ configuration }) {
               why,
               kind,
               cost,
+              queued: isQueued,
             },
           };
         }),
@@ -758,9 +762,12 @@ function Flow({ configuration }) {
     (pattern, position) => sendEvent(`${inputId}_branch_click`, { pattern, position }),
     [inputId],
   );
+  // The targets in the run queue (#106): their Run reads Unqueue.
+  const queuedKey = sortedKey(nodes.filter((n) => n.data?.queued).map((n) => n.id));
+  const queued = useMemo(() => new Set(queuedKey ? queuedKey.split('|') : []), [queuedKey]);
   const nodeActions = useMemo(
-    () => ({ focusId: toolbarFocus, actions: options.toolbar_actions, onAction: onMenuAction, unfold, onBranch }),
-    [toolbarFocus, options.toolbar_actions, onMenuAction, unfold, onBranch],
+    () => ({ focusId: toolbarFocus, actions: options.toolbar_actions, onAction: onMenuAction, unfold, onBranch, queued }),
+    [toolbarFocus, options.toolbar_actions, onMenuAction, unfold, onBranch, queued],
   );
 
   // Highlighting is derived, never stored: the selected group, or else the
@@ -881,11 +888,12 @@ function Flow({ configuration }) {
           node={group?.includes(focusId) ? focusId : group?.[0]}
           actions={options.toolbar_group_actions}
           onAction={onMenuAction}
+          queued={queued}
         />
       </ReactFlow>
       </NodeActionsContext.Provider>
       {menu && menuActions.length > 0 && (
-        <NodeMenu key={`${menu.node}@${menu.x},${menu.y}`} menu={menu} actions={menuActions} onAction={onMenuAction} onClose={closeMenu} />
+        <NodeMenu key={`${menu.node}@${menu.x},${menu.y}`} menu={menu} actions={menuActions} onAction={onMenuAction} onClose={closeMenu} queued={queued} />
       )}
     </div>
   );

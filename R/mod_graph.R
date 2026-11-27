@@ -22,6 +22,8 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #'   (target_kinds()), for their icons.
 #' @param script Reactive: the board's script, for its tar_map() families
 #'   (add_families()).
+#' @param queued Reactive: the targets in the run queue (#106), for their
+#'   clock.
 #' @param show Reactive event: `list(name)`, a target to focus and bring into
 #'   view with what it depends on and what depends on it directly.
 #' @param color_mode Reactive: `"light"` or `"dark"`, the page's mode.
@@ -37,12 +39,14 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
                          kinds = shiny::reactive(character()),
                          costs = shiny::reactive(list()),
                          tar_meta = shiny::reactive(NULL),
-                         script = shiny::reactive(NULL)) {
+                         script = shiny::reactive(NULL),
+                         queued = shiny::reactive(character())) {
   stopifnot(
     shiny::is.reactive(board), shiny::is.reactive(progress), shiny::is.reactive(running),
     shiny::is.reactive(warned_targets), shiny::is.reactive(show), shiny::is.reactive(color_mode),
     shiny::is.reactive(outdated), shiny::is.reactive(kinds), shiny::is.reactive(costs),
-    shiny::is.reactive(tar_meta), shiny::is.reactive(script)
+    shiny::is.reactive(tar_meta), shiny::is.reactive(script),
+    shiny::is.reactive(queued)
   )
   shiny::moduleServer(id, function(input, output, session) {
     # A new graph: send it whole, with the live statuses on top.
@@ -75,6 +79,11 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
     send_kinds <- function() update_targetsboard_status(session, "flow", kinds = kinds())
     shiny::observeEvent(kinds(), send_kinds())
     shiny::observeEvent(board(), shiny::isolate(send_kinds()), priority = -1)
+
+    # The run queue's targets, for their clock (#106): the same way.
+    send_queued <- function() update_targetsboard_status(session, "flow", queued = queued())
+    shiny::observeEvent(queued(), send_queued(), ignoreNULL = FALSE)
+    shiny::observeEvent(board(), shiny::isolate(send_queued()), priority = -1)
 
     # Each built target's time and size, for its badge: the same way.
     send_costs <- function() update_targetsboard_status(session, "flow", costs = costs())
