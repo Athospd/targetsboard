@@ -106,6 +106,9 @@ test_that("a failing branch's Inputs open in the Problems list, one at a time (#
   app$wait_for_js("document.querySelector(\".react-flow__node[data-id='p']\") !== null", timeout = 30000)
   mouse_event(app, "p", "dblclick")
   app$wait_for_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs').length === 2", timeout = preview_timeout)
+  # The problem renders again once the manifest gives its command, closing
+  # what was opened (#264): open things after that.
+  app$wait_for_js("[...document.querySelectorAll('[data-copy]')].some(b => b.dataset.copy.includes('x > 1'))", timeout = 30000)
   # The branch and its Inputs open in one go: nothing can render between
   # them (#264). Text is read with textContent, which a closed section
   # doesn't hide.
@@ -119,19 +122,7 @@ test_that("a failing branch's Inputs open in the Problems list, one at a time (#
   open_inputs(0)
   app$wait_for_js(input_shown("x, slice 2 of 3"), timeout = 30000)
   open_inputs(1)
-  # shortcut: on a timeout, says what the page and the app held, for #264's CI-only failure; drop once found.
-  tryCatch(app$wait_for_js(input_shown("x, slice 3 of 3"), timeout = 30000), error = function(e) {
-    message("#264 sections: ", app$get_js(paste0(
-      "[...document.querySelectorAll('.tb-problem-branch')].map((d, i) => i + ' open=' + d.open + ' inputs.open=' +",
-      " d.querySelector('.tb-branch-inputs')?.open + ' output=' + !!d.querySelector('.shiny-html-output') +",
-      " ' text=' + JSON.stringify(d.querySelector('.tb-branch-inputs')?.textContent.slice(0, 200))).join(' | ')"
-    )))
-    logs <- as.data.frame(app$get_logs())
-    message("#264 app log:
-", paste(utils::tail(paste(logs$location, logs$level, logs$message), 40), collapse = "
-"))
-    stop(e)
-  })
+  app$wait_for_js(input_shown("x, slice 3 of 3"), timeout = 30000)
   # One output, in the section opened last; the first one closed.
   expect_equal(app$get_js("document.querySelectorAll('[id$=\"-inputs\"]').length"), 1)
   expect_false(app$get_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs')[0].open"))
