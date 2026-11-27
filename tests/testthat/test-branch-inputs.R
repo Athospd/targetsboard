@@ -119,7 +119,19 @@ test_that("a failing branch's Inputs open in the Problems list, one at a time (#
   open_inputs(0)
   app$wait_for_js(input_shown("x, slice 2 of 3"), timeout = 30000)
   open_inputs(1)
-  app$wait_for_js(input_shown("x, slice 3 of 3"), timeout = 30000)
+  # shortcut: on a timeout, says what the page and the app held, for #264's CI-only failure; drop once found.
+  tryCatch(app$wait_for_js(input_shown("x, slice 3 of 3"), timeout = 30000), error = function(e) {
+    message("#264 sections: ", app$get_js(paste0(
+      "[...document.querySelectorAll('.tb-problem-branch')].map((d, i) => i + ' open=' + d.open + ' inputs.open=' +",
+      " d.querySelector('.tb-branch-inputs')?.open + ' output=' + !!d.querySelector('.shiny-html-output') +",
+      " ' text=' + JSON.stringify(d.querySelector('.tb-branch-inputs')?.textContent.slice(0, 200))).join(' | ')"
+    )))
+    logs <- as.data.frame(app$get_logs())
+    message("#264 app log:
+", paste(utils::tail(paste(logs$location, logs$level, logs$message), 40), collapse = "
+"))
+    stop(e)
+  })
   # One output, in the section opened last; the first one closed.
   expect_equal(app$get_js("document.querySelectorAll('[id$=\"-inputs\"]').length"), 1)
   expect_false(app$get_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs')[0].open"))
