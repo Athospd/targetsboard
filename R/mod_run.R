@@ -49,13 +49,14 @@ run_server <- function(id, backend, board, running, action, log = function(code)
     # unknown here.
     scope <- shiny::reactiveVal(NULL)
     maker <- shiny::reactiveVal(NULL) # how the board's run runs (#162)
-    launched <- FALSE
+    # A run seen starting is the board's only if the board's run process is
+    # alive: a board run over between two polls left a flag set before, and
+    # the next console run took its scope (#243).
     shiny::observeEvent(running(), {
-      if (running() && !launched) {
+      if (running() && !backend$run_alive()) {
         scope(NULL)
         maker(NULL)
       }
-      launched <<- FALSE
     }, ignoreInit = TRUE)
 
     # An error here would end the session, unseen: say it instead (#253).
@@ -78,7 +79,6 @@ run_server <- function(id, backend, board, running, action, log = function(code)
       process <- tryCatch(start_run(backend$poller$script, names, modes = modes), error = fail("start the run"))
       if (identical(process, failed)) return()
       scope(names)
-      launched <<- TRUE
       runner$process <- process
       maker(attr(runner$process, "maker"))
       log(run_code(names, modes, attr(runner$process, "maker"), backend$poller$script))
