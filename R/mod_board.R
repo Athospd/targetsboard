@@ -98,7 +98,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     graph <- graph_server(
       "graph", board, data$progress, data$running, data$warned_targets,
       show = shiny::reactive(shown()), color_mode = color_mode, outdated = data$outdated,
-      kinds = data$kinds, costs = data$costs, tar_meta = data$tar_meta
+      kinds = data$kinds, costs = data$costs, tar_meta = data$tar_meta,
+      script = backend$loaded_script
     )
 
     # The tabs beside the board. The tables' clicks show a target on it.

@@ -243,7 +243,7 @@ initial_metadata <- function(script, targets_only = TRUE, filters = list()) {
     return(empty_metadata())
   }
   x <- do.call(targets::tar_visnetwork, c(list(script = script, targets_only = targets_only), filters))$x
-  x$nodes <- clear_invalidated_errors(x$nodes, recorded_errors())
+  x$nodes <- add_families(clear_invalidated_errors(x$nodes, recorded_errors()), script)
   x
 }
 

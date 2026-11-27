@@ -76,6 +76,21 @@ const orderColumns = (columns, edges) => {
   return columns;
 };
 
+// A tar_map() family's targets next to each other in their column, where its
+// first one is, for its box (FamilyBoxes.js); the others keep their order.
+const keepFamiliesTogether = (columns, byId) => columns.map((col) => {
+  const family = (id) => {
+    const f = byId.get(id)?.data?.family;
+    return typeof f === 'string' ? f : null;
+  };
+  const first = new Map();
+  col.forEach((id, i) => { const f = family(id); if (f && !first.has(f)) first.set(f, i); });
+  return col
+    .map((id, i) => [id, family(id) ? first.get(family(id)) : i, i])
+    .sort((a, b) => a[1] - b[1] || a[2] - b[2])
+    .map(([id]) => id);
+});
+
 // Lay out the whole graph. `direction` is 'LR' (columns left to right) or
 // 'TB' (rows top to bottom). Nodes need their measured size; one not
 // measured (off screen, when only visible targets are rendered) takes the
@@ -93,9 +108,9 @@ export const layoutGraph = (nodes, edges, { direction = 'LR' } = {}) => {
   const levels = [...new Set(level.values())].sort((a, b) => a - b);
   const byLevel = new Map(levels.map((l) => [l, []]));
   nodes.forEach((n) => byLevel.get(level.get(n.id)).push(n.id)); // keeps R's order to start
-  const columns = orderColumns(levels.map((l) => byLevel.get(l)), edges);
-
   const byId = new Map(nodes.map((n) => [n.id, n]));
+  const columns = keepFamiliesTogether(orderColumns(levels.map((l) => byLevel.get(l)), edges), byId);
+
   // Along the flow: one step per column, as wide as the widest target.
   const step = Math.max(0, ...nodes.map((n) => (horizontal ? size(n).w : size(n).h))) + LEVEL_GAP;
   const position = new Map();

@@ -483,3 +483,38 @@
   border-color: var(--tb-danger);
   color: var(--tb-danger-text);
 }
+
+/* A tar_map() family's box (FamilyBoxes.js, #113): around its targets, over
+   the canvas; only its header takes clicks. */
+.tb-family {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px dashed color-mix(in srgb, var(--tb-canvas-marks) 45%, transparent);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.tb-family-header {
+  position: absolute;
+  bottom: 100%;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 2px;
+  font-size: 11px;
+  color: var(--tb-canvas-marks);
+  pointer-events: auto;
+}
+.tb-family-toggle {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  line-height: 14px;
+  font-size: 12px;
+  border: 1px solid color-mix(in srgb, var(--tb-canvas-marks) 45%, transparent);
+  border-radius: 3px;
+  background: var(--tb-canvas-bg);
+  color: var(--tb-canvas-marks);
+  cursor: pointer;
+}

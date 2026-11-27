@@ -25,6 +25,7 @@ import { layoutGraph, SIBLING_GAP } from './layout';
 import { NodeActionsContext, GroupToolbar, groupLabel } from './NodeActions';
 
 import BaseNode from './BaseNode';
+import FamilyBoxes, { foldFamilies } from './FamilyBoxes';
 
 // One node component per status the board shows. Defined at module scope: a
 // new object on every render makes React Flow re-mount all nodes (and warn
@@ -768,17 +769,26 @@ function Flow({ configuration }) {
   // action away (Select its lineage).
   // Renders come on every drag frame and status tick (#206): what doesn't
   // change keeps its object, so React Flow draws again only what did.
+  // tar_map() families folded into one node each (#113): open by default.
+  const [folded, setFolded] = useState(() => new Set());
+  const toggleFamily = useCallback((family) => setFolded((current) => {
+    const next = new Set(current);
+    if (next.has(family)) next.delete(family); else next.add(family);
+    return next;
+  }), []);
+  const view = useMemo(() => foldFamilies(nodes, edges, folded), [nodes, edges, folded]);
+
   const markedKey = group ? selectedKey : focusId;
   const { markedIds, near } = useMemo(() => {
     const marked = group ?? (focusId ? [focusId] : null);
-    return { markedIds: new Set(marked ?? []), near: marked ? neighboursOf(marked, edges) : null };
-  }, [markedKey, edges]); // eslint-disable-line react-hooks/exhaustive-deps
+    return { markedIds: new Set(marked ?? []), near: marked ? neighboursOf(marked, view.edges) : null };
+  }, [markedKey, view.edges]); // eslint-disable-line react-hooks/exhaustive-deps
   const shownCache = useRef(new Map());
   const shownNodes = useMemo(() => {
-    if (!near) return nodes;
+    if (!near) return view.nodes;
     const before = shownCache.current;
     const after = new Map();
-    const shown = nodes.map((n) => {
+    const shown = view.nodes.map((n) => {
       const className = markedIds.has(n.id) ? 'tb-focused' : near.has(n.id) ? undefined : 'tb-dimmed';
       const cached = before.get(n.id);
       const out = cached?.node === n && cached.className === className ? cached.out : { ...n, className };
@@ -787,15 +797,15 @@ function Flow({ configuration }) {
     });
     shownCache.current = after;
     return shown;
-  }, [nodes, near, markedIds]);
+  }, [view.nodes, near, markedIds]);
   const shownEdges = useMemo(
     () =>
-      edges.map((e) => ({
+      view.edges.map((e) => ({
         ...e,
         type: options.edge_type,
         className: !near || markedIds.has(e.source) || markedIds.has(e.target) ? undefined : 'tb-dimmed',
       })),
-    [edges, near, markedIds, options.edge_type],
+    [view.edges, near, markedIds, options.edge_type],
   );
 
   const menuActions = menu?.nodes.length > 1 ? options.node_group_actions : options.node_actions;
@@ -865,6 +875,7 @@ function Flow({ configuration }) {
             />
           )}
         </Panel>
+        <FamilyBoxes nodes={view.nodes} onToggle={toggleFamily} />
         <GroupToolbar
           ids={group}
           node={group?.includes(focusId) ? focusId : group?.[0]}

@@ -114,6 +114,11 @@
   `tar_rep2()`, `tar_map_rep()`), URLs (`format = "url"`), grouped data
   (`iteration = "group"`, as `tar_group_by()` gives) and storage formats
   other than rds (`qs`, `parquet`, ...), from `tar_manifest()` (#157).
+* A `tar_map()` family gets a labelled box on the canvas around its
+  targets, which the layout keeps together. Its button folds the family
+  into one node, `fit (3)`, which takes the family's edges and its worst
+  status, and unfolds it again. Families are read from the script's
+  `tar_map()` calls (#113).
 * A value stored in the cloud (`repository = "aws"` or `"gcp"`): the Value
   pane says so, with its size, and reads it only on "Download and
   preview", through a temporary file. A cloud file target isn't
