@@ -247,15 +247,40 @@ initial_metadata <- function(script, targets_only = TRUE, filters = list()) {
   x
 }
 
-# tar_visnetwork()'s filters, as given to tar_board() or tar_board_app():
-# each as its value where it evaluates in the caller (`shortcut = TRUE`,
-# `names = my_names`), else as its expression (`names = starts_with("model")`,
-# `names = c(a, b)`), for tidyselect in each tar_visnetwork() of the poller,
-# another process. A named list, for do.call().
+# tar_visnetwork()'s filters, as given to tar_board() or tar_board_app(), for
+# each tar_visnetwork() of the poller, another process (#239). A named list,
+# for do.call().
+# - names, allow, exclude are tidyselect: a call stays an expression, its bare
+#   names target names (`c(raw, data)`), with the caller's values inlined
+#   where tidyselect reads them, in any_of(my_targets) or starts_with(prefix).
+#   A bare variable is its value when that is a character vector.
+# - The others (`shortcut = TRUE`, `degree_from = n`) are their values.
 visnetwork_filters <- function(...) {
-  lapply(rlang::enquos(...), function(quo) {
-    tryCatch(rlang::eval_tidy(quo), error = function(e) rlang::quo_get_expr(quo))
+  quos <- rlang::enquos(...)
+  filters <- lapply(names(quos), function(arg) {
+    quo <- quos[[arg]]
+    expr <- rlang::quo_get_expr(quo)
+    if (!arg %in% c("names", "allow", "exclude")) return(rlang::eval_tidy(quo))
+    if (is.call(expr)) return(inline_selection(expr, rlang::quo_get_env(quo)))
+    value <- tryCatch(rlang::eval_tidy(quo), error = function(e) NULL)
+    if (is.character(value)) value else expr
   })
+  stats::setNames(filters, names(quos))
+}
+
+# The arguments tidyselect evaluates, as values: any_of(x), starts_with(x), ...
+inline_selection <- function(expr, env) {
+  if (!is.call(expr)) return(expr)
+  head <- expr[[1]]
+  fun <- if (is.name(head)) as.character(head) else if (is.call(head) && length(head) == 3) as.character(head[[3]])
+  if (isTRUE(fun %in% c("any_of", "all_of", "starts_with", "ends_with", "contains", "matches", "num_range"))) {
+    for (i in seq_along(expr)[-1]) {
+      if (!rlang::is_missing(expr[[i]]) && (is.name(expr[[i]]) || is.call(expr[[i]]))) expr[[i]] <- eval(expr[[i]], env)
+    }
+    return(expr)
+  }
+  for (i in seq_along(expr)[-1]) if (!rlang::is_missing(expr[[i]])) expr[[i]] <- inline_selection(expr[[i]], env)
+  expr
 }
 
 # The shape of tar_visnetwork()$x, without targets.
