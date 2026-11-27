@@ -67,6 +67,6 @@ test_that("on the board: the notice, the confirmation, and the download's error 
     timeout = 60000
   )
   text <- app$get_js("[...document.querySelectorAll('.shiny-notification')].map(n => n.textContent).join(' ')")
-  if (!requireNamespace("googleCloudStorageR", quietly = TRUE)) expect_match(text, "googleCloudStorageR", fixed = TRUE)
+  if (!nzchar(system.file(package = "googleCloudStorageR"))) expect_match(text, "googleCloudStorageR", fixed = TRUE)
   expect_no_match(text, "callr subprocess", fixed = TRUE)
 })
