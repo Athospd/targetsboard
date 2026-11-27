@@ -120,7 +120,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
       open_request = shiny::reactive(if (preview_request() > 0) preview_request()),
       board = board, running = data$running, tar_meta = data$tar_meta,
       methods = loaded$methods, outdated = data$outdated, commands = data$commands,
-      rules = data$rules, skipped = data$skipped, settings = data$settings
+      rules = data$rules, skipped = data$skipped, settings = data$settings, kinds = data$kinds
     )
 
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.

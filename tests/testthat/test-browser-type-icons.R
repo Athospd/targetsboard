@@ -34,3 +34,31 @@ test_that("each kind of target but a plain one shows its icon, with its name on 
   same <- sprintf("getComputedStyle(%s).color === getComputedStyle(%s.closest('.base-node')).color", icon("y"), icon("y"))
   expect_true(app$get_js(same))
 })
+
+test_that("batched reps, URLs, grouped data and storage formats show their icons (#157)", {
+  skip_if_not_installed("tarchetypes")
+  dir <- local_pipeline()
+  writeLines(c(
+    "library(targets); library(tarchetypes)",
+    "list(",
+    "  tar_rep(r1, data.frame(x = 1), batches = 2, reps = 2),",
+    "  tar_url(u, 'https://example.com'),",
+    "  tar_group_by(g, data.frame(k = c(1, 2), v = 3:4), k),",
+    "  tar_target(pq, data.frame(a = 1), format = 'parquet')",
+    ")"
+  ), file.path(dir, "_targets.R"))
+  app <- local_board_app(dir, "more_kinds")
+  icon <- function(id) sprintf("document.querySelector(\".react-flow__node[data-id='%s'] .tb-type-icon\")", id)
+  kind_of <- function(id) app$get_js(sprintf("(() => { const i = %s; return i ? i.dataset.kind : null; })()", icon(id)))
+  app$wait_for_js(sprintf("%s !== null && %s !== null", icon("u"), icon("pq")), timeout = 60000)
+  expect_equal(kind_of("r1"), "rep")
+  expect_equal(kind_of("u"), "url")
+  expect_equal(kind_of("g"), "group")
+  expect_equal(kind_of("pq"), "format")
+  expect_equal(app$get_js(paste0(icon("pq"), ".title")), "Stored as parquet")
+  expect_equal(app$get_js(paste0(icon("r1"), ".title")), "Batched replications (tar_rep())")
+  # The Value pane says what the kind means.
+  mouse_event(app, "u", "dblclick")
+  app$wait_for_js("document.querySelector('.tb-kind-hint') !== null", timeout = 20000)
+  expect_match(app$get_text(".tb-kind-hint"), "ETag", fixed = TRUE)
+})
