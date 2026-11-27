@@ -344,14 +344,25 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       target <- preview_target(name, store(), branch = branch())
       if (is.null(target)) return(no_value())
       key <- preview_key(target)
-      if (preview_too_large(target) && !key %in% read_anyway()) {
+      if ((preview_too_large(target) || preview_in_cloud(target)) && !key %in% read_anyway()) {
         return(shiny::tagList(problem_part, preview_gate(target, store = store(), ns = session$ns),
                               target_tabs_card(tabs_for, session$ns)))
       }
       built <- previews$get(key)
       if (is.null(built)) {
         missing <- new.env() # a value can be NULL itself
-        value <- tryCatch(suppressWarnings(read_preview_value(target, store())), error = function(e) missing)
+        failed <- NULL
+        value <- tryCatch(suppressWarnings(read_preview_value(target, store())), error = function(e) {
+          failed <<- conditionMessage(e)
+          missing
+        })
+        # A cloud value that doesn't download: why, a package or credentials (#131).
+        if (identical(value, missing) && preview_in_cloud(target)) {
+          return(shiny::tagList(problem_part, shiny::tags$div(
+            class = "tb-preview-download-error alert alert-warning",
+            paste0("Couldn't download the value from ", target$repository, ": ", cli::ansi_strip(failed))
+          ), target_tabs_card(tabs_for, session$ns)))
+        }
         if (identical(value, missing)) return(no_value())
         built <- previews$set(key, build_preview(value, target))
       }
