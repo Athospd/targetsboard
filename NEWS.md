@@ -149,6 +149,13 @@
 
 ## Bug fixes
 
+* A store with custom R code (`tar_format()`, `tar_repository_cas()`) no
+  longer blocks the board. targets asked before each read at a console
+  prompt the browser doesn't show. The preview now asks instead, with
+  **Trust this store and read**, and the board's own reads of a trusted
+  store skip the prompt; your `TAR_ASK` setting is left as it is. The
+  header names the format "custom (tar_format())" instead of its encoded
+  code (#237).
 * Stop no longer kills your R session. A run in an interactive R session
   (a debug run, or `tar_make(callr_function = NULL)` in the console) is
   left alone, with a note to stop it there. The debug run code now marks
