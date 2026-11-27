@@ -126,6 +126,7 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
             if (is.null(reasons)) reasons <- list(progress_mtime = progress_mtime)
             reasons$manifest <- manifest
             reasons$cloud <- found$cloud
+            reasons$controllers <- found$controllers
             tmp <- paste0(reasons_path, ".tmp")
             saveRDS(reasons, file = tmp)
             if (!file.rename(tmp, reasons_path)) unlink(tmp)
@@ -163,11 +164,13 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
 #' @return A list: `reasons` (`sitrep`, `vertices`, `edges`, `parents`) and
 #'   `manifest`, each `NULL` if it failed; `cloud`, where the metadata lives
 #'   when in a cloud bucket (`repository`, `bucket`, `prefix`), else `NULL`
-#'   (#111); and `errors`, the messages.
+#'   (#111); `controllers`, crew's controller names, the default first, or
+#'   `NULL` (#137); and `errors`, the messages.
 #' @noRd
 poller_why <- function(script) {
   # The script runs in its own environment each time, apart from this one.
   fresh <- function() new.env(parent = globalenv())
+  targets::tar_option_reset() # options from a script read before don't carry over
   errors <- character()
   reasons <- tryCatch({
     network <- targets::tar_network(script = script, targets_only = FALSE, callr_function = NULL, envir = fresh())
@@ -215,7 +218,15 @@ poller_why <- function(script) {
       list(repository = repository, bucket = where$bucket, prefix = where$prefix)
     }
   }, error = function(e) NULL)
-  list(reasons = reasons, manifest = manifest, cloud = cloud, errors = errors)
+  # crew's controllers, by name, the default first: tar_manifest() loaded the
+  # script here, so its tar_option_set() holds (#137). NULL without crew.
+  controller <- tryCatch(targets::tar_option_get("controller"), error = function(e) NULL)
+  controllers <- if (inherits(controller, "crew_class_controller_group")) {
+    names(controller$controllers)
+  } else if (inherits(controller, "crew_class_controller")) {
+    controller$launcher$name
+  }
+  list(reasons = reasons, manifest = manifest, cloud = cloud, controllers = controllers, errors = errors)
 }
 environment(poller_why) <- baseenv()
 

@@ -141,6 +141,11 @@
   first, up to 50 and then how many more. A click on one opens the
   pattern's Value pane on that branch; Fold folds it. One pattern at a
   time (#147).
+* A Workers tab, shown when the pipeline uses crew: one row per controller,
+  and one for `deployment = "main"` targets, with how many of their targets
+  run, are built and errored, live during a run, and the last run's targets
+  and seconds from `tar_crew()`. targets records nothing finer: no
+  per-worker counts, and no worker per target (#137).
 
 ## Bug fixes
 
