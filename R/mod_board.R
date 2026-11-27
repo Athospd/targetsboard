@@ -46,6 +46,7 @@ board_tabs_ui <- function(ns, metadata, layout) {
         class = "tb-board-pane", padding = 0, gap = 0,
         script_loading_ui(ns("script")),
         no_script_output(ns("no_script")),
+        cloud_meta_ui(ns("cloud_meta")),
         bslib::layout_sidebar(
           class = "p-0",
           sidebar = preview_ui(ns("preview")),
@@ -102,6 +103,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     log_server("log", backend)
     script_view_server("script_view", backend$loaded_script)
     no_script_server("no_script", backend$loaded_script)
+    cloud_meta_server("cloud_meta", data$cloud, backend$loaded_script, refresh = backend$request_refresh)
     visnetwork_server("visnetwork", board, color_mode)
     meta_clicked <- meta_server("meta", data$tar_meta, data$script_targets)
     internals_server("internals", board, shiny::reactive(shiny::reactiveValuesToList(input)))
