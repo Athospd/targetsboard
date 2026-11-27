@@ -154,6 +154,10 @@
 
 ## Bug fixes
 
+* CI runs the tests it skipped: tarchetypes, future and clustermq are in
+  Suggests, the example-pipelines test reads the installed package's
+  examples, and a test skipped for a package CI didn't install now fails
+  the job (#282).
 * A debug run left with `Q` no longer blocks the board's next Run with
   targets' "Process ID ... is already running a {targets} pipeline" (#279).
   `mark_run_ended()`, which the debug run code calls on exit, now removes

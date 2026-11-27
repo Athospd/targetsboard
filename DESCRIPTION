@@ -54,7 +54,9 @@ Imports:
 Suggests:
     broom,
     chromote,
+    clustermq,
     crew,
+    future,
     ggplot2,
     later,
     pdftools,
@@ -62,6 +64,7 @@ Suggests:
     ragg,
     rstudioapi,
     shinytest2,
+    tarchetypes,
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3

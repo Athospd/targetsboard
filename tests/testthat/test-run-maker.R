@@ -83,7 +83,10 @@ test_that("run_maker() reads scripts with empty subscripts and calls of calls (#
 })
 
 test_that("run_maker() reads every example pipeline", {
-  for (script in list.files(test_path("..", "..", "inst", "examples", "pipelines"), "[.]R$", full.names = TRUE)) {
+  # The installed package's: under R CMD check, tests run beside it, without inst/ (#282).
+  scripts <- list.files(system.file("examples", "pipelines", package = "targetsboard"), "[.]R$", full.names = TRUE)
+  expect_gt(length(scripts), 0)
+  for (script in scripts) {
     expect_no_error(run_maker(script), message = basename(script))
   }
 })

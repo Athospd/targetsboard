@@ -48,3 +48,17 @@ jobs:
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+      # A test skipped for a package CI didn't install guards nothing here:
+      # declare it in Suggests (#282). Other skips (scale tests, Linux-only
+      # browser themes) are deliberate.
+      - name: Fail on tests skipped for a missing package
+        if: always()
+        shell: bash
+        run: |
+          out=$(find check -name 'testthat.Rout*' 2>/dev/null | head -1)
+          [ -n "$out" ] || exit 0
+          if grep -n "is not installed" "$out"; then
+            echo "::error::Tests skipped for a package CI didn't install: declare it in Suggests."
+            exit 1
+          fi
