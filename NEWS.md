@@ -2,6 +2,11 @@
 
 ## New features
 
+* A JSON file is a tree you can fold, like a list (#250): objects `{n}`,
+  arrays `[n]`, strings, numbers, bools and nulls, 8 levels deep within a
+  budget of nodes; `.ndjson`/`.jsonl` one item a line. Its raw text is a
+  click away. A file too big, or not valid JSON, shows its text as before,
+  with why.
 * Which inputs a branch came from: a pattern's branch has an Inputs
   section in the Value pane. Opened, it names the slice of each target the
   branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
