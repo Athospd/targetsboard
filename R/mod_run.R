@@ -14,10 +14,6 @@ run_ui <- function(id) {
   )
 }
 
-#' The run queue's line (#106), under the run summary
-#' @noRd
-run_queue_output <- function(id) shiny::uiOutput(shiny::NS(id, "queue"))
-
 #' @param backend The board's backend (board_backend()): its run, poller
 #'   and refresh.
 #' @param board Reactive: the graph the board draws, for its targets.
@@ -75,20 +71,19 @@ run_server <- function(id, backend, board, running, action, log = function(code)
       failed
     }
 
-    # Runs asked for during a run wait, merged, for it to end (#106).
-    queue <- shiny::reactiveVal(empty_queue())
-    targets_now <- function() board_targets(shiny::isolate(board())$x$nodes)
-    queued <- shiny::reactive(queued_targets(queue(), board_targets(board()$x$nodes)))
+    # Runs asked for during a run wait, merged, for it to end (#106): the
+    # queue's own module, which says when they are due.
+    queue_request <- shiny::reactiveVal(NULL)
+    unqueue_request <- shiny::reactiveVal(NULL)
+    send <- function(event, names) event(list(names = names, n = (shiny::isolate(event())$n %||% 0) + 1))
+    queue <- run_queue_server(
+      "queue", request = queue_request, unqueue = unqueue_request, clear = shiny::reactive(input$stop),
+      running = running, busy = busy, targets = shiny::reactive(board_targets(board()$x$nodes))
+    )
+    shiny::observeEvent(queue$due(), launch_run(queue$due()$names))
 
     launch_run <- function(names = NULL) {
-      if (busy()) {
-        queue(queue_add(shiny::isolate(queue()), names))
-        shiny::showNotification(
-          paste0("Queued ", if (is.null(names)) "all targets" else describe_names(names), ": it runs when this run ends."),
-          type = "message"
-        )
-        return()
-      }
+      if (busy()) return(send(queue_request, names))
       modes <- list(keep_going = isTRUE(input$keep_going), stop_at_warnings = isTRUE(input$stop_at_warnings))
       process <- tryCatch(start_run(backend$poller$script, names, modes = modes), error = fail("start the run"))
       if (identical(process, failed)) return()
@@ -100,23 +95,8 @@ run_server <- function(id, backend, board, running, action, log = function(code)
     }
     shiny::observeEvent(input$all, launch_run())
 
-    # The queue starts once no run goes: as soon as running() says so, or,
-    # while targets hasn't recorded the end yet, a second later.
-    shiny::observe({
-      waiting <- queue()
-      if (queue_empty(waiting) || running()) return()
-      if (busy()) return(shiny::invalidateLater(1000))
-      shiny::isolate({
-        queue(empty_queue())
-        launch_run(queue_run_names(waiting))
-      })
-    })
-    shiny::observeEvent(input$clear_queue, queue(empty_queue()))
-    output$queue <- shiny::renderUI(run_queue_ui(queued(), session$ns("clear_queue")))
-
     # Stops the run going, whoever started it.
     shiny::observeEvent(input$stop, {
-      queue(empty_queue()) # Stop stops what waits too
       if (backend$run_alive()) {
         runner$stopped <- TRUE
         runner$process$kill_tree() # the board's own run: its whole tree
@@ -211,8 +191,8 @@ run_server <- function(id, backend, board, running, action, log = function(code)
       switch(
         chosen$action,
         # Run on targets all queued takes them out: Run reads Unqueue there.
-        run = if (busy() && length(nodes) && all(nodes %in% shiny::isolate(queued()))) {
-          queue(queue_remove(shiny::isolate(queue()), nodes, targets_now()))
+        run = if (busy() && length(nodes) && all(nodes %in% shiny::isolate(queue$queued()))) {
+          send(unqueue_request, nodes)
         } else {
           launch_run(nodes)
         },
@@ -223,7 +203,7 @@ run_server <- function(id, backend, board, running, action, log = function(code)
 
     list(
       show_problem = shiny::reactive(input$show_problem), scope = shiny::reactive(scope()),
-      maker = shiny::reactive(maker()), queued = queued
+      maker = shiny::reactive(maker()), queued = queue$queued
     )
   })
 }

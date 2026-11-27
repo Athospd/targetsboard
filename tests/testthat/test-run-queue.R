@@ -1,22 +1,6 @@
-# The run queue (#106): runs asked for during a run wait, merged, and start
-# when it ends.
-
-test_that("the queue merges requests, takes them back, and says what it holds", {
-  q <- queue_add(empty_queue(), c("a", "b"))
-  q <- queue_add(q, c("b", "c"))
-  expect_equal(queued_targets(q, c("a", "b", "c", "d")), c("a", "b", "c"))
-  expect_equal(queue_remove(q, "b")$names, c("a", "c"))
-  # Run all: every target, whatever the pipeline is by then.
-  all <- queue_add(q, NULL)
-  expect_true(all$all)
-  expect_equal(queued_targets(all, c("a", "b", "c", "d")), c("a", "b", "c", "d"))
-  expect_equal(queue_run_names(all, c("a", "b")), NULL)
-  # Taking one out of "all" leaves the others, by name.
-  expect_equal(queue_remove(all, "b", targets = c("a", "b", "c", "d")), list(all = FALSE, names = c("a", "c", "d")))
-  expect_true(queue_empty(empty_queue()))
-  expect_false(queue_empty(q))
-  expect_equal(queue_run_names(q), c("a", "b", "c"))
-})
+# The run queue (#106) in the run module and on the board: runs asked for
+# during a run wait, merged, and start when it ends. The module alone:
+# test-mod-run-queue.R.
 
 test_that("Run during a run queues it; Run on a queued target unqueues it; the queue starts when the run ends", {
   skip_on_cran()
@@ -61,16 +45,9 @@ test_that("Run during a run queues it; Run on a queued target unqueues it; the q
     expect_equal(session$returned$queued(), character())
     action(list(action = "run", nodes = list("a")))
     session$flushReact()
-    session$setInputs(clear_queue = 1)
+    session$setInputs(`queue-clear_queue` = 1)
     expect_equal(session$returned$queued(), character())
   })
-})
-
-test_that("the queue's line names what waits, with Clear queue", {
-  html <- as.character(run_queue_ui(c("a", "b"), "clear"))
-  expect_match(html, "Queued: a, b", fixed = TRUE)
-  expect_match(html, "Clear queue", fixed = TRUE)
-  expect_null(run_queue_ui(character(), "clear"))
 })
 
 test_that("on the board, Run during a run queues the target with a clock, and the queued run builds it", {

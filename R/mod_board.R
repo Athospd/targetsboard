@@ -16,7 +16,7 @@ board_sidebar_ui <- function(id) {
   shiny::tagList(
     run_ui(shiny::NS(id, "run")),
     run_summary_ui(shiny::NS(id, "run_summary")),
-    run_queue_output(shiny::NS(id, "run"))
+    run_queue_ui(shiny::NS(shiny::NS(id, "run"), "queue"))
   )
 }
 
