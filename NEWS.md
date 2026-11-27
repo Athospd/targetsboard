@@ -114,6 +114,11 @@
   `tar_rep2()`, `tar_map_rep()`), URLs (`format = "url"`), grouped data
   (`iteration = "group"`, as `tar_group_by()` gives) and storage formats
   other than rds (`qs`, `parquet`, ...), from `tar_manifest()` (#157).
+* A value stored in the cloud (`repository = "aws"` or `"gcp"`): the Value
+  pane says so, with its size, and reads it only on "Download and
+  preview", through a temporary file. A cloud file target isn't
+  downloaded, since that writes over its path: the pane gives the
+  `tar_read()` to run. A download that fails says why (#131).
 * A Console tab: every run, invalidation and value read from the board, as
   the R call that does it in the console (`targets::tar_make(names = a)`,
   `targets::tar_read(a)`, ...), in the order of the session. Each has a

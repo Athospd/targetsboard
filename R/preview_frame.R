@@ -12,19 +12,24 @@ preview_bytes_limit <- function() getOption("targetsboard.preview_bytes", 100e6)
 #' its place (format "null"): its `stand_in` is its error message. With all
 #' of a pattern's branches, `pattern$stand_ins` numbers the ones that did.
 #'
-#' @return `list(name, format, bytes, time)`, or `NULL` when the store has no
-#'   record of it. A pattern's bytes are the sum of its branches'.
+#' @return `list(name, format, bytes, time, repository)`, or `NULL` when the
+#'   store has no record of it. A pattern's bytes are the sum of its
+#'   branches'.
 #' @noRd
 preview_target <- function(name, store = targets::tar_config_get("store"), branch = 1L) {
   meta <- tryCatch(
-    targets::tar_meta(fields = c("type", "format", "bytes", "time", "children", "error"), store = store),
+    targets::tar_meta(fields = c("type", "format", "bytes", "time", "children", "error", "repository", "path"), store = store),
     error = function(e) NULL
   )
   if (is.null(meta) || !name %in% meta$name) return(NULL)
   field <- function(row, f) if (f %in% names(row)) na_null(row[[f]]) else NULL
   stand_in <- function(row) if (identical(field(row, "format"), "null")) field(row, "error") %||% ""
   row <- meta[meta$name == name, ]
-  target <- list(name = name, format = field(row, "format"), bytes = field(row, "bytes"), time = field(row, "time"))
+  target <- list(
+    name = name, format = field(row, "format"), bytes = field(row, "bytes"), time = field(row, "time"),
+    repository = field(row, "repository"),
+    paths = if ("path" %in% names(row)) Filter(Negate(is.na), row$path[[1]]) # a file target's files
+  )
   target$stand_in <- stand_in(row)
   children <- if ("children" %in% names(row)) row$children[[1]] else NULL
   children <- children[!is.na(children)]
@@ -47,6 +52,7 @@ preview_target <- function(name, store = targets::tar_config_get("store"), branc
   target$format <- field(child, "format") %||% target$format
   target$bytes <- field(child, "bytes")
   target$time <- field(child, "time")
+  target$repository <- field(child, "repository") %||% target$repository
   target$stand_in <- stand_in(child)
   target
 }
@@ -96,6 +102,9 @@ read_preview_value <- function(target, store = NULL) {
 preview_key <- function(target) {
   paste(target$name, target$pattern$branch %||% "", format(target$time %||% NA), target$bytes %||% NA, sep = "|")
 }
+
+# Whether a value is in a cloud bucket: reading it downloads it (#131).
+preview_in_cloud <- function(target) isTRUE(target$repository %in% c("aws", "gcp"))
 
 # Whether a value is too large to read without asking.
 preview_too_large <- function(target, limit = preview_bytes_limit()) {
@@ -318,20 +327,44 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL, n
   )
 }
 
-#' The frame of a value too large to read without asking
+#' The frame of a value the preview doesn't read without asking
+#'
+#' One too large, or one in a cloud bucket (#131): reading it downloads it,
+#' which the provider may bill and which needs its package and credentials.
+#' targets reads a cloud value through a temporary file; a cloud file target
+#' it would download over its own path, so the preview never does.
 #' @noRd
 preview_gate <- function(target, limit = preview_bytes_limit(), store = NULL, ns = identity) {
-  bslib::card(
-    class = "tb-preview",
-    preview_header(target, store = store, ns = ns),
-    bslib::card_body(
-      class = "tb-preview-gate",
+  size <- format_bytes(target$bytes)
+  body <- if (preview_in_cloud(target) && is_file_target(target)) {
+    list(shiny::tags$p(
+      "This file is stored in the cloud (", target$repository, "): downloading it writes it over ",
+      shiny::tags$code(paste(utils::head(target$paths, 3), collapse = ", ")), " in the project, so the preview doesn't. ",
+      shiny::tags$code(read_code(target$name, store)), " in the console downloads it there."
+    ))
+  } else if (preview_in_cloud(target)) {
+    list(
+      shiny::tags$p(paste0(
+        "This value is stored in the cloud (", target$repository, ")", if (!is.null(size)) paste0(", ", size),
+        ": reading it downloads it, which your provider may bill, and needs its R package and your credentials. ",
+        "It goes to a temporary file, never into the project.",
+        if (preview_too_large(target, limit)) paste0(" It is also more than the ", format_bytes(limit), " the preview reads on its own.")
+      )),
+      shiny::actionButton(ns("read"), "Download and preview", class = "btn-sm")
+    )
+  } else {
+    list(
       shiny::tags$p(sprintf(
         "This value is %s in the store, more than the %s the preview reads on its own: reading it can take a while and use a lot of memory.",
-        format_bytes(target$bytes), format_bytes(limit)
+        size, format_bytes(limit)
       )),
       shiny::actionButton(ns("read"), "Load the value", class = "btn-sm")
     )
+  }
+  bslib::card(
+    class = "tb-preview",
+    preview_header(target, store = store, ns = ns),
+    do.call(bslib::card_body, c(list(class = "tb-preview-gate"), body))
   )
 }
 
