@@ -46,7 +46,7 @@ outdated_reasons <- function(reasons, rules = NULL) {
     why <- c(
       meta = if (cue("meta")) "It has no record in the store: it is new, was invalidated, or never finished.",
       always = if (cue("always") && is.null(rule)) "Its cue is \"always\": it runs every time.",
-      age = if (identical(rule$rule, "age")) {
+      age = if (identical(rule$rule, "age") && cue("always")) {
         age <- rule_age(rule$arg)
         sprintf("Its last build is older than %s.", if (is.null(age)) sprintf("`%s`", rule$arg) else format_age(age))
       },

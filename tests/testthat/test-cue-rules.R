@@ -96,3 +96,17 @@ test_that("cue_rules() and sourced_paths() read a pkg::f(...)(...) call (#238)",
   expect_no_error(cue_rules(script))
   expect_no_error(sourced_paths(script))
 })
+
+test_that("a tar_age() target says it is too old only when its age cue fired (#240)", {
+  rules <- cue_rules(rules_script())
+  reasons <- function(...) list(
+    vertices = data.frame(name = "aged", type = "stem", status = "outdated"),
+    edges = data.frame(from = character(), to = character()),
+    sitrep = data.frame(name = "aged", ...)
+  )
+  expect_equal(outdated_reasons(reasons(always = FALSE, command = TRUE), rules)$aged, c(command = "Its command changed."))
+  expect_equal(outdated_reasons(reasons(always = FALSE, meta = TRUE), rules)$aged,
+               c(meta = "It has no record in the store: it is new, was invalidated, or never finished."))
+  expect_equal(outdated_reasons(reasons(always = TRUE, command = TRUE), rules)$aged,
+               c(age = "Its last build is older than 1 day.", command = "Its command changed."))
+})
