@@ -45,7 +45,8 @@ export const targetKind = (type, kind) => {
 const TypeIcon = ({ kind, raw }) => {
   if (!kind) return null;
   const shape = ICONS[kind === 'quarto' || kind === 'rmarkdown' ? 'report' : kind];
-  const title = kind === 'format' ? `Stored as ${raw?.slice('format:'.length)}` : TITLES[kind];
+  const format = raw?.slice('format:'.length);
+  const title = kind === 'format' ? (format === 'custom' ? 'Custom storage format (tar_format())' : `Stored as ${format}`) : TITLES[kind];
   return (
     <span className="tb-type-icon" data-kind={kind} title={title}>
       <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">

@@ -25,7 +25,9 @@ gallery_expected <- c(
   table_csv = "preview", table_tsv = "preview", report_html = "preview", notes_md = "preview",
   code_r = "preview", report_qmd = "preview", config_json = "preview", config_yaml = "preview",
   run_log = "preview", output_folder = "preview", binary_file = "preview", many_files = "preview",
-  boot_files = "preview"
+  boot_files = "preview",
+  sims = "rows_columns", sims_batch = "preview", by_cyl = "rows_columns", cyl_means = "rows_columns",
+  moment_2 = "preview", moment_3 = "preview", fresh_draws = "preview", cran_page = "preview"
 )
 
 test_that("every target of the preview gallery shows its views", {

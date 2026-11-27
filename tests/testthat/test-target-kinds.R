@@ -91,3 +91,29 @@ test_that("target_kinds() reads tarchetypes' factories from a real manifest (#15
   expect_equal(kinds[c("r1", "u", "g", "pq")], c(r1 = "rep", u = "url", g = "group", pq = "format:parquet"))
   expect_false("plain" %in% names(kinds))
 })
+
+test_that("a custom storage format (tar_format()) is named as one, not by its encoded code", {
+  format <- "format_custom&read=cmVhZFJEUyhwYXRoKQ&write=c2F2ZVJEUyhvYmplY3QsIHBhdGgp"
+  kinds <- target_kinds(data.frame(name = "a", format = format, iteration = "vector", command = "1"))
+  expect_equal(kinds, c(a = "format:custom"))
+  expect_match(kind_hint("format:custom"), "tar_format()", fixed = TRUE)
+  expect_no_match(kind_hint("format:custom"), "format = ", fixed = TRUE)
+})
+
+test_that("a real tar_format() target never shows its encoded code, in its kind or its hint", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  writeLines(c(
+    "library(targets)",
+    "xz <- tar_format(read = function(path) readRDS(path), write = function(object, path) saveRDS(object, path, compress = 'xz'))",
+    "list(tar_target(packed, 1:3, format = xz), tar_target(plain, 1))"
+  ), "_targets.R")
+  # The manifest only: nothing built, so targets' TAR_ASK check never runs.
+  manifest <- targets::tar_manifest(fields = c("name", "format", "iteration", "command"))
+  expect_match(manifest$format[manifest$name == "packed"], "^format_custom&") # what targets gives
+  kinds <- target_kinds(manifest)
+  expect_equal(kinds, c(packed = "format:custom"))
+  shown <- c(kinds, kind_hint(kinds[["packed"]]))
+  expect_no_match(shown, "format_custom|&|read=|write=")
+})

@@ -117,6 +117,8 @@
 
 ## Bug fixes
 
+* A target stored in a custom format (`tar_format()`) is named as one,
+  not by its encoded code ("Stored as format_custom&read=...").
 * A target new in the pipeline no longer lands on top of a target the
   author moved to its spot: it moves across the flow until the spot is
   free (#205).
