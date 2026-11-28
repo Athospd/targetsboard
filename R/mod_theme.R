@@ -69,6 +69,7 @@ theme_server <- function(id) {
     # take dark for the user's.
     ask_saved_theme(session)
     shiny::observeEvent(input$saved, {
+      shiny::req(input_list(input$saved))
       theme <- input$saved$theme
       # The page's theme: the picker's value, or before it comes, the one
       # the page started with.
