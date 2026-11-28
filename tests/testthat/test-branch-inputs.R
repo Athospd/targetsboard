@@ -126,4 +126,14 @@ test_that("a failing branch's Inputs open in the Problems list, one at a time (#
   # One output, in the section opened last; the first one closed.
   expect_equal(app$get_js("document.querySelectorAll('[id$=\"-inputs\"]').length"), 1)
   expect_false(app$get_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs')[0].open"))
+
+  # A redraw that keeps the focus keeps what was opened (#264): a new
+  # target in the script.
+  write(c("library(targets)", "tar_option_set(error = 'continue')",
+          "list(tar_target(x, c(1, 2, 3)), tar_target(p, if (x > 1) stop('too big') else x, pattern = map(x)), tar_target(y, 1))"),
+        file.path(dir, "_targets.R"))
+  app$wait_for_js("document.querySelector(\".react-flow__node[data-id='y']\") !== null", timeout = 60000)
+  expect_true(app$get_js("document.querySelectorAll('.tb-problem-branch')[1].open"))
+  expect_true(app$get_js("document.querySelectorAll('.tb-problem-branch .tb-branch-inputs')[1].open"))
+  expect_true(app$get_js(input_shown("x, slice 3 of 3")))
 })

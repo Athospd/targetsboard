@@ -324,6 +324,7 @@ test_that("the status legend counts the targets by status, selects them, and sta
   app$click(selector = ".tb-legend-toggle")
   app$wait_for_js("document.querySelector('.tb-legend-list') === null")
   app$run_js("location.reload()")
-  app$wait_for_js("document.querySelector('.tb-legend-toggle') !== null")
-  expect_equal(app$get_js("document.querySelector('.tb-legend-toggle').getAttribute('aria-expanded')"), "false")
+  # Its state comes back from the browser's storage a moment after it shows.
+  app$wait_for_js("document.querySelector('.tb-legend-toggle')?.getAttribute('aria-expanded') === 'false'")
+  expect_null(app$get_js("document.querySelector('.tb-legend-list')"))
 })
