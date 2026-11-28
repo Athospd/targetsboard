@@ -24,7 +24,7 @@ local_export_pipeline <- function(.env = parent.frame()) {
     "  tar_target(squares, data$x^2, pattern = map(data)),",
     "  tar_target(outputs, {",
     "    dir.create('out', showWarnings = FALSE)",
-    "    grDevices::png('out/chart.png', width = 100, height = 100); graphics::plot(1:3); grDevices::dev.off()",
+    "    grDevices::png('out/chart.png', width = 100, height = 100); graphics::par(mar = c(0, 0, 0, 0)); graphics::plot(1:3, axes = FALSE); grDevices::dev.off()",
     "    utils::write.csv(data, 'out/table.csv', row.names = FALSE)",
     "    writeLines('<html><body><h1>My report</h1></body></html>', 'out/report.html')",
     "    writeLines(c('line one', 'line two'), 'out/notes.txt')",
