@@ -241,6 +241,13 @@ run_server <- function(id, backend, board, running, action, log = function(code)
     shiny::observeEvent(action(), {
       chosen <- action()
       nodes <- as.character(unlist(chosen$nodes %||% chosen$node))
+      # Run and Invalidate are for targets: a function or a global in a
+      # selected group is left out (#305).
+      if (chosen$action %in% c("run", "invalidate")) {
+        drawn <- shiny::isolate(board())$x$nodes
+        nodes <- setdiff(nodes, drawn$id[drawn$type %in% c("function", "object")])
+        if (!length(nodes)) return()
+      }
       switch(
         chosen$action,
         # Run on targets all queued takes them out: Run reads Unqueue there.

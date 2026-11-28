@@ -24,10 +24,20 @@ export const actionLabel = (action, ids, queued) => {
   return action.id === 'run' && ids.length > 0 && ids.every((id) => queued?.has(id)) ? 'Unqueue' : label;
 };
 
+// Functions and globals (targets_only = FALSE) are drawn with the targets,
+// but aren't targets: no run counts, no Run or Invalidate (#305).
+export const isTarget = (node) => !['function', 'object'].includes(node?.data?.target_type);
+const TARGET_ACTIONS = ['run', 'invalidate'];
+// The actions a menu or a toolbar offers on `nodes`: Run and Invalidate
+// only when one of them is a target.
+export const actionsOn = (actions, nodes) =>
+  nodes.some(isTarget) ? actions : actions.filter((action) => !TARGET_ACTIONS.includes(action.id));
+
 // Buttons over the focused target. Shown only when there are actions.
 // A pattern's toolbar also unfolds it into its branches, or folds it.
-export const FocusedNodeToolbar = ({ id, pattern = false }) => {
-  const { focusId, actions, onAction, unfold, queued } = useContext(NodeActionsContext);
+export const FocusedNodeToolbar = ({ id, pattern = false, target = true }) => {
+  const { focusId, actions: all, onAction, unfold, queued } = useContext(NodeActionsContext);
+  const actions = target ? all : actionsOn(all, []);
   if (!actions.length) return null;
   return (
     <NodeToolbar isVisible={focusId === id} position={Position.Top} className="tb-node-toolbar">

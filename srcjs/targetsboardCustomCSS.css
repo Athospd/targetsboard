@@ -148,6 +148,13 @@
 .base-node.tb-status-outdated, .tb-branch.tb-status-outdated { background-color: var(--tb-status-outdated); color: var(--tb-status-outdated-text); border-color: var(--tb-status-outdated-border); }
 .base-node.tb-status-errored, .tb-branch.tb-status-errored { background-color: var(--tb-status-errored); color: var(--tb-status-errored-text); border-color: var(--tb-status-errored-border); }
 .base-node.tb-status-running, .tb-branch.tb-status-running { background-color: var(--tb-status-running); color: var(--tb-status-running-text); border-color: var(--tb-status-running-border); }
+/* A function or a global (targets_only = FALSE, #305): not a target, so not
+   filled; a dashed outline in its status's colour, thicker when outdated:
+   a changed function is what makes its targets outdated. A theme that marks
+   status by the outline (Nord) gives that colour; else the fill's. */
+.base-node.tb-not-target { background-color: var(--tb-canvas-bg); color: var(--bs-body-color, var(--tb-canvas-marks)); border-style: dashed; }
+.base-node.tb-not-target.tb-status-uptodate { border-color: var(--tb-theme-status-uptodate-border, var(--tb-status-uptodate)); }
+.base-node.tb-not-target.tb-status-outdated { border-color: var(--tb-theme-status-outdated-border, var(--tb-status-outdated)); border-width: 2px; }
 
 .base-node {
   padding: 0.625rem;
