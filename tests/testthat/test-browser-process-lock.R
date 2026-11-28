@@ -27,7 +27,7 @@ test_that("Run on a store an R session blocks offers Unblock and run, which runs
   targets::tar_invalidate(everything())
 
   app <- local_board_app(dir, "process-lock")
-  app$wait_for_js("!document.querySelector('#board-run-all').disabled", timeout = 30000)
+  app$wait_for_js("!document.querySelector('#board-run-all').disabled", timeout = 120000)
   app$click(selector = "#board-run-all")
   app$wait_for_js("document.querySelector('.shiny-notification #board-run-unblock') !== null", timeout = 120000)
   note <- app$get_js("document.querySelector('.shiny-notification #board-run-unblock').closest('.shiny-notification').innerText")

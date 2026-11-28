@@ -86,8 +86,11 @@ test_that("a Run that an R session's lock refuses offers to unblock, and runs on
     session$flushReact()
     session$setInputs(`run-all` = 1)
     session$elapse(600) # the board sees the run start
-    wait_for(function() !backend$runner$process$is_alive(), timeout = 60)
-    session$elapse(600)
+    # Waits for the notification itself: one tick isn't always enough under covr (#316).
+    wait_for(function() {
+      session$elapse(600)
+      any(grepl("already running", notes))
+    }, timeout = 60)
     note <- notes[grepl("already running", notes)]
     expect_length(note, 1)
     expect_match(note, "your R session", fixed = TRUE)
