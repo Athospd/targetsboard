@@ -156,7 +156,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     )
 
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.
-    run <- run_server("run", backend, board, data$running, action = graph$node_action, log = console$add)
+    run <- run_server("run", backend, board, data$running, action = graph$node_action, log = console$add,
+                      tar_meta = data$tar_meta)
     # Under the run buttons: the run going, or the last one.
     run_summary_server("run_summary", board, data$running, data$progress, data$tar_meta, scope = run$scope, maker = run$maker)
 

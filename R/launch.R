@@ -60,6 +60,13 @@
 #' `_targetsboard.R`. A value larger than 100 MB in the store is read only
 #' when asked; set the limit with `options(targetsboard.preview_bytes = )`.
 #'
+#' @section Profiling:
+#' The Value pane's Debug section can profile a target with profvis: re-run
+#' it once, with its inputs from the store, in a background process, and
+#' open its flame graph. It's off by default: a switch there turns it on for
+#' the session, and `options(targetsboard.profile = TRUE)` turns it on from
+#' the start. The section also gives the code, to run in the console.
+#'
 #' @section Themes:
 #' The board's look is the "Targets board" theme. A few Bootstrap themes
 #' from Bootswatch, checked for readable text in light and dark mode, can
@@ -141,12 +148,12 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
     tempfile("targetsboard_editor_", fileext = ".rds")
   }
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme, filters,
-      editor) {
+    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme, profile,
+      filters, editor) {
       options(
         targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes,
         targetsboard.preview_bytes = preview_bytes, targetsboard.theme = theme,
-        targetsboard.editor = editor
+        targetsboard.editor = editor, targetsboard.profile = profile
       )
       # The filters as arguments again: values, or expressions for tidyselect.
       print(do.call(targetsboard::tar_board_app, c(list(
@@ -170,6 +177,7 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
       confirm_nodes = confirm_nodes_limit(),
       preview_bytes = preview_bytes_limit(),
       theme = getOption("targetsboard.theme"),
+      profile = isTRUE(getOption("targetsboard.profile")),
       filters = filters,
       editor = editor
     ),
