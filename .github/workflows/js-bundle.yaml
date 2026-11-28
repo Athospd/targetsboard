@@ -1,5 +1,6 @@
 # The JS bundle in inst/htmlwidgets is committed (so install_github needs no
-# Node). Fail when it doesn't match a fresh build of srcjs/.
+# Node). Run the JS tests, and fail when the bundle doesn't match a fresh
+# build of srcjs/.
 on:
   push:
     branches: [main]
@@ -21,6 +22,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # The widget's logic (srcjs/*.test.js, #274).
+      - run: npm test
 
       - run: npm run build
 
