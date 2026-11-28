@@ -56,14 +56,14 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
                            outdated = shiny::reactive(list()), commands = shiny::reactive(character()),
                            rules = shiny::reactive(NULL), skipped = shiny::reactive(list()),
                            settings = shiny::reactive(NULL), kinds = shiny::reactive(character()),
-                           branch_request = shiny::reactive(NULL),
+                           globals = shiny::reactive(NULL), branch_request = shiny::reactive(NULL),
                            log = function(code) NULL) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(focused), shiny::is.reactive(open_request),
     shiny::is.reactive(board), shiny::is.reactive(running), shiny::is.reactive(tar_meta),
     shiny::is.reactive(methods), shiny::is.reactive(outdated), shiny::is.reactive(commands),
     shiny::is.reactive(rules), shiny::is.reactive(skipped), shiny::is.reactive(settings),
-    shiny::is.reactive(kinds), shiny::is.reactive(branch_request)
+    shiny::is.reactive(kinds), shiny::is.reactive(globals), shiny::is.reactive(branch_request)
   )
   shiny::moduleServer(id, function(input, output, session) {
     previews <- backend$previews
@@ -358,7 +358,8 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
         return(global_ui(
           defs[defs$name == name, , drop = FALSE], name,
           users = graph$edges$to[graph$edges$from == name],
-          hash = meta$data[meta$name == name]
+          hash = meta$data[meta$name == name],
+          value = globals()[[name]]
         ))
       }
       # A target that errored or warned shows its problem first; an errored

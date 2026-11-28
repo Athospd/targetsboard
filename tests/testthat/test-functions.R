@@ -75,7 +75,7 @@ test_that("a function on the canvas shows its code, open, in the Value pane, and
   expect_null(app$get_js("document.querySelector('.tb-debug')"))
 })
 
-test_that("global_ui() shows a global as written, the targets that use it and its hash; never its value", {
+test_that("global_ui() shows a global as written, the targets that use it and its hash", {
   def <- data.frame(name = "rate", file = "_targets.R", line = 3L, code = "rate <- 3")
   html <- as.character(global_ui(def, "rate", users = c("a", "b"), hash = "1383ef88"))
   expect_match(html, "rate &lt;- 3", fixed = TRUE)
@@ -84,6 +84,18 @@ test_that("global_ui() shows a global as written, the targets that use it and it
   expect_match(html, "<code>1383ef88</code>", fixed = TRUE)
   expect_match(html, 'data-copy="targets::tar_load_globals()"', fixed = TRUE)
   expect_match(as.character(global_ui(def[0, ], "rate")), "wasn't found", fixed = TRUE)
+  expect_no_match(html, "Its value", fixed = TRUE) # until the poller has read the script
+})
+
+test_that("global_ui() shows a global's value as the poller printed it, or why it couldn't", {
+  def <- data.frame(name = "rate", file = "_targets.R", line = 3L, code = "rate <- 3")
+  html <- as.character(global_ui(def, "rate", value = list(class = "numeric", bytes = 56, printed = "[1] 3")))
+  expect_match(html, "Its value", fixed = TRUE)
+  expect_match(html, "a numeric, 56 B", fixed = TRUE)
+  expect_match(html, '<pre class="tb-preview-printed">[1] 3</pre>', fixed = TRUE)
+  expect_match(as.character(global_ui(def, "rate", value = list(error = "no print method"))), "be printed: no print method", fixed = TRUE)
+  # Shown even when its definition isn't found.
+  expect_match(as.character(global_ui(def[0, ], "rate", value = list(class = "numeric", bytes = 56, printed = "[1] 3"))), "[1] 3", fixed = TRUE)
 })
 
 test_that("a global on the canvas shows its definition and what uses it in the Value pane", {
@@ -99,4 +111,6 @@ test_that("a global on the canvas shows its definition and what uses it in the V
   text <- app$get_js("document.querySelector('.tb-global').parentNode.innerText")
   expect_match(text, "Used by a", fixed = TRUE)
   expect_match(text, "Its hash, as targets recorded it", fixed = TRUE)
+  # Its value, once the poller has read the script.
+  app$wait_for_js("document.querySelector('.tb-global-value pre')?.innerText === '[1] 3'", timeout = 60000)
 })

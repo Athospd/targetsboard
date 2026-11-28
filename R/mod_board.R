@@ -152,7 +152,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, color_mo
       board = board, running = data$running, tar_meta = data$tar_meta,
       methods = loaded$methods, outdated = data$outdated, commands = data$commands,
       rules = data$rules, skipped = data$skipped, settings = data$settings, kinds = data$kinds,
-      branch_request = graph$branch_clicked,
+      globals = data$globals, branch_request = graph$branch_clicked,
       log = console$add
     )
 

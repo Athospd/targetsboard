@@ -5,8 +5,9 @@
 * A **Functions and globals** switch under the run controls draws the
   functions and global objects the targets use, or takes them away, while
   the board runs (#305, its first step): the graph loads again as Load
-  loads a script, and a large one asks first. `tar_board(targets_only = )`
-  only sets where it starts.
+  loads a script, and a large one asks first. The switch is remembered per
+  script, in the store's user folder: the board starts, and a script loads,
+  as it was left. `tar_board(targets_only = )` overrides it at the start.
 
 * Functions and global objects on the graph (`targets_only = FALSE`) read
   as not targets (#305): a dashed outline in their status's colour, thicker
@@ -47,8 +48,9 @@
 * A global object on the graph (`targets_only = FALSE`) has its own Value
   pane (#305): its definition as the script writes it, with where it is,
   the targets that use it, its hash as targets recorded it, and the code
-  that loads the pipeline's globals in your session. The board never runs
-  the script to read its value.
+  that loads the pipeline's globals in your session; and its value, printed
+  by the background process that reads the script for the graph, as the
+  script makes it. The board never runs the script in its own process.
 * Profile a target with profvis (#141), from the Value pane's Debug
   section: off by default, a switch there turns it on for the session, and
   `options(targetsboard.profile = TRUE)` from the start. It gives the code to

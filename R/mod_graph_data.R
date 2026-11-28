@@ -112,6 +112,7 @@ graph_data_server <- function(id, backend) {
     # run's totals, which targets writes to the store when the run ends.
     manifest <- shiny::reactive(after_graph()$manifest)
     controllers <- shiny::reactive(after_graph()$controllers)
+    globals <- shiny::reactive(after_graph()$globals) # their values, for their pane (#305)
     crew <- shiny::reactivePoll(
       1000, session,
       checkFunc = function() file.mtime(store_file("crew")),
@@ -136,6 +137,7 @@ graph_data_server <- function(id, backend) {
       rules = rules,
       manifest = manifest,
       controllers = controllers,
+      globals = globals,
       crew = crew
     )
   })
