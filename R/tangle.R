@@ -14,6 +14,7 @@ is_tangle_document <- function(path) tolower(tools::file_ext(path)) %in% c("qmd"
 #' @return A data frame of name, kind ("target") and line, or NULL.
 #' @noRd
 tangle_definitions <- function(file) {
+  if (!file.exists(file)) return(NULL)
   lines <- tryCatch(readLines(file, warn = FALSE), error = function(e) NULL)
   if (is.null(lines)) return(NULL)
   opens <- grep("^[[:space:]]*```+[[:space:]]*[{][Rr]([[:space:],}])", lines)
@@ -50,7 +51,7 @@ tangle_script <- function(document) {
     "library(targets)",
     paste0("tarchetypes::tar_tangle(", deparse(document), ")")
   )
-  if (!identical(tryCatch(readLines(script), error = function(e) NULL), code)) writeLines(code, script)
+  if (!file.exists(script) || !identical(readLines(script, warn = FALSE), code)) writeLines(code, script)
   normalizePath(script, winslash = "/")
 }
 
@@ -58,7 +59,8 @@ tangle_script <- function(document) {
 #' @noRd
 tangle_document <- function(script) {
   if (!startsWith(basename(script), "targetsboard_tangle_")) return(NULL)
-  first <- tryCatch(readLines(script, n = 1, warn = FALSE), error = function(e) "")
+  if (!file.exists(script)) return(NULL)
+  first <- readLines(script, n = 1, warn = FALSE)
   prefix <- "# targetsboard's script for "
   if (!length(first) || !startsWith(first, prefix)) return(NULL)
   document <- sub(": tar_tangle[(][)] makes a target$", "", substring(first, nchar(prefix) + 1))
