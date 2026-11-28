@@ -13,7 +13,10 @@ test_that("the switch draws functions and globals, and takes them away", {
   withr::local_dir(dir)
   app <- local_board_app(dir, "functions_switch")
   app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 60000)
-  node <- "document.querySelector(\".react-flow__node[data-id='double_it']\")"
+  # The nodes come with the page: Shiny binds the switch later. A click
+  # before that would be its first value, which the board ignores.
+  app$wait_for_js("window.jQuery?.('#board-script-functions').data('shiny-input-binding') !== undefined", timeout = 30000)
+  node <- "document.querySelector('.react-flow__node[data-id=double_it]')"
   expect_null(app$get_js(node))
   app$run_js("document.querySelector('#board-script-functions').click()")
   app$wait_for_js(paste(node, "!== null"), timeout = 60000)

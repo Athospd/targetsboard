@@ -217,8 +217,9 @@ script_server <- function(id, backend, metadata, script, scripts = NULL,
 
     # Functions and globals on the graph or not (#305): the poller again, on
     # the same script, its graph loading as Load's does. The switch starts
-    # as the backend is: a page loaded again keeps it.
-    bslib::update_switch("functions", value = !shiny::isolate(backend$targets_only()))
+    # as the backend is: a page loaded again keeps it. Only when it differs
+    # from the page's: a late update would undo a click made meanwhile.
+    if (!shiny::isolate(backend$targets_only())) bslib::update_switch("functions", value = TRUE)
     shiny::observeEvent(input$functions, ignoreInit = TRUE, {
       only <- !isTRUE(input$functions)
       if (identical(only, shiny::isolate(backend$targets_only()))) return()
