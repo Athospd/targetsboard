@@ -168,8 +168,14 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
 #'   `NULL` (#137); and `errors`, the messages.
 #' @noRd
 poller_why <- function(script) {
-  # The script runs in its own environment each time, apart from this one.
-  fresh <- function() new.env(parent = globalenv())
+  # The script runs in the global environment, as in tar_make(), emptied
+  # before each read. In an environment of its own, a global holding a
+  # closure (torch's nn_module(), an R6 class) hashes anew on each read, and
+  # what uses it looks outdated.
+  fresh <- function() {
+    rm(list = ls(globalenv(), all.names = TRUE), envir = globalenv())
+    globalenv()
+  }
   targets::tar_option_reset() # options from a script read before don't carry over
   errors <- character()
   reasons <- tryCatch({
