@@ -9,6 +9,25 @@
   from the store, in a background process, then links its flame graph. A
   target whose last build took over a minute asks first. profvis is in
   Suggests.
+* A report target's files (`tar_quarto()`, `tar_render()`) open on the
+  rendered report or site, with its sources and inputs in one closed list
+  below it (#275). Every multi-file target labels its files by their path in
+  the folder they share (`posts/first/index.qmd`), not their file name alone.
+* torch targets (`tar_torch()`, `tar_aws_torch()`, #228): a model shows its
+  layers as a tree and a table of its parameters, with how many train; a
+  tensor its shape, dtype, device and first values. torch isn't a
+  dependency. A value whose format needs a package that isn't installed
+  (torch, keras, qs2, arrow, fst) says which to install, under its metadata,
+  instead of no value.
+* A JSON file is a tree you can fold, like a list (#250): objects `{n}`,
+  arrays `[n]`, strings, numbers, bools and nulls, 8 levels deep within a
+  budget of nodes; `.ndjson`/`.jsonl` one item a line. Its raw text is a
+  click away. A file too big, or not valid JSON, shows its text as before,
+  with why.
+* Invalidate counts only targets with a record left to invalidate (#252).
+  Invalidate all, and the graph's Invalidate on a selection, leave out
+  targets already invalidated or never built; the confirmation says how many
+  it left out, and with none left it says there is nothing to invalidate.
 * Which inputs a branch came from: a pattern's branch has an Inputs
   section in the Value pane. Opened, it names the slice of each target the
   branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
