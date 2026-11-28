@@ -43,108 +43,23 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
   tar_vis_path <- tempfile("tar_visnetwork_", fileext = ".rds")
   refresh_path <- sub("[.]rds$", ".refresh", tar_vis_path)
 
-  # Runs in the background process: self-contained, it can't call this
-  # package's internals.
-  tar_visnetwork_instance <- function(script, tar_vis_path, refresh_path, interval, settle, filters, sourced_paths,
-                                      active_run, why, ...) {
-    progress_file <- file.path(targets::tar_config_get("store"), "meta", "progress")
-
-    # What the script sources (sourced_paths()), read again when it changes;
-    # their folders are listed every time, so a new file there counts too.
-    sourced <- list(mtime = NULL, paths = "R")
-    code_signature <- function() {
-      mtime <- file.mtime(script)
-      if (!identical(mtime, sourced$mtime)) sourced <<- list(mtime = mtime, paths = sourced_paths(script))
-      listed <- lapply(sourced$paths, function(path) {
-        if (dir.exists(path)) list.files(path, pattern = "[.][Rr]$", recursive = TRUE, full.names = TRUE)
-        else if (file.exists(path)) path
-      })
-      files <- c(script, sort(unique(unlist(listed))))
-      list(
-        files = files,
-        mtimes = file.mtime(files),
-        refresh = if (file.exists(refresh_path)) readLines(refresh_path, warn = FALSE)
-      )
-    }
-    # Is the pipeline process targets recorded still running? A killed run
-    # leaves targets marked dispatched for good.
-    running <- function() !is.null(active_run())
-
-    computed_code <- NULL
-    computed_progress <- NULL # progress mtime of the last recompute
-    seen_progress <- NULL     # and the one last seen, since when
-    seen_since <- Sys.time()
-
-    while (TRUE) {
-      code <- code_signature()
-      progress_mtime <- file.mtime(progress_file)
-      if (!identical(progress_mtime, seen_progress)) {
-        seen_progress <- progress_mtime
-        seen_since <- Sys.time()
-      }
-      run_ended <- !is.null(computed_progress) &&
-        !identical(progress_mtime, computed_progress) &&
-        difftime(Sys.time(), seen_since, units = "secs") >= settle &&
-        !running()
-
-      if (!identical(code, computed_code) || run_ended) {
-        error_path <- sub("[.]rds$", ".error", tar_vis_path) # poller_error_path()
-        widget <- tryCatch(
-          do.call(targets::tar_visnetwork, c(list(script = script, ...), filters)),
-          error = function(e) {
-            message("tar_visnetwork() failed: ", conditionMessage(e))
-            writeLines(conditionMessage(e), error_path)
-            NULL
-          }
-        )
-        if (!is.null(widget)) unlink(error_path)
-        # Write to a temp file and rename it into place, so the app never
-        # reads a half-written file. On Windows the rename fails while the
-        # app holds the file open: then retry on the next check.
-        written <- is.null(widget) || {
-          tmp <- paste0(tar_vis_path, ".tmp")
-          saveRDS(list(x = widget$x, widget = widget, progress_mtime = progress_mtime), file = tmp)
-          file.rename(tmp, tar_vis_path) || { unlink(tmp); FALSE }
-        }
-        # A broken script is retried once it changes again, not every check.
-        if (written) {
-          computed_code <- code
-          computed_progress <- progress_mtime
-        }
-        if (!is.null(widget) && written) {
-          reasons_path <- sub("[.]rds$", "_reasons.rds", tar_vis_path) # poller_reasons_path()
-          # Why targets are outdated, and the manifest: one process for the
-          # three, not one each (poller_why()).
-          found <- tryCatch(callr::r(why, args = list(script = script)), error = function(e) {
-            list(errors = c(why = conditionMessage(e)))
-          })
-          for (error in found$errors) message(error)
-          reasons <- found$reasons
-          manifest <- found$manifest
-          if (!is.null(reasons)) reasons$progress_mtime <- progress_mtime
-          if (!is.null(reasons) || !is.null(manifest)) {
-            if (is.null(reasons)) reasons <- list(progress_mtime = progress_mtime)
-            reasons$manifest <- manifest
-            reasons$cloud <- found$cloud
-            reasons$controllers <- found$controllers
-            reasons$globals <- found$globals
-            tmp <- paste0(reasons_path, ".tmp")
-            saveRDS(reasons, file = tmp)
-            if (!file.rename(tmp, reasons_path)) unlink(tmp)
-          }
-        }
-      }
-      Sys.sleep(interval)
-    }
-  }
-
+  # The background process checks, then sleeps, for as long as the app
+  # runs. Each check is poller_step(), which the tests run in-process.
   bg_process <- callr::r_bg(
-    tar_visnetwork_instance,
-    args = list(
+    function(step, args, interval) {
+      # nocov start: in the background process, which covr doesn't trace.
+      state <- NULL
+      while (TRUE) {
+        state <- do.call(step, c(list(state = state), args))
+        Sys.sleep(interval)
+      }
+      # nocov end
+    },
+    args = list(step = poller_step, interval = interval, args = list(
       script = script, tar_vis_path = tar_vis_path, refresh_path = refresh_path,
-      interval = interval, settle = settle, filters = filters, sourced_paths = sourced_paths,
-      active_run = active_run, why = poller_why, ...
-    ),
+      settle = settle, filters = filters, sourced_paths = sourced_paths,
+      active_run = active_run, why = poller_why, vis_args = list(...)
+    )),
     supervise = TRUE,
     poll_connection = TRUE,
     stdout = sub("[.]rds$", ".log", tar_vis_path),
@@ -152,6 +67,111 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
   )
   invisible(list(process = bg_process, tar_vis_path = tar_vis_path, refresh_path = refresh_path))
 }
+
+#' One check of the poller: recompute the graph if needed
+#'
+#' The body of tar_visnetwork_bg()'s loop, a function of its own so the
+#' tests can run it in-process. It runs in the background process, so it is
+#' self-contained (`baseenv()`): what it calls from this package comes in as
+#' arguments.
+#' @param state What the previous check left, or NULL on the first one.
+#' @param sourced_paths,active_run,why sourced_paths(), active_run() and
+#'   poller_why().
+#' @param vis_args More arguments to [targets::tar_visnetwork()].
+#' @return The state for the next check.
+#' @noRd
+poller_step <- function(state, script, tar_vis_path, refresh_path, settle, filters, sourced_paths,
+                        active_run, why, vis_args = list()) {
+  if (is.null(state)) {
+    state <- list(
+      # What the script sources (sourced_paths()), read again when it
+      # changes; their folders are listed every time, so a new file there
+      # counts too.
+      sourced = list(mtime = NULL, paths = "R"),
+      computed_code = NULL,
+      computed_progress = NULL, # progress mtime of the last recompute
+      seen_progress = NULL,     # and the one last seen, since when
+      seen_since = Sys.time()
+    )
+  }
+  progress_file <- file.path(targets::tar_config_get("store"), "meta", "progress")
+
+  mtime <- file.mtime(script)
+  if (!identical(mtime, state$sourced$mtime)) state$sourced <- list(mtime = mtime, paths = sourced_paths(script))
+  listed <- lapply(state$sourced$paths, function(path) {
+    if (dir.exists(path)) list.files(path, pattern = "[.][Rr]$", recursive = TRUE, full.names = TRUE)
+    else if (file.exists(path)) path
+  })
+  files <- c(script, sort(unique(unlist(listed))))
+  code <- list(
+    files = files,
+    mtimes = file.mtime(files),
+    refresh = if (file.exists(refresh_path)) readLines(refresh_path, warn = FALSE)
+  )
+
+  progress_mtime <- file.mtime(progress_file)
+  if (!identical(progress_mtime, state$seen_progress)) {
+    state$seen_progress <- progress_mtime
+    state$seen_since <- Sys.time()
+  }
+  # A run ended: the progress changed since the last recompute, and hasn't
+  # for `settle` seconds, and the pipeline process targets recorded is gone
+  # (a killed run leaves targets marked dispatched for good).
+  run_ended <- !is.null(state$computed_progress) &&
+    !identical(progress_mtime, state$computed_progress) &&
+    difftime(Sys.time(), state$seen_since, units = "secs") >= settle &&
+    is.null(active_run())
+
+  if (identical(code, state$computed_code) && !run_ended) return(state)
+
+  error_path <- sub("[.]rds$", ".error", tar_vis_path) # poller_error_path()
+  widget <- tryCatch(
+    do.call(targets::tar_visnetwork, c(list(script = script), vis_args, filters)),
+    error = function(e) {
+      message("tar_visnetwork() failed: ", conditionMessage(e))
+      writeLines(conditionMessage(e), error_path)
+      NULL
+    }
+  )
+  if (!is.null(widget)) unlink(error_path)
+  # Write to a temp file and rename it into place, so the app never reads a
+  # half-written file. On Windows the rename fails while the app holds the
+  # file open: then retry on the next check.
+  written <- is.null(widget) || {
+    tmp <- paste0(tar_vis_path, ".tmp")
+    saveRDS(list(x = widget$x, widget = widget, progress_mtime = progress_mtime), file = tmp)
+    file.rename(tmp, tar_vis_path) || { unlink(tmp); FALSE }
+  }
+  # A broken script is retried once it changes again, not every check.
+  if (written) {
+    state$computed_code <- code
+    state$computed_progress <- progress_mtime
+  }
+  if (is.null(widget) || !written) return(state)
+
+  reasons_path <- sub("[.]rds$", "_reasons.rds", tar_vis_path) # poller_reasons_path()
+  # Why targets are outdated, and the manifest: one process for the three,
+  # not one each (poller_why()).
+  found <- tryCatch(callr::r(why, args = list(script = script)), error = function(e) {
+    list(errors = c(why = conditionMessage(e)))
+  })
+  for (error in found$errors) message(error)
+  reasons <- found$reasons
+  manifest <- found$manifest
+  if (!is.null(reasons)) reasons$progress_mtime <- progress_mtime
+  if (!is.null(reasons) || !is.null(manifest)) {
+    if (is.null(reasons)) reasons <- list(progress_mtime = progress_mtime)
+    reasons$manifest <- manifest
+    reasons$cloud <- found$cloud
+    reasons$controllers <- found$controllers
+    reasons$globals <- found$globals
+    tmp <- paste0(reasons_path, ".tmp")
+    saveRDS(reasons, file = tmp)
+    if (!file.rename(tmp, reasons_path)) unlink(tmp)
+  }
+  state
+}
+environment(poller_step) <- baseenv()
 
 #' Why targets are outdated, and the manifest, for the poller
 #'
