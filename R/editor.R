@@ -79,7 +79,7 @@ definitions_in <- function(file) {
 #' Without one (a plain browser and terminal), there is none.
 #' @noRd
 editor_opener <- function() {
-  if (!interactive()) return(NULL)
+  if (!rlang::is_interactive()) return(NULL)
   if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
     return(function(file, line) rstudioapi::navigateToFile(file, line = line))
   }
