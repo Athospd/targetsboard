@@ -229,3 +229,20 @@ invalidate_targets <- function(names) {
   targets::tar_invalidate(names = targets::any_of(names))
   invisible(names)
 }
+
+#' The targets with a record to invalidate (#252)
+#'
+#' `tar_invalidate()` deletes a target's metadata record: a target with
+#' none, already invalidated or never built, has nothing left to invalidate.
+#' A pattern counts while it or a branch of it has one.
+#' @param names Target names, with the board's attributes.
+#' @param meta `tar_meta()`, with `name` and `parent`, or NULL (no store).
+#' @return `names` with a record, attributes kept.
+#' @noRd
+recorded_targets <- function(names, meta) {
+  if (is.null(meta) || !nrow(meta)) return(structure(character(), all = attr(names, "all")))
+  parent <- if ("parent" %in% names(meta)) meta$parent else NA_character_
+  out <- names[names %in% meta$name | names %in% parent]
+  attr(out, "all") <- attr(names, "all")
+  out
+}

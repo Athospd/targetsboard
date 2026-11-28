@@ -21,14 +21,16 @@ run_ui <- function(id) {
 #' @param action Reactive event: an action chosen on the graph, a list of
 #'   `action` and `nodes` (or `node`). It handles `run` and `invalidate`.
 #' @param log `function(code)`: logs an action's R code (console_log()).
+#' @param tar_meta Reactive: the metadata the board polls, to invalidate
+#'   only targets with a record (#252); `NULL` leaves the names as asked.
 #' @return A list of reactives: `show_problem`, the target whose problem a
 #'   run's notification asks to show; `queued`, the targets waiting for the
 #'   run going to end (#106).
 #' @noRd
-run_server <- function(id, backend, board, running, action, log = function(code) NULL) {
+run_server <- function(id, backend, board, running, action, log = function(code) NULL, tar_meta = NULL) {
   stopifnot(
     !shiny::is.reactive(backend), shiny::is.reactive(board), shiny::is.reactive(running),
-    shiny::is.reactive(action)
+    shiny::is.reactive(action), is.null(tar_meta) || shiny::is.reactive(tar_meta)
   )
   shiny::moduleServer(id, function(input, output, session) {
     runner <- backend$runner
@@ -195,10 +197,20 @@ run_server <- function(id, backend, board, running, action, log = function(code)
     # Invalidate targets, after a confirmation: the next run builds them
     # again, which can take long. The confirmation is for the targets it
     # names, whatever is selected by then.
+    # Only targets with a record: one already invalidated, or never built,
+    # has nothing to invalidate (#252).
     to_invalidate <- shiny::reactiveVal(NULL)
     ask_to_invalidate <- function(names) {
-      to_invalidate(names)
-      shiny::showModal(invalidate_modal(names, session$ns))
+      recorded <- if (is.null(tar_meta)) names else recorded_targets(names, shiny::isolate(tar_meta()))
+      if (!length(recorded)) {
+        shiny::showNotification(
+          "Nothing to invalidate: no target has a record (already invalidated, or never built).",
+          type = "message"
+        )
+        return()
+      }
+      to_invalidate(recorded)
+      shiny::showModal(invalidate_modal(recorded, session$ns, skipped = length(names) - length(recorded)))
     }
     shiny::observeEvent(input$invalidate_all, {
       names <- board_targets(board()$x$nodes)
@@ -252,7 +264,8 @@ run_server <- function(id, backend, board, running, action, log = function(code)
 #' The confirmation before invalidating targets
 #' @param ns The run module's namespace, for its button.
 #' @noRd
-invalidate_modal <- function(names, ns = identity) {
+#' @param skipped How many asked for have no record to invalidate (#252).
+invalidate_modal <- function(names, ns = identity, skipped = 0) {
   shown <- utils::head(names, 50)
   count <- if (length(names) == 1) "1 target" else paste(length(names), "targets")
   shiny::modalDialog(
@@ -262,6 +275,13 @@ invalidate_modal <- function(names, ns = identity) {
       "The next run will build these targets again, and what depends on them.",
       "Until then, their values can no longer be read."
     ),
+    if (skipped > 0) {
+      shiny::p(class = "text-body-secondary small", if (skipped == 1) {
+        "1 other is already invalidated or was never built."
+      } else {
+        paste(skipped, "others are already invalidated or were never built.")
+      })
+    },
     # A list that scrolls past a dozen names.
     shiny::tags$ul(
       class = "list-group tb-modal-list",
