@@ -39,6 +39,10 @@ html_root <- function(path) {
 # An HTML document in a frame, served with its folder. Fullscreen is
 # allowed: a revealjs deck goes fullscreen with F.
 html_view <- function(path) {
+  # In an exported page, the file itself: no board serves it (#284).
+  if (exporting_page()) {
+    return(shiny::tags$iframe(class = "tb-preview-document", srcdoc = read_text(path), title = basename(path)))
+  }
   shiny::tags$iframe(class = "tb-preview-document", src = serve_html_report(path), title = basename(path), allow = "fullscreen")
 }
 
