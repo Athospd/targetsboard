@@ -484,8 +484,8 @@ target_tabs <- function(ns = identity) {
 #' @param tabs_for A function of the row's titles, giving the tab to select
 #'   (the last one picked), or `NULL` for the first.
 #' @noRd
-value_tabs <- function(panels = list(), tabs_for = function(titles) NULL, ns = identity) {
-  panels <- c(panels, target_tabs(ns))
+value_tabs <- function(panels = list(), tabs_for = function(titles) NULL, ns = identity, own_tabs = target_tabs(ns)) {
+  panels <- c(panels, own_tabs)
   titles <- vapply(panels, nav_title, "")
   selected <- tabs_for(titles)
   do.call(bslib::navset_underline, c(

@@ -2,6 +2,14 @@
 
 ## New features
 
+* `tar_board_export()` writes the board as one HTML page that opens in any
+  browser, with no R and no Shiny (#284, its first step): the graph as it
+  is now, and a click on a target shows its Value pane: facts, views
+  (tables, widgets, plots as images), printed value and command. It says
+  which targets' values went in; `names` picks them. Values in the cloud,
+  over `max_bytes` (10 MB), or whose store runs code to read them are left
+  out with their facts. A pattern shows its first branch, a file target its
+  paths.
 * Pipelines written as Quarto or R Markdown documents
   (`tarchetypes::tar_tangle()`, #136). A `.qmd` or `.Rmd` loads from the
   script bar or `tar_board(script = )`, through a script the board writes to
