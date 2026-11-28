@@ -116,7 +116,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, color_mo
     no_script_server("no_script", backend$loaded_script)
     cloud_meta_server("cloud_meta", data$cloud, backend$loaded_script, refresh = backend$request_refresh)
     visnetwork_server("visnetwork", board, color_mode)
-    meta_clicked <- meta_server("meta", data$tar_meta, data$script_targets, loaded$store_others)
+    meta_clicked <- meta_server("meta", data$tar_meta, data$script_targets, loaded$store_others, board = board)
     # Workers shows only when the pipeline uses crew (#137).
     uses_crew <- workers_server("workers", data$progress, data$manifest, data$controllers, data$crew)
     shiny::observe(if (uses_crew()) bslib::nav_show("view", "workers") else bslib::nav_hide("view", "workers"))
