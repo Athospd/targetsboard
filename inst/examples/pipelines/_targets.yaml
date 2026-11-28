@@ -84,3 +84,7 @@ test_slow:
 test_warning:
   script: inst/examples/pipelines/targets_test_warning.R
   store: _targets_examples/test_warning
+
+torch:
+  script: inst/examples/pipelines/targets_torch.R
+  store: _targets_examples/torch
