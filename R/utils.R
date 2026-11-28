@@ -42,3 +42,11 @@ watch_changes <- function(read, ms = 1000, session = shiny::getDefaultReactiveDo
   })
   shiny::reactive(value())
 }
+
+# The page's inputs, as the board reads them (#283): a value of another
+# shape, from a stale or tampered page, reads as none, rather than end the
+# session in an observer's error (#253).
+# One name, or NULL.
+input_name <- function(x) if (rlang::is_string(x) && nzchar(x)) x
+# A list (an action, a click's details), or NULL.
+input_list <- function(x) if (is.list(x) && length(x)) x

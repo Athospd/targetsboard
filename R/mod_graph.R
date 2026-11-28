@@ -123,13 +123,13 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
 
     # Keep where the author left the targets, for the next time the board
     # opens: in the store's user folder, `_targets/user/`.
-    shiny::observeEvent(input$flow_layout, write_board_layout(input$flow_layout))
+    shiny::observeEvent(input$flow_layout, if (is_board_layout(input$flow_layout)) write_board_layout(input$flow_layout))
 
     # One pattern unfolded at a time (#147): its toolbar's Branches button
     # unfolds it, and folds it again. Its branches follow the run.
     unfolded <- shiny::reactiveVal(NULL)
     shiny::observeEvent(input$flow_node_action, {
-      action <- input$flow_node_action
+      action <- input_list(input$flow_node_action)
       if (!identical(action$action, "unfold")) return()
       unfolded(if (!identical(unfolded(), action$node)) action$node)
     })
@@ -141,11 +141,11 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
     })
 
     list(
-      focused = shiny::reactive(input$flow_focused_node),
+      focused = shiny::reactive(input_name(input$flow_focused_node)),
       selected = shiny::reactive(input$flow_selected_nodes),
-      double_clicked = shiny::reactive(input$flow_double_clicked_node),
-      node_action = shiny::reactive(input$flow_node_action),
-      branch_clicked = shiny::reactive(input$flow_branch_click)
+      double_clicked = shiny::reactive(input_name(input$flow_double_clicked_node)),
+      node_action = shiny::reactive(input_list(input$flow_node_action)),
+      branch_clicked = shiny::reactive(input_list(input$flow_branch_click))
     )
   })
 }

@@ -304,7 +304,8 @@ script_server <- function(id, backend, metadata, script, scripts = NULL,
       known(union(shiny::isolate(known()), project_scripts(board_projects(active, listed()), active)))
     })
     shiny::observeEvent(input$project, {
-      new_project <- input$project
+      new_project <- input_name(input$project)
+      if (is.null(new_project) || !new_project %in% board_projects()) return()
       if (identical(new_project, shiny::isolate(backend$project()))) return()
       if (shiny::isolate(running())) return() # disabled meanwhile: a race
       start_loading()

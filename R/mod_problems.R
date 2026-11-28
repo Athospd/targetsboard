@@ -59,7 +59,7 @@ problems_server <- function(id, board, tar_meta) {
       )
     })
 
-    shiny::reactive(input$row_clicked)
+    shiny::reactive(input_name(input$row_clicked))
   })
 }
 

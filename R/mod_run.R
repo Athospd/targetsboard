@@ -240,6 +240,7 @@ run_server <- function(id, backend, board, running, action, log = function(code)
     # on the selected group.
     shiny::observeEvent(action(), {
       chosen <- action()
+      shiny::req(input_name(chosen$action))
       nodes <- as.character(unlist(chosen$nodes %||% chosen$node))
       # Run and Invalidate are for targets: a function or a global in a
       # selected group is left out (#305).

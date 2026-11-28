@@ -58,7 +58,7 @@ meta_server <- function(id, tar_meta, script_targets = shiny::reactive(NULL), st
       )
     })
 
-    shiny::reactive(input$row_clicked)
+    shiny::reactive(input_name(input$row_clicked))
   })
 }
 

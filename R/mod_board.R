@@ -134,7 +134,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, color_mo
     shiny::observeEvent(graph$node_action(), {
       chosen <- graph$node_action()
       if (!identical(chosen$action, "open_editor")) return()
-      name <- chosen$node
+      name <- shiny::req(input_name(chosen$node))
       open <- board_editor()
       where <- definition_location(name, backend$loaded_script())
       if (is.null(open) || is.null(where)) {

@@ -449,7 +449,10 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       target <- c(files$target, list(files = files$paths))
       output[[file_output_id(i)]] <- shiny::renderUI(file_section_view(path, target))
     }
-    shiny::observeEvent(input$file_open, render_file_section(input$file_open))
+    shiny::observeEvent(input$file_open, {
+      i <- suppressWarnings(as.integer(input$file_open))
+      if (length(i) == 1 && !is.na(i)) render_file_section(i)
+    })
 
     # A list-column cell's value, opened from the Rows tab, in a dialog
     # (#298): built on click, cell within cell, Back up one level. The
@@ -482,9 +485,11 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       }
       cell$target <- target
       cell$value <- value
+      shiny::req(input_list(input$cell_open))
       show_cell(list(cell_step(input$cell_open)))
     })
     shiny::observeEvent(input$cell_drill, {
+      shiny::req(input_list(input$cell_drill))
       path <- c(cell_path(), list(cell_step(input$cell_drill)))
       if (length(path) > cell_depth) {
         return(shiny::showNotification(sprintf("Cells open %d levels deep at most.", cell_depth), type = "warning"))
@@ -493,7 +498,7 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     })
     shiny::observeEvent(input$cell_back, show_cell(utils::head(cell_path(), -1)))
 
-    list(target_link = shiny::reactive(input$target_link))
+    list(target_link = shiny::reactive(input_name(input$target_link)))
   })
 }
 
