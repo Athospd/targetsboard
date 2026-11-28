@@ -42,4 +42,43 @@ test_that("its ids are in its namespace", {
   expect_match(html, 'id="script-refresh"', fixed = TRUE)
   expect_match(as.character(script_loading_ui("script")), 'id="script-loading_caption"', fixed = TRUE)
   expect_match(as.character(run_ui("run")), 'id="run-keep_going"', fixed = TRUE)
+  expect_match(as.character(board_sidebar_ui("board")), 'id="board-script-functions"', fixed = TRUE)
+})
+
+test_that("the Functions and globals switch draws them, loading as Load does; Cancel on a large graph turns it back", {
+  skip_on_cran()
+  local_pipeline()
+  args <- script_args()
+  args$backend$start_once()
+  shiny::testServer(script_server, args = args, {
+    expect_true(args$backend$targets_only())
+    session$setInputs(functions = FALSE) # as the page sends it, on connecting: ignored
+    expect_false(loading())
+    session$setInputs(functions = TRUE)
+    expect_false(args$backend$targets_only())
+    expect_true(loading())
+    # The graph it brings is large: Cancel keeps targets only.
+    withr::local_options(targetsboard.confirm_nodes = 1)
+    args$poller_board(list(x = list(nodes = fake_nodes(), edges = fake_edges())))
+    session$flushReact()
+    expect_false(is.null(pending_board()))
+    session$setInputs(cancel_large = 1)
+    expect_true(args$backend$targets_only())
+    expect_false(loading())
+  })
+})
+
+test_that("the backend draws functions and globals on a new poller, on the same script", {
+  skip_on_cran()
+  local_pipeline()
+  backend <- board_backend("_targets.R", targets_only = TRUE)
+  withr::defer(backend$stop_poller())
+  backend$set_targets_only(FALSE) # before the poller starts: the setting only
+  expect_null(backend$poller$process)
+  backend$start_once()
+  first <- backend$poller$process
+  backend$set_targets_only(TRUE)
+  expect_false(identical(backend$poller$process, first))
+  expect_false(first$is_alive())
+  expect_equal(backend$poller$script, "_targets.R")
 })

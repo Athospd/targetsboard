@@ -6,15 +6,17 @@
 #' Created once per app.
 #'
 #' @param script Path to the targets script the poller starts on.
-#' @param targets_only Show only targets, without functions and globals.
+#' @param targets_only Show only targets, without functions and globals, to
+#'   start with: the board's switch changes it (#305).
 #' @param project The project of `_targets.yaml` it starts on.
 #' @param filters tar_visnetwork()'s filters for `script` (visnetwork_filters()):
 #'   kept on every redraw of it; another script is drawn whole.
 #' @return A list: the `poller` and `runner` environments, the `previews`
 #'   cache, the reactive values `rds_path` (the poller's graph file),
-#'   `loaded_script` and `project` (the active project of `_targets.yaml`),
-#'   and functions to start and stop the poller, switch project, ask the
-#'   poller to recompute, and tell whether a run is going.
+#'   `loaded_script`, `project` (the active project of `_targets.yaml`) and
+#'   `targets_only`, and functions to start and stop the poller, switch
+#'   project, draw functions and globals or not (`set_targets_only()`), ask
+#'   the poller to recompute, and tell whether a run is going.
 #' @noRd
 board_backend <- function(script, targets_only = TRUE, project = active_project(), filters = list()) {
   # One background poller, restarted only when someone loads a different
@@ -23,6 +25,7 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
   rds_path <- shiny::reactiveVal(NULL)
   loaded_script <- shiny::reactiveVal(script) # the script the poller draws
   project <- shiny::reactiveVal(project) # its project (projects.R)
+  only <- shiny::reactiveVal(targets_only) # without functions and globals
   previews <- preview_cache()
   first_script <- script
 
@@ -36,7 +39,9 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
     stop_poller()
     # The author's filters name the opened script's targets: only for it.
     own <- identical(normalizePath(script, mustWork = FALSE), normalizePath(first_script, mustWork = FALSE))
-    assets <- tar_visnetwork_bg(script = script, targets_only = targets_only, filters = if (own) filters else list())
+    assets <- tar_visnetwork_bg(
+      script = script, targets_only = shiny::isolate(only()), filters = if (own) filters else list()
+    )
     poller$process <- assets$process
     poller$script <- script
     loaded_script(script)
@@ -52,6 +57,12 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
     project(new_project)
     previews$clear()
     start_poller(script)
+  }
+
+  # Functions and globals drawn or not: the poller again, on the same script.
+  set_targets_only <- function(value) {
+    only(value)
+    if (!is.null(poller$process)) start_poller(poller$script)
   }
 
   # Started by the first session, and stopped with the app.
@@ -83,7 +94,9 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
     rds_path = rds_path,
     loaded_script = loaded_script,
     project = project,
+    targets_only = only,
     switch_project = switch_project,
+    set_targets_only = set_targets_only,
     start_poller = start_poller,
     stop_poller = stop_poller,
     start_once = start_once,

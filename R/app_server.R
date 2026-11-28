@@ -20,7 +20,7 @@ app_server <- function(metadata, script = targets::tar_config_get("script"), tar
     chrome_server("chrome")
     theme <- theme_server("theme")
     board_server(
-      "board", backend, metadata, script, scripts, targets_only,
+      "board", backend, metadata, script, scripts,
       color_mode = theme$color_mode
     )
   }

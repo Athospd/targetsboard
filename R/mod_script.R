@@ -9,6 +9,15 @@
 #' @param script Path to the targets script.
 #' @param scripts Other scripts the bar suggests.
 #' @noRd
+# The switch that draws functions and globals on the graph, or not (#305).
+# Off at first; script_server() sets it as the board is.
+functions_switch <- function(id) {
+  shiny::tags$div(
+    title = "Draw the functions and global objects the targets use, as tar_visnetwork(targets_only = FALSE) does",
+    bslib::input_switch(id, "Functions and globals", value = FALSE)
+  )
+}
+
 script_ui <- function(id, script, scripts = NULL) {
   ns <- shiny::NS(id)
   shiny::tags$div(
@@ -62,7 +71,6 @@ script_loading_ui <- function(id) {
 #' @param backend The board's backend (board_backend()): its poller, the
 #'   script it reads, and the preview cache.
 #' @param metadata `targets::tar_visnetwork()$x`, the first graph.
-#' @param targets_only Whether the graph shows only targets.
 #' @param poller_board Reactive: each graph the poller recomputes.
 #' @param script_error Reactive: why the script doesn't load, or `NULL`.
 #' @param running Reactive: whether a run is going. The project can't change
@@ -71,11 +79,11 @@ script_loading_ui <- function(id) {
 #'   accepted, and `methods`, which changes when the project's preview
 #'   methods are loaded again.
 #' @noRd
-script_server <- function(id, backend, metadata, script, scripts = NULL, targets_only = TRUE,
+script_server <- function(id, backend, metadata, script, scripts = NULL,
                           poller_board, script_error, running = shiny::reactive(FALSE)) {
   stopifnot(
     !shiny::is.reactive(backend), !shiny::is.reactive(metadata), !shiny::is.reactive(script),
-    !shiny::is.reactive(scripts), !shiny::is.reactive(targets_only),
+    !shiny::is.reactive(scripts),
     shiny::is.reactive(poller_board), shiny::is.reactive(script_error), shiny::is.reactive(running)
   )
   shiny::moduleServer(id, function(input, output, session) {
@@ -93,7 +101,7 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
       nodes <- nrow(new_board$x$nodes %||% data.frame())
       if (shiny::isolate(loading()) && nodes > confirm_nodes_limit()) {
         pending_board(new_board)
-        shiny::showModal(large_graph_modal(shiny::isolate(poller$script), nodes, targets_only, session$ns))
+        shiny::showModal(large_graph_modal(shiny::isolate(poller$script), nodes, shiny::isolate(backend$targets_only()), session$ns))
         return()
       }
       board(new_board)
@@ -106,9 +114,15 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
     pending_board <- shiny::reactiveVal(NULL)
     previous_script <- NULL
     previous_project <- NULL
-    # Back to the script, and its project, before Load or a project switch.
+    previous_only <- NULL
+    # Back to the script, and its project, before Load or a project switch;
+    # or to targets only, before the switch turned functions on.
     go_back <- function() {
-      if (identical(previous_project, shiny::isolate(backend$project()))) {
+      if (!identical(previous_only, shiny::isolate(backend$targets_only()))) {
+        backend$targets_only(previous_only)
+        bslib::update_switch("functions", value = !previous_only)
+        backend$start_poller(previous_script)
+      } else if (identical(previous_project, shiny::isolate(backend$project()))) {
         backend$start_poller(previous_script)
       } else {
         backend$switch_project(previous_project, previous_script)
@@ -140,6 +154,7 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
       shinycssloaders::showSpinner("loading")
       previous_script <<- poller$script
       previous_project <<- shiny::isolate(backend$project())
+      previous_only <<- shiny::isolate(backend$targets_only())
     }
     load_done <- function() {
       if (!shiny::isolate(loading())) return()
@@ -199,6 +214,18 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
       setdiff(history[[key]], script)
     }
     others <- shiny::reactiveVal(remember_script(shiny::isolate(backend$project()), script))
+
+    # Functions and globals on the graph or not (#305): the poller again, on
+    # the same script, its graph loading as Load's does. The switch starts
+    # as the backend is: a page loaded again keeps it. Only when it differs
+    # from the page's: a late update would undo a click made meanwhile.
+    if (!shiny::isolate(backend$targets_only())) bslib::update_switch("functions", value = TRUE)
+    shiny::observeEvent(input$functions, ignoreInit = TRUE, {
+      only <- !isTRUE(input$functions)
+      if (identical(only, shiny::isolate(backend$targets_only()))) return()
+      start_loading()
+      backend$set_targets_only(only)
+    })
 
     shiny::observeEvent(input$load, {
       new_script <- input$path
