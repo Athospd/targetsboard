@@ -2,6 +2,12 @@
 
 ## New features
 
+* A **Functions and globals** switch under the run controls draws the
+  functions and global objects the targets use, or takes them away, while
+  the board runs (#305, its first step): the graph loads again as Load
+  loads a script, and a large one asks first. `tar_board(targets_only = )`
+  only sets where it starts.
+
 * `tar_board_export()` writes the board as one HTML page that opens in any
   browser, with no R and no Shiny (#284, its first step): the graph as it
   is now, and a click on a target shows its Value pane: facts, views

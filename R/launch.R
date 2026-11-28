@@ -86,7 +86,8 @@
 #'   or, without one, `"127.0.0.1"`: only your own machine can reach it.
 #' @param browse Open the board in your browser once it is up.
 #' @param verbose Show a spinner while the board starts, and print its url.
-#' @param targets_only Show only targets, without functions and globals.
+#' @param targets_only Show only targets, without functions and globals, at
+#'   first: the board's "Functions and globals" switch draws them, or not.
 #' @param metadata Optional: `targets::tar_visnetwork()$x` for the first
 #'   render. Computed from `script` when `NULL`, and empty when there is no
 #'   script yet.

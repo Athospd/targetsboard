@@ -16,6 +16,7 @@
 board_sidebar_ui <- function(id) {
   shiny::tagList(
     run_ui(shiny::NS(id, "run")),
+    functions_switch(shiny::NS(shiny::NS(id, "script"), "functions")),
     run_summary_ui(shiny::NS(id, "run_summary")),
     run_queue_ui(shiny::NS(shiny::NS(id, "run"), "queue"))
   )
@@ -75,11 +76,10 @@ board_tabs_ui <- function(ns, metadata, layout) {
 
 #' @param backend The board's backend (board_backend()).
 #' @param scripts Other scripts the script bar suggests.
-#' @param targets_only Whether the graph shows only targets.
 #' @param color_mode Reactive: `"light"` or `"dark"`, the page's mode.
 #' @return A list of reactives: `focused`, the target focused on its graph.
 #' @noRd
-board_server <- function(id, backend, metadata, script, scripts = NULL, targets_only = TRUE, color_mode) {
+board_server <- function(id, backend, metadata, script, scripts = NULL, color_mode) {
   stopifnot(!shiny::is.reactive(backend), shiny::is.reactive(color_mode))
   shiny::moduleServer(id, function(input, output, session) {
     # What changes on the graph, polled from the store and the poller's files.
@@ -88,7 +88,7 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, targets_
     # The script the board draws, Load and Refresh: the accepted graph, and
     # when the preview methods load again.
     loaded <- script_server(
-      "script", backend, metadata, script, scripts, targets_only,
+      "script", backend, metadata, script, scripts,
       poller_board = data$poller_board, script_error = data$script_error,
       running = data$running
     )

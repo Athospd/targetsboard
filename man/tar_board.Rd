@@ -38,7 +38,8 @@ parsermd package.}
 \item{port}{Port to serve the board on. Defaults to the \code{shiny.port} option
 or, without one, a random free port.}
 
-\item{targets_only}{Show only targets, without functions and globals.}
+\item{targets_only}{Show only targets, without functions and globals, at
+first: the board's "Functions and globals" switch draws them, or not.}
 
 \item{metadata}{Optional: \code{targets::tar_visnetwork()$x} for the first
 render. Computed from \code{script} when \code{NULL}, and empty when there is no
