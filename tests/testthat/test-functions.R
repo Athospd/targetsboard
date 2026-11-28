@@ -91,7 +91,7 @@ test_that("global_ui() shows a global's value as the poller printed it, or why i
   def <- data.frame(name = "rate", file = "_targets.R", line = 3L, code = "rate <- 3")
   html <- as.character(global_ui(def, "rate", value = list(class = "numeric", bytes = 56, printed = "[1] 3")))
   expect_match(html, "Its value", fixed = TRUE)
-  expect_match(html, "a numeric, 56 B", fixed = TRUE)
+  expect_match(html, "(a numeric, 56 B)", fixed = TRUE)
   expect_match(html, '<pre class="tb-preview-printed">[1] 3</pre>', fixed = TRUE)
   expect_match(as.character(global_ui(def, "rate", value = list(error = "no print method"))), "be printed: no print method", fixed = TRUE)
   # Shown even when its definition isn't found.

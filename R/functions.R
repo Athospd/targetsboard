@@ -63,7 +63,7 @@ global_ui <- function(def, name, users = character(), hash = NULL, value = NULL)
       class = "tb-command tb-global-value", open = NA,
       shiny::tags$summary(
         "Its value ",
-        shiny::tags$span(class = "tb-function-where", paste0("a ", value$class, ", ", format_bytes(value$bytes)))
+        shiny::tags$span(class = "tb-function-where", paste0("(a ", value$class, ", ", format_bytes(value$bytes), ")"))
       ),
       shiny::tags$pre(class = "tb-preview-printed", value$printed),
       shiny::tags$p(class = "text-muted small", "As the script made it, when the board last read the script.")
