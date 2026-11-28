@@ -247,21 +247,44 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       if (is.null(own)) return(NULL)
       list(name = name, own = own, branch = !is.null(target$pattern))
     })
-    output$debug <- shiny::renderUI({
+    # What the Debug section's code needs: its seed and workspace too.
+    debug_details <- shiny::reactive({
       debug <- debug_target()
       if (is.null(debug)) return(NULL)
       # records_changed() in debug_target() follows this target's records:
       # another target's new metadata doesn't read the store again.
       meta <- shiny::isolate(tar_meta())
-      seed <- if (!is.null(meta) && "seed" %in% names(meta)) na_null(meta$seed[meta$name %in% debug$own][1])
+      row <- if (!is.null(meta)) meta[meta$name %in% debug$own, , drop = FALSE][1, , drop = FALSE]
+      field <- function(f) if (!is.null(row) && f %in% names(row)) na_null(row[[f]])
+      c(debug, list(
+        command = focused_command(), inputs = focused_inputs(), seed = field("seed"), seconds = field("seconds"),
+        workspace = debug$own %in% tryCatch(targets::tar_workspaces(), error = function(e) character())
+      ))
+    })
+    output$debug <- shiny::renderUI({
+      debug <- debug_details()
+      if (is.null(debug)) return(NULL)
       debug_ui(
-        debug$own, run = debug$name, command = focused_command(), inputs = focused_inputs(),
-        seed = seed, workspace = debug$own %in% tryCatch(targets::tar_workspaces(), error = function(e) character()),
+        debug$own, run = debug$name, command = debug$command, inputs = debug$inputs,
+        seed = debug$seed, workspace = debug$workspace,
         branch = debug$branch, script = backend$poller$script,
         store = store(), dir = normalizePath(getwd(), winslash = "/"),
-        run_block = shiny::uiOutput(session$ns("debug_run"))
+        run_block = shiny::uiOutput(session$ns("debug_run")),
+        profile_block = profile_ui(session$ns("profile"))
       )
     })
+    # Profile it (#141): what Reproduce gives, under profvis.
+    profile_server("profile", shiny::reactive({
+      debug <- debug_details()
+      # Not before its command is known: there'd be nothing to profile.
+      if (is.null(debug) || is.null(debug$command) || (debug$branch && !debug$workspace)) return(NULL)
+      dir <- normalizePath(getwd(), winslash = "/")
+      list(
+        name = debug$own, seconds = debug$seconds, dir = dir,
+        code = profile_code(debug$own, debug$command, debug$workspace, debug$inputs, debug$seed,
+                            script = backend$poller$script, store = store(), dir = dir)
+      )
+    }))
     output$debug_run <- shiny::renderUI({
       debug <- debug_target()
       if (is.null(debug)) return(NULL)
@@ -553,7 +576,7 @@ settings_ui <- function(row) {
 #' @noRd
 debug_ui <- function(name, run = name, command = NULL, inputs = character(), seed = NULL,
                      workspace = FALSE, branch = FALSE, running = FALSE, script = NULL,
-                     store = NULL, dir = NULL, run_block = NULL) {
+                     store = NULL, dir = NULL, run_block = NULL, profile_block = NULL) {
   if (length(command) != 1 || is.na(command)) command <- NULL
   shiny::tags$details(
     class = "tb-command tb-debug",
@@ -562,7 +585,8 @@ debug_ui <- function(name, run = name, command = NULL, inputs = character(), see
       code_block("Reproduce", "reproduce",
                  reproduce_code(name, command, workspace, inputs, seed, script = script, store = store, dir = dir))
     },
-    run_block %||% debug_run_block(name, running, script, run = run, store = store, dir = dir)
+    run_block %||% debug_run_block(name, running, script, run = run, store = store, dir = dir),
+    profile_block
   )
 }
 

@@ -141,6 +141,15 @@ with a \code{\link[=tar_board_preview]{tar_board_preview()}} method, from a pack
 when asked; set the limit with \code{options(targetsboard.preview_bytes = )}.
 }
 
+\section{Profiling}{
+
+The Value pane's Debug section can profile a target with profvis: re-run
+it once, with its inputs from the store, in a background process, and
+open its flame graph. It's off by default: a switch there turns it on for
+the session, and \code{options(targetsboard.profile = TRUE)} turns it on from
+the start. The section also gives the code, to run in the console.
+}
+
 \section{Themes}{
 
 The board's look is the "Targets board" theme. A few Bootstrap themes
