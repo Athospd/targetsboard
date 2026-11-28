@@ -87,7 +87,9 @@
 #' @param browse Open the board in your browser once it is up.
 #' @param verbose Show a spinner while the board starts, and print its url.
 #' @param targets_only Show only targets, without functions and globals, at
-#'   first: the board's "Functions and globals" switch draws them, or not.
+#'   first: the board's "Functions and globals" switch draws them, or not,
+#'   and remembers it per script in the store. `NULL`, the default, is as
+#'   the switch was left for `script`, else `TRUE`.
 #' @param metadata Optional: `targets::tar_visnetwork()$x` for the first
 #'   render. Computed from `script` when `NULL`, and empty when there is no
 #'   script yet.
@@ -124,7 +126,7 @@
 #' @export
 tar_board <- function(script = targets::tar_config_get("script", project = project),
                       port = getOption("shiny.port", targets::tar_random_port()),
-                      targets_only = TRUE, metadata = NULL,
+                      targets_only = NULL, metadata = NULL,
                       host = getOption("shiny.host", "127.0.0.1"),
                       browse = TRUE, verbose = TRUE, scripts = NULL,
                       project = Sys.getenv("TAR_PROJECT", "main"), ...) {
@@ -144,6 +146,7 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
   }
   # Computed here, so that a broken script errors in your session at once.
   filters <- visnetwork_filters(...)
+  targets_only <- targets_only %||% saved_targets_only(script, project)
   if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, filters))
   board_theme_option() # an unknown theme errors here, not in the board
 
@@ -251,6 +254,11 @@ open_url <- function(url) utils::browseURL(url)
 #' no script yet: the board then waits for one, as `targets::tar_watch()` does.
 #' A script that exists but is broken still errors.
 #' @noRd
+# As the board's switch was left for `script`, in its project's store (#305).
+saved_targets_only <- function(script, project) {
+  !isTRUE(with_project(project, read_functions_shown(script)))
+}
+
 initial_metadata <- function(script, targets_only = TRUE, filters = list()) {
   if (!file.exists(script)) {
     message("No targets script at ", script, " yet: the board will draw it once it exists.")
@@ -327,13 +335,14 @@ port_in_use <- function(port, host = "127.0.0.1") {
 
 #' @rdname tar_board
 #' @export
-tar_board_app <- function(script = targets::tar_config_get("script", project = project), targets_only = TRUE,
+tar_board_app <- function(script = targets::tar_config_get("script", project = project), targets_only = NULL,
                           metadata = NULL, options = list(), scripts = NULL,
                           project = Sys.getenv("TAR_PROJECT", "main"), ...) {
   if (!nzchar(project)) project <- "main"
   check_project(project)
   script_choices(script, scripts)
   filters <- visnetwork_filters(...)
+  targets_only <- targets_only %||% saved_targets_only(script, project)
   if (is.null(metadata)) metadata <- with_project(project, initial_metadata(script, targets_only, filters))
 
   shiny::shinyApp(

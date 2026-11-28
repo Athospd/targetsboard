@@ -36,16 +36,57 @@ read_board_layout <- function(path = board_layout_path()) {
 # must not create `_targets/`.
 write_board_layout <- function(layout, path = board_layout_path()) {
   if (!is_board_layout(layout)) rlang::abort("`layout` must be the widget's `<inputId>_layout` input.")
+  write_user_json(layout, path)
+}
+
+# A JSON file in the store's user folder, only into a store that exists.
+# Whole or not at all: a page loading while the file is being written must
+# not read half of it. Written beside it, then renamed over it.
+write_user_json <- function(x, path) {
   store <- dirname(dirname(path))
   if (!dir.exists(store)) return(invisible(FALSE))
   dir.create(dirname(path), showWarnings = FALSE, recursive = TRUE)
-  # Whole or not at all: a page loading while the file is being written must
-  # not read half of it. Written beside it, then renamed over it.
-  temp <- tempfile("targetsboard_layout_", tmpdir = dirname(path), fileext = ".json")
+  temp <- tempfile("targetsboard_", tmpdir = dirname(path), fileext = ".json")
   on.exit(unlink(temp), add = TRUE)
-  jsonlite::write_json(layout, temp, auto_unbox = TRUE, digits = NA, pretty = TRUE)
+  jsonlite::write_json(x, temp, auto_unbox = TRUE, digits = NA, pretty = TRUE)
   file.rename(temp, path)
   invisible(TRUE)
+}
+
+# The board's settings per script, beside its layout (#305):
+#
+#   {"functions": {"_targets.R": true}}
+#
+# whether the board drew the script with its functions and globals when
+# last left. A script is keyed by its path from the working directory, so
+# the store's folder can move with the project.
+board_settings_path <- function(store = targets::tar_config_get("store")) {
+  file.path(store, "user", "targetsboard_settings.json")
+}
+
+script_key <- function(script) {
+  path <- normalizePath(script, winslash = "/", mustWork = FALSE)
+  wd <- paste0(normalizePath(getwd(), winslash = "/"), "/")
+  if (startsWith(path, wd)) substring(path, nchar(wd) + 1) else path
+}
+
+read_board_settings <- function(path = board_settings_path()) {
+  if (!file.exists(path)) return(list())
+  settings <- tryCatch(jsonlite::read_json(path), error = function(e) NULL)
+  if (is.list(settings)) settings else list()
+}
+
+# TRUE or FALSE as the switch was left for `script`, or NULL.
+read_functions_shown <- function(script, path = board_settings_path()) {
+  shown <- read_board_settings(path)$functions[[script_key(script)]]
+  if (is.logical(shown) && length(shown) == 1 && !is.na(shown)) shown
+}
+
+write_functions_shown <- function(script, shown, path = board_settings_path()) {
+  settings <- read_board_settings(path)
+  settings$functions <- as.list(settings$functions)
+  settings$functions[[script_key(script)]] <- isTRUE(shown)
+  write_user_json(settings, path)
 }
 
 is_board_layout <- function(layout) {
