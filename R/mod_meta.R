@@ -20,14 +20,14 @@ meta_ui <- function(id) {
 #' @return The name of the target whose row was clicked, a reactive that
 #'   fires on every click, even on the same row twice.
 #' @noRd
-meta_server <- function(id, tar_meta, script_targets = shiny::reactive(NULL)) {
-  stopifnot(shiny::is.reactive(tar_meta), shiny::is.reactive(script_targets))
+meta_server <- function(id, tar_meta, script_targets = shiny::reactive(NULL), store_others = shiny::reactive(character())) {
+  stopifnot(shiny::is.reactive(tar_meta), shiny::is.reactive(script_targets), shiny::is.reactive(store_others))
   shiny::moduleServer(id, function(input, output, session) {
     # Stored targets the script no longer has (#112).
     # Once per change of the leftovers, not on every metadata write (#243).
     leftovers <- shiny::reactiveVal(NULL)
     shiny::observe(leftovers(leftover_targets(tar_meta(), script_targets())), priority = 1)
-    output$leftovers <- shiny::renderUI(leftovers_ui(leftovers()))
+    output$leftovers <- shiny::renderUI(leftovers_ui(leftovers(), store_others()))
 
     output$table <- reactable::renderReactable({
       shiny::req(tar_meta())
@@ -95,8 +95,9 @@ leftover_targets <- function(meta, targets) {
 #'
 #' With the code that removes them, to copy: the board doesn't prune.
 #' @param leftovers leftover_targets().
+#' @param others The other scripts loaded on this store this session (#245).
 #' @noRd
-leftovers_ui <- function(leftovers) {
+leftovers_ui <- function(leftovers, others = character()) {
   n <- nrow(leftovers)
   if (!n) return(NULL)
   shiny::tags$div(
@@ -107,7 +108,9 @@ leftovers_ui <- function(leftovers) {
       n, if (n == 1) "" else "s", if (n == 1) "is" else "are",
       format_bytes(sum(leftovers$bytes)) %||% "size unknown",
       describe_names(leftovers$name), if (n == 1) "it" else "them"
-    )),
+    ), if (length(others)) {
+      paste0(" They may be another pipeline's: this store also held ", and_list(others), "'s targets this session.")
+    }),
     copy_code_button("targets::tar_prune()")
   )
 }

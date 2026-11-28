@@ -2,6 +2,11 @@
 
 ## New features
 
+* Loading a script onto a store another script used this session says so
+  (#245): targets with the same names are shared, so up-to-date marks and
+  records can belong to the other pipeline. The notice gives a
+  `_targets.yaml` project with a store of its own, to copy. The Metadata
+  tab's leftovers notice adds that they may be another pipeline's.
 * Which inputs a branch came from: a pattern's branch has an Inputs
   section in the Value pane. Opened, it names the slice of each target the
   branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
