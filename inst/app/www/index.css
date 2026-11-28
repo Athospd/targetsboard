@@ -899,3 +899,8 @@ html .Reactable .rt-page-size-select {
 .bslib-has-full-screen .card[data-full-screen="true"] .tb-preview[data-full-screen="false"]:focus-within > * > .bslib-full-screen-enter {
   display: block !important;
 }
+
+/* A tensor's first values wrap, rather than run off the pane (#228). */
+.tb-preview-values {
+  white-space: pre-wrap;
+}

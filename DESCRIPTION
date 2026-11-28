@@ -61,6 +61,7 @@ Suggests:
     later,
     parsermd,
     pdftools,
+    profvis,
     plotly,
     ragg,
     rstudioapi,

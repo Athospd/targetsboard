@@ -53,6 +53,8 @@ kind_hint <- function(kind) {
     if (format == "custom") {
       return("Stored in a custom format (tar_format()): reading it runs the pipeline's own code.")
     }
+    if (format == "torch") return("A torch model or tensor (tar_torch()): reading it needs the torch package.")
+    if (format == "keras") return("A keras model (tar_keras()): reading it needs the keras package.")
     return(paste0("Stored as ", format, " (format = \"", format, "\"), not rds: reading it needs that format's package."))
   }
   switch(kind,
