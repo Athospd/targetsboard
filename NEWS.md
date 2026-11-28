@@ -366,6 +366,11 @@
   and edge on each render. Measured on 400 targets: 17-20 ms frames, down
   from 46-66 ms (#206).
 
+* targetsboard needs targets 1.9.0 or later, for `tar_unblock_process()`
+  (#283). Contract tests check the columns and fields the board reads from
+  targets, and that the R code the board gives to copy parses for any
+  target name and path.
+
 * Four fewer dependencies: dplyr, purrr, zeallot and digest. The widget's
   graph conversion is base R and about 15 times as fast (5,000 targets:
   1.2 s to 0.08 s), with the same JSON (#160).
