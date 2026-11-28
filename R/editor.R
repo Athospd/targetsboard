@@ -15,6 +15,9 @@ definition_location <- function(name, script) {
   if (!file.exists(script)) return(NULL)
   r_dir <- file.path(dirname(script), "R")
   files <- c(script, list.files(r_dir, pattern = "[.][Rr]$", full.names = TRUE, recursive = TRUE))
+  # The documents it tangles (#136), relative to the board's folder.
+  documents <- Filter(is_tangle_document, sourced_paths(script))
+  files <- c(files, documents[file.exists(documents)])
   found <- do.call(rbind, lapply(files, definitions_in))
   if (is.null(found) || !nrow(found)) return(NULL)
   hit <- found[found$name == name, , drop = FALSE]
@@ -28,6 +31,10 @@ definition_location <- function(name, script) {
 
 # The targets and functions one file defines: name, kind, line.
 definitions_in <- function(file) {
+  if (is_tangle_document(file)) {
+    found <- tangle_definitions(file)
+    return(if (!is.null(found)) cbind(found, file = file))
+  }
   exprs <- tryCatch(parse(file, keep.source = TRUE), error = function(e) NULL)
   data <- if (!is.null(exprs)) utils::getParseData(exprs, includeText = TRUE)
   if (is.null(data) || !nrow(data)) return(NULL)

@@ -2,6 +2,12 @@
 
 ## New features
 
+* Pipelines written as Quarto or R Markdown documents
+  (`tarchetypes::tar_tangle()`, #136). A `.qmd` or `.Rmd` loads from the
+  script bar or `tar_board(script = )`, through a script the board writes to
+  its temporary folder; the Script tab shows the document. A script that
+  calls `tar_tangle()` refreshes when its document changes, and Open in
+  editor goes to a target's line in the document. parsermd is in Suggests.
 * Loading a script onto a store another script used this session says so
   (#245): targets with the same names are shared, so up-to-date marks and
   records can belong to the other pipeline. The notice gives a

@@ -59,6 +59,7 @@ Suggests:
     future,
     ggplot2,
     later,
+    parsermd,
     pdftools,
     profvis,
     plotly,
