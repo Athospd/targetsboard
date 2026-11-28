@@ -7,6 +7,10 @@
   budget of nodes; `.ndjson`/`.jsonl` one item a line. Its raw text is a
   click away. A file too big, or not valid JSON, shows its text as before,
   with why.
+* Invalidate counts only targets with a record left to invalidate (#252).
+  Invalidate all, and the graph's Invalidate on a selection, leave out
+  targets already invalidated or never built; the confirmation says how many
+  it left out, and with none left it says there is nothing to invalidate.
 * Which inputs a branch came from: a pattern's branch has an Inputs
   section in the Value pane. Opened, it names the slice of each target the
   branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
