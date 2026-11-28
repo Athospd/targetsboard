@@ -388,8 +388,67 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
     return(markdown_view(readLines(path, warn = FALSE, encoding = "UTF-8")))
   }
   if (ext %in% c("r", "rmd", "qmd")) return(text_file_view(path, "r"))
-  if (ext %in% c("txt", "log", "json", "yaml", "yml", "md", "markdown", "toml", "sql", "py", "sh")) {
+  if (ext %in% c("json", "geojson", "ndjson", "jsonl")) return(json_view(path, lines = ext %in% c("ndjson", "jsonl")))
+  if (ext %in% c("txt", "log", "yaml", "yml", "md", "markdown", "toml", "sql", "py", "sh")) {
     return(text_file_view(path))
   }
   NULL
+}
+
+# JSON as a tree (#250): how big a file it parses, how many lines of NDJSON,
+# and how many nodes it draws in all, whatever the shape.
+json_bytes <- function() 5e6
+json_lines <- 100
+json_depth <- 8
+json_nodes <- 2000
+
+#' What a JSON value is, in a few characters: `{3}` an object, `[3]` an
+#' array, string, number, bool, null; from jsonlite's lists
+#' (`simplifyVector = FALSE`), where an object has names, even none
+#' @noRd
+json_type_label <- function(x) {
+  if (is.null(x)) return("null")
+  if (is.list(x)) return(sprintf(if (is.null(names(x))) "[%s]" else "{%s}", format(length(x), big.mark = ",")))
+  if (is.logical(x)) return("bool")
+  if (is.numeric(x)) return("number")
+  if (is.character(x)) return("string")
+  type_label(x)
+}
+
+#' A JSON file as a tree you can fold, its text a click away
+#'
+#' A file too big to parse, or not valid JSON, keeps the text view, with
+#' why. NDJSON (`lines = TRUE`): one item a line, the first `json_lines`.
+#' @noRd
+json_view <- function(path, lines = FALSE) {
+  text_view <- function(note) shiny::tagList(shiny::tags$p(class = "tb-table-caption", note), text_file_view(path))
+  if (isTRUE(file.size(path) > json_bytes())) {
+    return(text_view("Too large to show as a tree: its text."))
+  }
+  value <- tryCatch({
+    if (lines) {
+      text <- first_lines(path, json_lines)
+      lapply(text$lines[nzchar(trimws(text$lines))], jsonlite::parse_json, simplifyVector = FALSE)
+    } else {
+      jsonlite::read_json(path, simplifyVector = FALSE)
+    }
+  }, error = function(e) structure(list(), error = conditionMessage(e)))
+  if (!is.null(attr(value, "error"))) {
+    why <- gsub("[[:space:]]+", " ", cli::ansi_strip(attr(value, "error")))
+    return(text_view(paste("Not valid JSON:", substr(why, 1, 200))))
+  }
+  # JSON spells its bools true and false.
+  shown <- function(x) if (is.logical(x) && length(x) == 1 && !is.na(x)) tolower(x) else short_value(x)
+  options <- tree_options(json_type_label, json_depth, budget = list2env(list(left = json_nodes)), value = shown)
+  shiny::tagList(
+    if (lines && isTRUE(first_lines(path, json_lines)$more)) {
+      shiny::tags$p(class = "tb-table-caption", sprintf("The first %d lines.", json_lines))
+    },
+    if (is.list(value) && length(value)) {
+      shiny::tags$div(class = "tb-tree", tree_items_ui(value, 1, options))
+    } else {
+      shiny::tags$div(class = "tb-tree", tree_node("value", value, 1, options))
+    },
+    shiny::tags$details(class = "tb-preview-raw", shiny::tags$summary("Raw text"), text_file_view(path))
+  )
 }
