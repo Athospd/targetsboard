@@ -2,6 +2,10 @@
 
 ## New features
 
+* A report target's files (`tar_quarto()`, `tar_render()`) open on the
+  rendered report or site, with its sources and inputs in one closed list
+  below it (#275). Every multi-file target labels its files by their path in
+  the folder they share (`posts/first/index.qmd`), not their file name alone.
 * Which inputs a branch came from: a pattern's branch has an Inputs
   section in the Value pane. Opened, it names the slice of each target the
   branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
