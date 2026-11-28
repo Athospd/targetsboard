@@ -8,8 +8,11 @@
   (tables, widgets, plots as images), printed value and command. It says
   which targets' values went in; `names` picks them. Values in the cloud,
   over `max_bytes` (10 MB), or whose store runs code to read them are left
-  out with their facts. A pattern shows its first branch, a file target its
-  paths.
+  out with their facts. A pattern shows its first 20 branches, picked from
+  a menu; a file target, its first 20 files as the board shows them
+  (images, PDFs, HTML reports, tables, text), in the page, each within
+  `max_bytes`. `max_total` (50 MB) caps the page: past it, what's left is
+  listed with its facts (#284, step 2).
 * Pipelines written as Quarto or R Markdown documents
   (`tarchetypes::tar_tangle()`, #136). A `.qmd` or `.Rmd` loads from the
   script bar or `tar_board(script = )`, through a script the board writes to
