@@ -15,7 +15,7 @@ local_export_pipeline <- function(.env = parent.frame()) {
     "  tar_target(squares, data$x^2, pattern = map(data))",
     ")"
   ), file.path(dir, "_targets.R"))
-  withr::with_dir(dir, try(targets::tar_make(reporter = "silent", names = !tidyselect::any_of("later")), silent = TRUE))
+  withr::with_dir(dir, try(targets::tar_make(reporter = "silent", names = c(data, plot, big, bad, squares)), silent = TRUE))
   dir
 }
 
