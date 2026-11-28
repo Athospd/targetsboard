@@ -131,9 +131,17 @@ test_that("the preview's buttons and links work in the browser", {
   app$wait_for_js("document.querySelector('.tb-problem .tb-input-link') !== null", timeout = preview_timeout)
   # Clicked through JS: the pane can re-render between app$click()'s lookup
   # and its click ("No node with given id found", main's CI 2026-11-26).
+  # "Copied" shows for a moment: recorded as it shows, since the pane can
+  # draw a fresh button, saying Copy, before a poll sees it (#296).
+  app$run_js(paste(
+    "window.__sawCopied = false;",
+    "new MutationObserver(() => { if (Array.from(document.querySelectorAll('.tb-problem .tb-copy'))",
+    "  .some(b => b.textContent === 'Copied')) window.__sawCopied = true; })",
+    "  .observe(document.body, {subtree: true, childList: true, characterData: true});"
+  ))
   app$run_js("document.querySelector('.tb-problem .tb-copy').click()")
   app$wait_for_js("window.__copied !== null && window.__copied.includes('targets::tar_')")
-  app$wait_for_js("document.querySelector('.tb-problem .tb-copy').textContent === 'Copied'")
+  app$wait_for_js("window.__sawCopied === true")
   app$wait_for_js("document.querySelector('.tb-problem .tb-copy').textContent === 'Copy'")
   app$run_js("document.querySelector('.tb-problem .tb-input-link[data-target=\"a\"]').click()")
   app$wait_for_js(paste0(node_js("a"), ".classList.contains('tb-focused')"))
