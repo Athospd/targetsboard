@@ -49,7 +49,7 @@ Imports:
     rlang (>= 1.0.0),
     shinycssloaders (>= 1.1.0),
     shiny (>= 1.8.1),
-    targets,
+    targets (>= 1.9.0),
     visNetwork
 Suggests:
     broom,
