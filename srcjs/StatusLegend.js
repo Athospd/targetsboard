@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { isTarget } from './NodeActions'; // functions and globals have a status too: counted apart
 
 // The statuses' names, in the legend's order.
 const LABELS = {
@@ -31,9 +32,6 @@ export const readCostsShown = () => {
 };
 export const writeCostsShown = (shown) => storage((s) => s.setItem(COSTS_KEY, JSON.stringify(shown)));
 
-// Functions and globals (targets_only = FALSE) have a status too, but the
-// legend counts targets.
-const isTarget = (node) => !['function', 'object'].includes(node.data?.target_type);
 
 // What each status's colour means, with how many targets have it; a click
 // on one selects them. Under them, the switches of the targets' time and

@@ -26,7 +26,7 @@ import { layoutGraph } from './layout';
 import {
   rNames, handlePositions, placeNewNodes, upstreamOf, downstreamOf, lineageOf, neighboursOf,
 } from './graph';
-import { NodeActionsContext, GroupToolbar, actionLabel } from './NodeActions';
+import { NodeActionsContext, GroupToolbar, actionLabel, actionsOn } from './NodeActions';
 
 import BaseNode from './BaseNode';
 import FamilyBoxes, { foldFamilies } from './FamilyBoxes';
@@ -723,7 +723,9 @@ function Flow({ configuration }) {
     [view.edges, near, markedIds, options.edge_type],
   );
 
-  const menuActions = menu?.nodes.length > 1 ? options.node_group_actions : options.node_actions;
+  // Run and Invalidate only on targets, not on functions and globals (#305).
+  const byId = (ids) => (ids ?? []).map((id) => nodes.find((n) => n.id === id)).filter(Boolean);
+  const menuActions = actionsOn(menu?.nodes.length > 1 ? options.node_group_actions : options.node_actions, byId(menu?.nodes));
 
   // The colours are tokens, in targetsboardCustomCSS.css; tb-dark switches
   // them to dark mode's.
@@ -794,7 +796,7 @@ function Flow({ configuration }) {
         <GroupToolbar
           ids={group}
           node={group?.includes(focusId) ? focusId : group?.[0]}
-          actions={options.toolbar_group_actions}
+          actions={actionsOn(options.toolbar_group_actions, byId(group))}
           onAction={onMenuAction}
           queued={queued}
         />

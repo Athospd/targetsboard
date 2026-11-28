@@ -41,6 +41,26 @@ test_that("Run all and the graph's Run start a run with the modes; Value is not 
   })
 })
 
+test_that("the graph's Run and Invalidate leave out functions and globals (#305)", {
+  skip_on_cran()
+  local_pipeline()
+  args <- run_args()
+  args$board(list(x = list(nodes = data.frame(id = c("a", "b", "f"), type = c("stem", "stem", "function")))))
+  started <- list()
+  local_mocked_bindings(start_run = function(script, names = NULL, ...) {
+    started[[length(started) + 1]] <<- names
+    NULL
+  })
+  shiny::testServer(run_server, args = args, {
+    args$action(list(action = "run", node = "a", nodes = list("a", "f")))
+    session$flushReact()
+    expect_equal(started[[1]], "a")
+    args$action(list(action = "run", node = "f"))
+    session$flushReact()
+    expect_length(started, 1) # a function alone: nothing to run
+  })
+})
+
 test_that("the run's scope: what the board's run was asked for, none for a run from the console (#181)", {
   skip_on_cran()
   local_pipeline()

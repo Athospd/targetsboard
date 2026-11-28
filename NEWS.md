@@ -8,6 +8,11 @@
   loads a script, and a large one asks first. `tar_board(targets_only = )`
   only sets where it starts.
 
+* Functions and global objects on the graph (`targets_only = FALSE`) read
+  as not targets (#305): a dashed outline in their status's colour, thicker
+  when a change made them outdated, and no fill. Their menus and toolbars
+  offer no Run or Invalidate, and Run on a selected group leaves them out.
+
 * `tar_board_export()` writes the board as one HTML page that opens in any
   browser, with no R and no Shiny (#284, its first step): the graph as it
   is now, and a click on a target shows its Value pane: facts, views

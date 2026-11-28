@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { FocusedNodeToolbar, UnfoldedBranches } from './NodeActions';
+import { FocusedNodeToolbar, UnfoldedBranches, isTarget } from './NodeActions';
 import TypeIcon, { targetKind } from './TypeIcon';
 
 // A target, drawn in the colours of its status: uptodate, outdated, errored
@@ -32,9 +32,14 @@ const BaseNode = ({
 }) => {
   // Its colours come from the status's tokens, in targetsboardCustomCSS.css.
   const kind = targetKind(data?.target_type, data?.kind);
+  // A function or a global: outlined, not filled (#305).
+  const target = isTarget({ data });
   return (
-    <div className={`base-node tb-status-${status}` + (kind ? ' tb-has-type-icon' : '')} title={nodeTitle(data)}>
-      <FocusedNodeToolbar id={id} pattern={data?.target_type === 'pattern'} />
+    <div
+      className={`base-node tb-status-${status}` + (kind ? ' tb-has-type-icon' : '') + (target ? '' : ' tb-not-target')}
+      title={nodeTitle(data)}
+    >
+      <FocusedNodeToolbar id={id} pattern={data?.target_type === 'pattern'} target={target} />
       <UnfoldedBranches id={id} />
       <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
       <TypeIcon kind={kind} raw={data?.kind} />
