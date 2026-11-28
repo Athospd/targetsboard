@@ -145,7 +145,8 @@ test_that("the Load spinner covers the board only while Load loads, not at the s
   expect_true(app$get_js(hit))
   expect_equal(app$get_js("getComputedStyle(document.querySelector('.tb-board-loading .load-container')).display"), "none")
   # And still none once the server has answered.
-  app$wait_for_js("Shiny.shinyapp.$values['board-script-loading'] !== undefined")
+  # The server's first answer: slow on a CI runner (#296).
+  app$wait_for_js("Shiny.shinyapp.$values['board-script-loading'] !== undefined", timeout = 15000)
   expect_true(app$get_js(hit))
 
   # Load a slow script: the spinner covers the pane, captioned, and takes the
