@@ -17,6 +17,7 @@ board_sidebar_ui <- function(id) {
   shiny::tagList(
     run_ui(shiny::NS(id, "run")),
     functions_switch(shiny::NS(shiny::NS(id, "script"), "functions")),
+    export_ui(shiny::NS(id, "export")),
     run_summary_ui(shiny::NS(id, "run_summary")),
     run_queue_ui(shiny::NS(shiny::NS(id, "run"), "queue"))
   )
@@ -158,6 +159,8 @@ board_server <- function(id, backend, metadata, script, scripts = NULL, color_mo
     # Run all, Stop, Invalidate all, and the graph's Run and Invalidate.
     run <- run_server("run", backend, board, data$running, action = graph$node_action, log = console$add,
                       tar_meta = data$tar_meta)
+    # Export: the board as one HTML page (#309).
+    export_server("export", board, graph$selected, data$running, data$tar_meta, backend$loaded_script)
     # Under the run buttons: the run going, or the last one.
     run_summary_server("run_summary", board, data$running, data$progress, data$tar_meta, scope = run$scope, maker = run$maker)
 

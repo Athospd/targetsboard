@@ -30,7 +30,8 @@ graph_ui <- function(id, metadata, layout = NULL) {
 #' @param tar_meta Reactive: `targets::tar_meta()`, for an unfolded
 #'   pattern's branches.
 #' @return A list of reactives, the widget's events: `focused`, the focused
-#'   target; `double_clicked`, a target double-clicked; `node_action`, an
+#'   target; `selected`, the selected targets; `double_clicked`, a target
+#'   double-clicked; `node_action`, an
 #'   action chosen in a menu or toolbar; and `branch_clicked`,
 #'   `list(pattern, position)`, a branch of the unfolded pattern clicked.
 #' @noRd
@@ -141,6 +142,7 @@ graph_server <- function(id, board, progress, running, warned_targets, show, col
 
     list(
       focused = shiny::reactive(input$flow_focused_node),
+      selected = shiny::reactive(input$flow_selected_nodes),
       double_clicked = shiny::reactive(input$flow_double_clicked_node),
       node_action = shiny::reactive(input$flow_node_action),
       branch_clicked = shiny::reactive(input$flow_branch_click)

@@ -24,6 +24,11 @@
   (images, PDFs, HTML reports, tables, text), in the page, each within
   `max_bytes`. `max_total` (50 MB) caps the page: past it, what's left is
   listed with its facts (#284, step 2).
+* An **Export** button under the run controls saves the board as one HTML
+  page (#309), as `tar_board_export()` does: a dialog picks the targets on
+  the board or the selected ones and the size cap, estimates the page, and
+  shows the same in R. The page builds in a background process, with
+  Cancel, and the browser then saves it.
 * Pipelines written as Quarto or R Markdown documents
   (`tarchetypes::tar_tangle()`, #136). A `.qmd` or `.Rmd` loads from the
   script bar or `tar_board(script = )`, through a script the board writes to
