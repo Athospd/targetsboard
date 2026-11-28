@@ -165,3 +165,20 @@ test_that("poller_why() reads the reasons and the manifest in one process, apart
   expect_null(found$manifest)
   expect_match(found$errors, "broken")
 })
+
+test_that("poller_why() reads the script as tar_make() does: a closure in a global isn't a change", {
+  # A global holding a closure, as torch's nn_module() and R6 classes do:
+  # read in an environment of its own, its hash changes on every read.
+  local_pipeline()
+  writeLines(c(
+    "library(targets)",
+    "helpers <- list(add = function(x) x + 1)",
+    "list(tar_target(a, helpers$add(1)), tar_target(b, a + 1))"
+  ), "_targets.R")
+  targets::tar_make(reporter = "silent")
+  found <- callr::r(poller_why, args = list(script = "_targets.R"))
+  expect_equal(found$errors, character())
+  outdated <- found$reasons$vertices$name[found$reasons$vertices$status %in% "outdated"]
+  expect_false(any(c("helpers", "a", "b") %in% outdated))
+  expect_equal(outdated_reasons(found$reasons), list())
+})
