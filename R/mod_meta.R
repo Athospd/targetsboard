@@ -1,7 +1,8 @@
 #' The Metadata tab: tar_meta()'s table
 #'
 #' `tar_meta()` as a table. A click on a row asks to show its target on the
-#' board.
+#' board. When the graph draws functions and globals, their records too,
+#' with a filter on their type (#305).
 #'
 #' @param id The module's id.
 #' @noRd
@@ -17,11 +18,15 @@ meta_ui <- function(id) {
 #' @param tar_meta `tar_meta(targets_only = TRUE)`: a reactive.
 #' @param script_targets Reactive: the script's targets, for the stored ones
 #'   it no longer has (leftover_targets()); `NULL` until known.
+#' @param board Reactive: the graph the board draws; its functions and
+#'   globals, if any, bring their records into the table.
 #' @return The name of the target whose row was clicked, a reactive that
 #'   fires on every click, even on the same row twice.
 #' @noRd
-meta_server <- function(id, tar_meta, script_targets = shiny::reactive(NULL), store_others = shiny::reactive(character())) {
-  stopifnot(shiny::is.reactive(tar_meta), shiny::is.reactive(script_targets), shiny::is.reactive(store_others))
+meta_server <- function(id, tar_meta, script_targets = shiny::reactive(NULL), store_others = shiny::reactive(character()),
+                        board = shiny::reactive(NULL)) {
+  stopifnot(shiny::is.reactive(tar_meta), shiny::is.reactive(script_targets), shiny::is.reactive(store_others),
+            shiny::is.reactive(board))
   shiny::moduleServer(id, function(input, output, session) {
     # Stored targets the script no longer has (#112).
     # Once per change of the leftovers, not on every metadata write (#243).
@@ -29,9 +34,18 @@ meta_server <- function(id, tar_meta, script_targets = shiny::reactive(NULL), st
     shiny::observe(leftovers(leftover_targets(tar_meta(), script_targets())), priority = 1)
     output$leftovers <- shiny::renderUI(leftovers_ui(leftovers(), store_others()))
 
-    output$table <- reactable::renderReactable({
+    # Whether the graph draws functions and globals: set only when it
+    # changes, so each poll of the graph doesn't read the metadata again.
+    not_targets <- shiny::reactiveVal(FALSE)
+    shiny::observe(not_targets(any(board()$x$nodes$type %in% c("function", "object"))))
+    shown <- shiny::reactive({
       shiny::req(tar_meta())
-      meta <- tar_meta()
+      if (!not_targets()) return(tar_meta())
+      tryCatch(plain_meta(targets::tar_meta(targets_only = FALSE)), error = function(e) tar_meta())
+    })
+
+    output$table <- reactable::renderReactable({
+      meta <- shown()
       reactable::reactable(
         meta,
         theme = board_table_theme(),
@@ -62,6 +76,10 @@ meta_columns <- function(meta) {
       cell = function(value) format_bytes(value) %||% "",
       align = "right", defaultSortOrder = "desc"
     )
+  }
+  # Functions and globals among the targets: their type, to filter on.
+  if (any(meta$type %in% c("function", "object"))) {
+    columns$type <- reactable::colDef(filterable = TRUE)
   }
   if (length(columns)) columns else NULL
 }

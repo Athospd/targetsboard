@@ -25,6 +25,10 @@
   its temporary folder; the Script tab shows the document. A script that
   calls `tar_tangle()` refreshes when its document changes, and Open in
   editor goes to a target's line in the document. parsermd is in Suggests.
+* When the graph draws functions and global objects, the Metadata tab shows
+  their records too (`tar_meta(targets_only = FALSE)`), with a filter on
+  the type column (#305). Problems, the run summary and the leftovers stay
+  targets only.
 * Loading a script onto a store another script used this session says so
   (#245): targets with the same names are shared, so up-to-date marks and
   records can belong to the other pipeline. The notice gives a

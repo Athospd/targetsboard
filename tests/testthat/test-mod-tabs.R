@@ -54,6 +54,25 @@ test_that("meta_server() shows tar_meta() and returns clicks", {
   })
 })
 
+test_that("meta_server() adds functions' and globals' records when the graph draws them (#305)", {
+  skip_on_cran()
+  dir <- local_pipeline()
+  writeLines(c("library(targets)", "half <- function(x) x / 2", "list(tar_target(a, half(1)))"), file.path(dir, "_targets.R"))
+  withr::local_dir(dir)
+  targets::tar_make(reporter = "silent")
+  meta <- shiny::reactiveVal(targets::tar_meta(targets_only = TRUE))
+  board <- shiny::reactiveVal(list(x = list(nodes = data.frame(id = "a", type = "stem"))))
+  shiny::testServer(meta_server, args = list(tar_meta = meta, board = board), {
+    session$flushReact()
+    expect_equal(shown()$name, "a")
+    expect_no_match(output$table, '"filterable":true', fixed = TRUE)
+    board(list(x = list(nodes = data.frame(id = c("a", "half"), type = c("stem", "function")))))
+    session$flushReact()
+    expect_setequal(shown()$name, c("a", "half"))
+    expect_match(output$table, '"filterable":true', fixed = TRUE) # the type column's filter
+  })
+})
+
 test_that("log_server() shows the board's latest run, headed by what it was", {
   runner <- new.env()
   backend <- list(runner = runner)
