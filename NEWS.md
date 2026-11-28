@@ -30,6 +30,11 @@
   records can belong to the other pipeline. The notice gives a
   `_targets.yaml` project with a store of its own, to copy. The Metadata
   tab's leftovers notice adds that they may be another pipeline's.
+* A global object on the graph (`targets_only = FALSE`) has its own Value
+  pane (#305): its definition as the script writes it, with where it is,
+  the targets that use it, its hash as targets recorded it, and the code
+  that loads the pipeline's globals in your session. The board never runs
+  the script to read its value.
 * Profile a target with profvis (#141), from the Value pane's Debug
   section: off by default, a switch there turns it on for the session, and
   `options(targetsboard.profile = TRUE)` from the start. It gives the code to
