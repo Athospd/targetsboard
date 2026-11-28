@@ -21,7 +21,7 @@ tar_map_templates <- function(script) {
   }
   # A target's name: tar_*(name, ...), tar_*(name = ...) or tar_target_raw("name", ...).
   target_name <- function(x) {
-    args <- as.list(x)[-1]
+    args <- drop_empty(as.list(x)[-1])
     named <- names(args) %||% rep("", length(args))
     name <- if ("name" %in% named) args[["name"]] else if (any(!nzchar(named))) args[!nzchar(named)][[1]]
     if (is.name(name)) as.character(name) else if (is.character(name) && length(name) == 1) name

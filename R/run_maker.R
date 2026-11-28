@@ -27,7 +27,7 @@ run_maker <- function(script) {
     }
     if (identical(name, "plan") && is.null(found)) {
       found <<- "tar_make_future"
-      w <- x$workers
+      w <- drop_empty(as.list(x)[-1])$workers
       if (is.numeric(w) && length(w) == 1 && !is.na(w)) workers <<- as.integer(w)
     }
     if (identical(name, "options") && "clustermq.scheduler" %in% names(x) && is.null(found)) {

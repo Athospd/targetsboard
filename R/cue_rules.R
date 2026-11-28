@@ -36,7 +36,7 @@ cue_rules <- function(script) {
   arg_of <- function(x, name, formals) {
     stub <- function() NULL
     formals(stub) <- c(stats::setNames(rep(list(quote(expr = )), length(formals)), formals), alist(... = ))
-    matched <- tryCatch(as.list(match.call(stub, x))[-1], error = function(e) list())
+    matched <- drop_empty(tryCatch(as.list(match.call(stub, x))[-1], error = function(e) list()))
     matched[[name]]
   }
   target_name <- function(x) {
@@ -70,7 +70,7 @@ cue_rules <- function(script) {
   }
   # Only a named cue = : a call's first unnamed argument is never its cue.
   arg_of_named <- function(x, name) {
-    args <- as.list(x)[-1]
+    args <- drop_empty(as.list(x)[-1])
     if (!is.null(names(args)) && name %in% names(args)) args[[name]]
   }
   for (expr in exprs) visit(expr)

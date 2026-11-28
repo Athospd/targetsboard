@@ -42,3 +42,9 @@ watch_changes <- function(read, ms = 1000, session = shiny::getDefaultReactiveDo
   })
   shiny::reactive(value())
 }
+
+# A call's arguments without its empty ones (`f(a = )`, `x[, 1]`): an empty
+# one, kept in a variable, errors when that is read (#253, #283).
+drop_empty <- function(args) {
+  args[vapply(seq_along(args), function(i) !identical(args[[i]], quote(expr = )), logical(1))]
+}

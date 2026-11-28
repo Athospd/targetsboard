@@ -268,7 +268,7 @@ script_error_text <- function(script, message) {
 #' @return A character vector of paths, `"R"` first.
 #' @noRd
 sourced_paths <- function(script) {
-  exprs <- tryCatch(parse(script, keep.source = FALSE), error = function(e) expression())
+  exprs <- tryCatch(parse(script, keep.source = FALSE), error = function(e) expression(), warning = function(w) expression())
   found <- character()
   # The literal strings of an argument: "a", or c("a", "b").
   literal <- function(arg) {
@@ -289,15 +289,20 @@ sourced_paths <- function(script) {
     } else {
       ""
     }
+    # Its arguments without the empty ones, as drop_empty() (#283): this
+    # runs in the background process, which can't call it.
+    given <- function(args) {
+      args[vapply(seq_along(args), function(i) !identical(args[[i]], quote(expr = )), logical(1))]
+    }
     # tar_tangle(path): a pipeline written as a document (#136).
     if (name == "tar_tangle") {
-      args <- as.list(x)[-1]
+      args <- given(as.list(x)[-1])
       named <- if (is.null(names(args))) rep("", length(args)) else names(args)
       arg <- if ("path" %in% named) args[["path"]] else if (length(args) && !nzchar(named[[1]])) args[[1]]
       if (!is.null(arg)) found <<- c(found, literal(arg))
     }
     if (name %in% c("tar_source", "source", "sys.source")) {
-      args <- as.list(x)[-1]
+      args <- given(as.list(x)[-1])
       named <- if (is.null(names(args))) rep("", length(args)) else names(args)
       arg <- if ("files" %in% named) {
         args[["files"]]
