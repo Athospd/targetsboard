@@ -12,6 +12,11 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
     ".map(n => n.style.transform)).size === 6"
   ))
   selected <- function() sort(unlist(app$get_value(input = "board-graph-flow_selected_nodes")))
+  # The input reaches the server a moment after the page shows it (Windows CI).
+  expect_selected <- function(ids) {
+    try(wait_for(function() identical(selected(), ids), timeout = 10), silent = TRUE)
+    expect_equal(selected(), ids)
+  }
   has_class <- function(id, class) app$get_js(sprintf("%s.classList.contains('%s')", node_js(id), class))
   buttons <- function(selector, what = "dataset.action") {
     unlist(app$get_js(sprintf(
@@ -34,7 +39,7 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
     ctrl_click(app, "d")
     wait_after_ctrl_click(app, paste(group_toolbar, "!== null"))
   }
-  expect_equal(selected(), c("b", "d"))
+  expect_selected(c("b", "d"))
 
   # One toolbar, over the group: without Value, counting the targets.
   expect_equal(app$get_js("document.querySelectorAll('.tb-node-toolbar').length"), 1)
@@ -72,27 +77,27 @@ test_that("a selected group has its own toolbar, menu and highlighting", {
   )
   app$click(selector = ".tb-node-menu [data-action='copy_name']")
   app$wait_for_js("window.__copied === 'c(\"b\", \"d\")'")
-  expect_equal(selected(), c("b", "d")) # still the group
+  expect_selected(c("b", "d")) # still the group
 
   # "Select what they depend on", from the group: all levels up.
   mouse_event(app, "b", "contextmenu")
   app$wait_for_js(menu_open)
   app$click(selector = ".tb-node-menu [data-action='select_upstream']")
   app$wait_for_js("document.querySelectorAll('.react-flow__node.selected').length === 3")
-  expect_equal(selected(), c("a", "b", "d"))
+  expect_selected(c("a", "b", "d"))
 
   # Right-click outside the group: that target alone, with its own menu.
   mouse_event(app, "f", "contextmenu")
   app$wait_for_js(menu_open)
   app$wait_for_js("document.querySelectorAll('.react-flow__node.selected').length === 1")
-  expect_equal(selected(), "f")
+  expect_selected("f")
   expect_true("value" %in% buttons(".tb-node-menu [role=menuitem]"))
   expect_equal(app$get_js(group_toolbar), NULL)
 
   # Escape closes the menu first, then clears the selection and the focus.
   press_key(app, "Escape")
   app$wait_for_js(paste0("!(", menu_open, ")"))
-  expect_equal(selected(), "f")
+  expect_selected("f")
   press_key(app, "Escape")
   app$wait_for_js("document.querySelectorAll('.react-flow__node.selected, .react-flow__node.tb-focused').length === 0")
   app$wait_for_value(input = "board-graph-flow_focused_node", ignore = list("f"))
