@@ -20,6 +20,7 @@ test_that("Export opens its dialog, builds the page, and offers it to save", {
   expect_match(text, 'targetsboard::tar_board_export("', fixed = TRUE)
   app$click(selector = "[id$='export-build']")
   app$wait_for_js("document.querySelector('.modal a[id$=export-save]') !== null", timeout = 120000)
-  href <- app$get_js("document.querySelector('.modal a[id$=export-save]').href")
-  expect_match(href, "export-save", fixed = TRUE)
+  # Shiny gives the link its URL once the download binds: wait for it.
+  app$wait_for_js("document.querySelector('.modal a[id$=export-save]').href.includes('export-save')", timeout = 30000)
+  expect_match(app$get_js("document.querySelector('.modal a[id$=export-save]').href"), "export-save", fixed = TRUE)
 })
