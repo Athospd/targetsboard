@@ -54,6 +54,24 @@ local_board_args <- function(.env = parent.frame()) {
 backend_of <- function(server) environment(server)$backend
 poller_of <- function(server) backend_of(server)$poller
 
+# Gives each file a modification time of its own, later than any before:
+# file times can have a second's resolution, so a file rewritten within the
+# second may keep its time, and the app would miss the change. In place of
+# Sys.sleep(1.1) before the write (#283).
+touch_later <- local({
+  ahead <- 0
+  function(...) {
+    ahead <<- ahead + 2
+    for (path in c(...)) Sys.setFileTime(path, Sys.time() + ahead)
+    invisible()
+  }
+})
+
+# The store's records, rewritten by tar_make() or tar_invalidate().
+touch_records <- function(store = "_targets") {
+  touch_later(Filter(file.exists, file.path(store, "meta", c("meta", "progress"))))
+}
+
 wait_for <- function(condition, timeout = 30) {
   deadline <- Sys.time() + timeout
   while (!condition()) {

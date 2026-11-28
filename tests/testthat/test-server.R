@@ -358,9 +358,9 @@ test_that("tar_meta() is re-read only when the metadata file changes", {
     }
     expect_equal(reads, before)
 
-    Sys.sleep(1.1) # file times can have 1s resolution
     targets::tar_invalidate(a)
     targets::tar_make(reporter = "silent")
+    touch_records()
     session$elapse(1000)
     invisible(output[["board-meta-table"]])
     expect_equal(reads, before + 1)

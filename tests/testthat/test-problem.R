@@ -191,8 +191,8 @@ test_that("the code to copy names the script, the store and the folder, and runs
   # The debug run builds the target again, in the board's store (its
   # progress file rewritten), and makes no store of its own.
   progress_file <- file.path("my_store", "meta", "progress")
+  Sys.setFileTime(progress_file, Sys.time() - 60) # any rewrite is then later
   before <- file.mtime(progress_file)
-  Sys.sleep(1.1) # file times have a second's resolution on some systems
   run_pasted(debug)
   expect_gt(file.mtime(progress_file), before)
   progress <- targets::tar_progress(store = "my_store")

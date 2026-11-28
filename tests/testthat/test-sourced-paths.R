@@ -45,8 +45,8 @@ test_that("the poller redraws when a function in a sourced folder outside R/ cha
   }
   expect_equal(status(), "uptodate")
   first <- file.mtime(poller$tar_vis_path)
-  Sys.sleep(1.1)
   writeLines("f <- function(x) x + 2", "functions/f.R")
+  touch_later("functions/f.R")
   wait_for(function() !identical(file.mtime(poller$tar_vis_path), first))
   expect_equal(status(), "outdated")
 })

@@ -397,20 +397,20 @@ test_that("the preview follows its target's records: invalidated, then built aga
     before <- built
 
     # Another target's records change: c's preview stays as it is.
-    Sys.sleep(1.1) # file times can have 1s resolution
     targets::tar_invalidate(a)
+    touch_records()
     session$elapse(1100)
     output[["board-preview-content"]]
     expect_equal(built, before)
 
-    Sys.sleep(1.1)
     targets::tar_invalidate(c)
+    touch_records()
     session$elapse(1100)
     html <- output[["board-preview-content"]]$html
     expect_match(html, "No value stored for this target yet.", fixed = TRUE)
 
-    Sys.sleep(1.1)
     targets::tar_make(reporter = "silent")
+    touch_records()
     session$elapse(1100)
     expect_match(output[["board-preview-content"]]$html, '<code class="tb-preview-name">c</code>', fixed = TRUE)
   })

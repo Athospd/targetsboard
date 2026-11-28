@@ -16,8 +16,8 @@ test_that("graph_data_server() re-reads the poller's graph when its file changes
     expect_equal(NROW(data$tar_meta()), 0) # no store: no metadata
     expect_equal(data$warned_targets(), character())
 
-    Sys.sleep(1.1) # a new modification time, even on coarse file systems
     saveRDS(list(x = "second"), path)
+    touch_later(path)
     session$elapse(600)
     expect_equal(data$poller_board()$x, "second")
 

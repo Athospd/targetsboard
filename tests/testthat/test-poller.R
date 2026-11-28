@@ -26,18 +26,17 @@ test_that("the poller recomputes only when the code changes or on request", {
   expect_true(poller$process$is_alive())
 
   # A new target in the script.
-  Sys.sleep(1.1) # file times can have 1s resolution
   writeLines(
     c("library(targets)", "list(tar_target(a, 1), tar_target(b, a + 1), tar_target(c, b * 2), tar_target(d, c))"),
     "_targets.R"
   )
+  touch_later("_targets.R")
   wait_for_rewrite(poller, first)
   expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b", "c", "d"))
 
   # A refresh request from the app.
   second <- written_at(poller)
-  Sys.sleep(1.1)
-  writeLines("1", poller$refresh_path)
+  writeLines("1", poller$refresh_path) # read by its content, not its time
   wait_for_rewrite(poller, second)
 })
 
@@ -64,8 +63,8 @@ test_that("a broken script doesn't kill the poller, which reports it until it's 
   error_path <- poller_error_path(poller$tar_vis_path)
   expect_false(file.exists(error_path))
 
-  Sys.sleep(1.1)
   writeLines("stop('broken')", "_targets.R")
+  touch_later("_targets.R")
   wait_for(function() file.exists(error_path))
   expect_match(paste(readLines(error_path), collapse = " "), "broken")
   expect_true(poller$process$is_alive())
@@ -136,11 +135,11 @@ test_that("the poller keeps the board's filters on every redraw (#148)", {
   expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b"))
 
   first <- written_at(poller)
-  Sys.sleep(1.1)
   writeLines(
     c("library(targets)", "list(tar_target(a, 1), tar_target(b, a + 1), tar_target(c, b * 2), tar_target(d, c))"),
     "_targets.R"
   )
+  touch_later("_targets.R")
   wait_for_rewrite(poller, first)
   expect_setequal(readRDS(poller$tar_vis_path)$x$nodes$id, c("a", "b"))
 })
