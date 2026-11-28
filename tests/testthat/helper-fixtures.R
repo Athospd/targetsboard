@@ -179,12 +179,13 @@ dismiss_modal <- function(app, attempts = 10) {
 # (the chromote.timeout option, read when Chrome launches) and for each
 # command, such as the first page load (the Chromote object's
 # default_timeout). Both get a minute. A test that hangs still fails, a
-# minute later.
-new_app_driver <- function(...) {
+# minute later. Waits (wait_for_js() and the like) default to 20 s, not
+# 4 s: macOS CI runners are often slower than that.
+new_app_driver <- function(..., timeout = 20000) {
   withr::local_options(chromote.timeout = 60)
   chrome <- chromote::default_chromote_object()
   chrome$default_timeout <- 60
-  shinytest2::AppDriver$new(...)
+  shinytest2::AppDriver$new(..., timeout = timeout)
 }
 
 # Waits until no CSS transition runs on the page: a colour measured mid-fade
