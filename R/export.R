@@ -49,7 +49,8 @@ tar_board_export <- function(file = "board.html", names = NULL,
   if (is.null(callr_function)) {
     do.call(write_export, args)
   } else {
-    callr_function(function(...) targetsboard:::write_export(...), args = args, show = TRUE)
+    # Through its namespace: write_export() isn't exported.
+    callr_function(function(...) asNamespace("targetsboard")$write_export(...), args = args, show = TRUE)
   }
   invisible(file)
 }
