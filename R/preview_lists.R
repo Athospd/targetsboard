@@ -40,31 +40,42 @@ item_name <- function(names, i) {
   if (is.na(name) || !nzchar(name)) sprintf("[[%d]]", i) else name
 }
 
+#' How a tree is drawn: its items' type labels, how deep it goes, and how
+#' many nodes it draws in all (`budget`, an environment counting down; NULL:
+#' no limit). R lists use the defaults; JSON its own (json_tree()).
+#' @noRd
+tree_options <- function(label = type_label, depth = tree_depth, budget = NULL, value = short_value) {
+  list(label = label, depth = depth, budget = budget, value = value)
+}
+
 #' One item of a list: a line with its name, type and first values, or, for
 #' a list above the deepest level, a section with its own items
 #' @noRd
-tree_node <- function(name, x, depth) {
+tree_node <- function(name, x, depth, options = tree_options()) {
   label <- shiny::tagList(
     shiny::tags$code(class = "tb-tree-name", name),
-    shiny::tags$span(class = "tb-tree-type", type_label(x)),
-    shiny::tags$span(class = "tb-tree-value", short_value(x))
+    shiny::tags$span(class = "tb-tree-type", options$label(x)),
+    shiny::tags$span(class = "tb-tree-value", options$value(x))
   )
-  if (is.list(x) && !is.data.frame(x) && length(x) && depth < tree_depth) {
+  budget <- options$budget
+  if (!is.null(budget)) budget$left <- budget$left - 1
+  room <- is.null(budget) || budget$left > 0
+  if (is.list(x) && !is.data.frame(x) && length(x) && depth < options$depth && room) {
     shiny::tags$details(
       class = "tb-tree-node",
       shiny::tags$summary(label),
-      tree_items_ui(x, depth + 1)
+      tree_items_ui(x, depth + 1, options)
     )
   } else {
     shiny::tags$div(class = "tb-tree-leaf", label)
   }
 }
 
-tree_items_ui <- function(x, depth) {
+tree_items_ui <- function(x, depth, options = tree_options()) {
   shown <- seq_len(min(length(x), tree_items))
   shiny::tags$div(
     class = "tb-tree-items",
-    lapply(shown, function(i) tree_node(item_name(names(x), i), x[[i]], depth)),
+    lapply(shown, function(i) tree_node(item_name(names(x), i), x[[i]], depth, options)),
     if (length(x) > tree_items) {
       shiny::tags$div(class = "tb-tree-more", sprintf("and %s more", format(length(x) - tree_items, big.mark = ",")))
     }

@@ -2,6 +2,11 @@
 
 ## New features
 
+* A JSON file is a tree you can fold, like a list (#250): objects `{n}`,
+  arrays `[n]`, strings, numbers, bools and nulls, 8 levels deep within a
+  budget of nodes; `.ndjson`/`.jsonl` one item a line. Its raw text is a
+  click away. A file too big, or not valid JSON, shows its text as before,
+  with why.
 * Invalidate counts only targets with a record left to invalidate (#252).
   Invalidate all, and the graph's Invalidate on a selection, leave out
   targets already invalidated or never built; the confirmation says how many
