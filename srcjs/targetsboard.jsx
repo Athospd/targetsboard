@@ -1,4 +1,5 @@
 import { reactShinyInput } from 'reactR';
+import ReactDOM from 'react-dom';
 import { useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -734,6 +735,8 @@ function Flow({ configuration }) {
   }, [inputId, selectedKey]);
 
   useEffect(() => {
+    // Also as a DOM event: a board exported as a page has no Shiny (#284).
+    window.dispatchEvent(new CustomEvent('targetsboard:focus', { detail: { id: inputId, node: focusId } }));
     if (!window.Shiny || !inputId) return;
     window.Shiny.setInputValue(`${inputId}_focused_node`, focusId);
   }, [inputId, focusId]);
@@ -912,8 +915,23 @@ export default function targetsboard({ configuration }) {
   );
 }
 
-reactShinyInput(
-  '.targetsboard',
-  'targetsboard.targetsboard',
-  targetsboard
-);
+// A board exported as a page (tar_board_export(), #284) has no Shiny: each
+// widget mounts itself, from the configuration reactR writes beside it.
+const mountStatic = () => {
+  document.querySelectorAll('.targetsboard').forEach((el) => {
+    const configuration = JSON.parse(document.getElementById(`${el.id}_configuration`).textContent);
+    ReactDOM.render(React.createElement(targetsboard, { configuration }), el);
+  });
+};
+
+if (window.Shiny) {
+  reactShinyInput(
+    '.targetsboard',
+    'targetsboard.targetsboard',
+    targetsboard
+  );
+} else if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mountStatic);
+} else {
+  mountStatic();
+}
