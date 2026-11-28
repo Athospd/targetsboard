@@ -2,6 +2,13 @@
 
 ## New features
 
+* Profile a target with profvis (#141), from the Value pane's Debug
+  section: off by default, a switch there turns it on for the session, and
+  `options(targetsboard.profile = TRUE)` from the start. It gives the code to
+  copy, and a Profile action that re-runs the target once, with its inputs
+  from the store, in a background process, then links its flame graph. A
+  target whose last build took over a minute asks first. profvis is in
+  Suggests.
 * A report target's files (`tar_quarto()`, `tar_render()`) open on the
   rendered report or site, with its sources and inputs in one closed list
   below it (#275). Every multi-file target labels its files by their path in

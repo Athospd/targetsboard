@@ -60,6 +60,7 @@ Suggests:
     ggplot2,
     later,
     pdftools,
+    profvis,
     plotly,
     ragg,
     rstudioapi,
