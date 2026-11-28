@@ -18,7 +18,7 @@ preview_bytes_limit <- function() getOption("targetsboard.preview_bytes", 100e6)
 #' @noRd
 preview_target <- function(name, store = targets::tar_config_get("store"), branch = 1L) {
   meta <- tryCatch(
-    targets::tar_meta(fields = c("type", "format", "bytes", "time", "children", "error", "repository", "path"), store = store),
+    targets::tar_meta(fields = c("type", "format", "bytes", "time", "children", "error", "repository", "path", "iteration"), store = store),
     error = function(e) NULL
   )
   if (is.null(meta) || !name %in% meta$name) return(NULL)
@@ -41,7 +41,8 @@ preview_target <- function(name, store = targets::tar_config_get("store"), branc
   # reads it, or all of them combined (branch 0).
   branch <- as.integer(branch)
   if (is.na(branch) || branch < 0L || branch > length(children)) branch <- 1L
-  target$pattern <- list(branches = length(children), branch = branch, total_bytes = target$bytes)
+  target$pattern <- list(branches = length(children), branch = branch, total_bytes = target$bytes,
+                         iteration = field(row, "iteration"))
   rows <- meta[match(children, meta$name), ]
   if (branch == 0L) {
     times <- rows$time[!is.na(rows$time)]
@@ -88,8 +89,18 @@ stand_in_note <- function(target) {
 # The branches argument of tar_read() for a pattern's branch, if one.
 branch_arg <- function(target) {
   branch <- target$pattern$branch
-  if (is.null(branch) || branch == 0L) NULL else paste("branches =", branch)
+  if (is.null(branch) || branch == 0L || by_branch_name(target)) NULL else paste("branches =", branch)
 }
+
+# A branch of a list-iteration pattern is read by its own name: tar_read(x,
+# branches = i) wraps it in a list of one (#303). One branch, either way.
+by_branch_name <- function(target) {
+  p <- target$pattern
+  identical(p$iteration, "list") && !is.null(p$branch_name) && !identical(p$branch, 0L)
+}
+
+# The name the console code reads: the target, or such a branch.
+read_name <- function(target) if (by_branch_name(target)) target$pattern$branch_name else target$name
 
 #' A store's custom R code (#237)
 #'
@@ -141,6 +152,7 @@ trust_gate <- function(target, store = NULL, ns = identity) {
 #' @noRd
 read_preview_value <- function(target, store = NULL) {
   branch <- target$pattern$branch
+  if (by_branch_name(target)) return(targets::tar_read_raw(target$pattern$branch_name, store = store))
   if (is.null(branch) || branch == 0L) return(targets::tar_read_raw(target$name, store = store))
   targets::tar_read_raw(target$name, branches = branch, store = store)
 }
@@ -272,7 +284,7 @@ preview_header <- function(target, facts = NULL, store = NULL, ns = identity) {
     if (!is.null(target$format)) paste(sub("^format_custom.*$", "custom (tar_format())", target$format), "format"),
     if (!is.null(built)) paste("built", built)
   )
-  code <- read_code(target$name, store, branch_arg(target))
+  code <- read_code(read_name(target), store, branch_arg(target))
   bslib::card_header(
     class = "tb-preview-header",
     shiny::tags$div(
