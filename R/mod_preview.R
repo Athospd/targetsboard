@@ -85,7 +85,7 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     shiny::observe({
       shiny::req(is_open(), focused())
       target <- preview_target(focused(), store(), branch = branch())
-      if (!is.null(target)) log(read_code(target$name, store(), branch_arg(target)))
+      if (!is.null(target)) log(read_code(read_name(target), store(), branch_arg(target)))
     })
 
     # A pattern's preview opens on its first branch, or on the branch asked

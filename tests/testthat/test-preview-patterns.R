@@ -35,6 +35,31 @@ test_that("a pattern previews one branch at a time, or all of them", {
   expect_null(preview_target("plain", "_targets")$pattern) # not a pattern
 })
 
+test_that("a list-iteration branch previews its own value, read by its name (#303)", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  writeLines(c(
+    "library(targets)",
+    "list(",
+    "  tar_target(i, 1:2),",
+    "  tar_target(fits, list(slope = i, f = function(x) x * i), pattern = map(i), iteration = 'list')",
+    ")"
+  ), file.path(dir, "_targets.R"))
+  withr::local_dir(dir)
+  targets::tar_make(reporter = "silent")
+  second <- preview_target("fits", "_targets", branch = 2)
+  value <- read_preview_value(second, "_targets")
+  expect_equal(names(value), c("slope", "f")) # the branch's value, not a list of it
+  expect_equal(value$slope, 2L)
+  expect_null(branch_arg(second))
+  expect_equal(read_code(read_name(second), NULL, branch_arg(second)),
+               paste0("targets::tar_read(", second$pattern$branch_name, ")"))
+  # All branches: still the list tar_read() gives.
+  all <- preview_target("fits", "_targets", branch = 0)
+  expect_length(read_preview_value(all, "_targets"), 2)
+  expect_equal(read_name(all), "fits")
+})
+
 test_that("the branch picker steps through branches, and offers all while small", {
   pattern <- list(branches = 20L, branch = 1L, branch_name = "boot_abc", total_bytes = 1000)
   html <- as.character(branch_picker(pattern, limit = 1e6))
