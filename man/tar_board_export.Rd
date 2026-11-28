@@ -10,6 +10,7 @@ tar_board_export(
   script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store"),
   max_bytes = 1e+07,
+  max_total = 5e+07,
   self_contained = TRUE,
   callr_function = callr::r
 )
@@ -24,7 +25,10 @@ the default, includes them all. The graph shows every target.}
 \item{script, store}{The targets script and store, targets' defaults.}
 
 \item{max_bytes}{A target whose value is larger in the store is listed
-with its facts only.}
+with its facts only; so is a file larger than this.}
+
+\item{max_total}{The page's size, roughly: once its views reach it, the
+targets, branches and files left are listed with their facts only.}
 
 \item{self_contained}{\code{TRUE}: one file. \code{FALSE}: the page and a folder
 of its scripts and styles beside it, \verb{<file>_files}.}
@@ -50,7 +54,9 @@ which when it writes them; \code{names} picks the ones to share. Values stored
 in the cloud (\code{repository = "aws"} or \code{"gcp"}) aren't included: reading
 them costs, and needs credentials. Neither are values over \code{max_bytes},
 nor values whose store runs custom code to read them (\code{tar_format()}).
-A pattern shows its first branch. A file target lists its files.
+A pattern shows its first branches, picked from a menu. A file target
+shows its files, each as the board does: images, PDFs, HTML reports,
+tables and text, in the page.
 }
 \examples{
 \dontrun{

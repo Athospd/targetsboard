@@ -192,6 +192,7 @@ served_types <- c(image_types, pdf = "application/pdf")
 #' @noRd
 serve_file <- function(path, session = shiny::getDefaultReactiveDomain()) {
   type <- served_types[[tolower(tools::file_ext(path))]]
+  if (exporting_page()) return(data_uri(readBin(path, "raw", file.size(path)), type)) # in the page (#284)
   if (is.null(session)) return(serve_html_report(path)) # outside a session: its folder
   session$registerDataObj(
     name = paste0("tb_file_", substr(rlang::hash(path), 1, 12)),
@@ -212,6 +213,14 @@ serve_file <- function(path, session = shiny::getDefaultReactiveDomain()) {
 #' @param path The PDF.
 #' @noRd
 pdf_view <- function(path) {
+  # In an exported page: the browser's viewer, or a link that saves it.
+  if (exporting_page()) {
+    src <- serve_file(path)
+    return(shiny::tags$object(
+      class = "tb-preview-document tb-preview-pdf", data = src, type = "application/pdf", title = basename(path),
+      shiny::tags$a(href = src, download = basename(path), paste("Save", basename(path)))
+    ))
+  }
   session <- shiny::getDefaultReactiveDomain()
   pages <- if (!is.null(session) && has_pdftools()) {
     tryCatch(pdftools::pdf_info(path)$pages, error = function(e) NULL)
