@@ -27,7 +27,7 @@ profile_start <- function(code, dir, out) {
     setwd(dir)
     options(keep.source = TRUE) # the flame graph shows the code's lines
     p <- eval(parse(text = code, keep.source = TRUE), envir = globalenv())
-    htmlwidgets::saveWidget(p, out, selfcontained = FALSE)
+    htmltools::save_html(p, out, libdir = "lib") # an htmlwidget: its tags and scripts
   }, args = list(code = code, dir = dir, out = out), supervise = TRUE)
 }
 
