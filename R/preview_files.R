@@ -38,36 +38,86 @@ files_page <- 50
 
 #' The sections of a files view: one per path, 50 at a time, the first open.
 #' A section holds an output for its view, which the session fills when it
-#' opens; with a single path, the view alone.
+#' opens; with a single path, the view alone. A rendered report (#275)
+#' shows at once, its sources and inputs in one closed list below it.
 #' @noRd
 files_sections <- function(view, ns = identity) {
   paths <- view$paths
   if (length(paths) == 1) return(shiny::uiOutput(ns(file_output_id(1))))
+  labels <- file_labels(paths)
+  if (rendered_report(paths)) {
+    return(shiny::tagList(
+      shiny::uiOutput(ns(file_output_id(1))),
+      shiny::tags$details(
+        class = "tb-preview-sources",
+        shiny::tags$summary(sprintf("Sources and inputs (%s)", format(length(paths) - 1, big.mark = ","))),
+        file_section_list(paths, labels, ns, which = seq_along(paths)[-1], first_open = FALSE)
+      )
+    ))
+  }
   shiny::tagList(
     shiny::tags$p(class = "tb-table-caption", sprintf("%s files.", format(length(paths), big.mark = ","))),
+    file_section_list(paths, labels, ns, which = seq_along(paths), first_open = TRUE)
+  )
+}
+
+# The sections of the paths `which`, 50 shown at a time. The first open
+# already holds its output; the others ask for theirs when they open
+# (srcjs/actions.js).
+file_section_list <- function(paths, labels, ns, which, first_open) {
+  shiny::tagList(
     shiny::tags$div(
       class = "tb-preview-files",
-      lapply(seq_along(paths), function(i) {
-        # Opened the first time, a section gets its output and asks for its
-        # view (srcjs/actions.js); the first one is open with it already.
+      lapply(seq_along(which), function(k) {
+        i <- which[[k]]
+        built <- first_open && k == 1
         shiny::tags$details(
           class = "tb-preview-file", `data-index` = i,
-          open = if (i == 1) NA, hidden = if (i > files_page) NA,
-          `data-tb-input` = if (i > 1) ns("file_open"),
-          `data-tb-value` = if (i > 1) i,
-          `data-tb-output` = if (i > 1) ns(file_output_id(i)),
-          shiny::tags$summary(shiny::tags$code(basename(paths[[i]]))),
-          if (i == 1) shiny::uiOutput(ns(file_output_id(1)), class = "tb-preview-file-body")
+          open = if (built) NA, hidden = if (k > files_page) NA,
+          `data-tb-input` = if (!built) ns("file_open"),
+          `data-tb-value` = if (!built) i,
+          `data-tb-output` = if (!built) ns(file_output_id(i)),
+          shiny::tags$summary(shiny::tags$code(labels[[i]])),
+          if (built) shiny::uiOutput(ns(file_output_id(i)), class = "tb-preview-file-body")
         )
       })
     ),
-    if (length(paths) > files_page) {
+    if (length(which) > files_page) {
       shiny::tags$button(
         type = "button", class = "btn btn-sm btn-default tb-preview-files-more",
         `data-tb-more` = files_page, sprintf("Show %d more", files_page)
       )
     }
   )
+}
+
+#' Each path's label: its path in the folder the paths share, so that
+#' posts/a/index.qmd and posts/b/index.qmd tell apart (#275)
+#' @noRd
+file_labels <- function(paths) {
+  parts <- strsplit(gsub("\\\\", "/", paths), "/", fixed = TRUE)
+  folders <- lapply(parts, function(p) utils::head(p, -1))
+  shared <- 0
+  repeat {
+    k <- shared + 1
+    heads <- vapply(folders, function(f) if (length(f) >= k) f[[k]] else NA_character_, character(1))
+    if (anyNA(heads) || length(unique(heads)) != 1) break
+    shared <- k
+  }
+  vapply(parts, function(p) paste(p[seq_along(p) > shared], collapse = "/"), character(1))
+}
+
+#' Whether a file target's first path is a rendered report, as
+#' tar_quarto() and tar_render() return them: a folder with an index.html
+#' (a site), or an HTML, PDF or Word document with a .qmd or .Rmd among the
+#' paths
+#' @noRd
+rendered_report <- function(paths) {
+  if (length(paths) < 2) return(FALSE)
+  first <- paths[[1]]
+  if (dir.exists(first)) return(file.exists(file.path(first, "index.html")))
+  tolower(tools::file_ext(first)) %in% c("html", "htm", "pdf", "docx") &&
+    any(tolower(tools::file_ext(paths[-1])) %in% c("qmd", "rmd"))
 }
 
 # A file section's output, in the preview module's namespace.

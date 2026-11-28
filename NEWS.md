@@ -2,6 +2,10 @@
 
 ## New features
 
+* A report target's files (`tar_quarto()`, `tar_render()`) open on the
+  rendered report or site, with its sources and inputs in one closed list
+  below it (#275). Every multi-file target labels its files by their path in
+  the folder they share (`posts/first/index.qmd`), not their file name alone.
 * torch targets (`tar_torch()`, `tar_aws_torch()`, #228): a model shows its
   layers as a tree and a table of its parameters, with how many train; a
   tensor its shape, dtype, device and first values. torch isn't a
