@@ -1,13 +1,16 @@
-#' The pipeline's functions, as written: name, file, line and code
+#' The pipeline's functions, or its other globals, as written: name, file,
+#' line and code
 #'
 #' Parsed, not run, from the files the script sources (sourced_paths()) and
-#' the script itself: each top-level `name <- function(...)`, or with `=`.
+#' the script itself: each top-level `name <- function(...)`, or with `=`;
+#' with `functions = FALSE`, each other top-level `name <- value` (#305).
 #' A folder is read as tar_source() reads it: its `.R` files, recursively.
 #' A later definition wins, as when sourced; the script comes last.
 #' @param script Path to the targets script.
+#' @param functions Functions, or the other globals.
 #' @return A data frame: `name`, `file`, `line`, `code`.
 #' @noRd
-function_definitions <- function(script) {
+function_definitions <- function(script, functions = TRUE) {
   none <- data.frame(name = character(), file = character(), line = integer(), code = character())
   if (is.null(script) || !file.exists(script)) return(none)
   files <- unlist(lapply(sourced_paths(script), function(path) {
@@ -19,7 +22,7 @@ function_definitions <- function(script) {
   }))
   is_definition <- function(x) {
     is.call(x) && is.name(x[[1]]) && as.character(x[[1]]) %in% c("<-", "=", "<<-") &&
-      is.name(x[[2]]) && is.call(x[[3]]) && identical(x[[3]][[1]], as.name("function"))
+      is.name(x[[2]]) && identical(is.call(x[[3]]) && identical(x[[3]][[1]], as.name("function")), functions)
   }
   rows <- lapply(unique(c(files, script)), function(file) {
     exprs <- tryCatch(parse(file, keep.source = TRUE), error = function(e) NULL)
@@ -37,6 +40,40 @@ function_definitions <- function(script) {
   out <- out[!duplicated(out$name, fromLast = TRUE), , drop = FALSE]
   rownames(out) <- NULL
   out
+}
+
+#' A global object, as the script writes it, in a section: where it is, the
+#' targets that use it, and its hash as targets recorded it (#305)
+#'
+#' Its value isn't read: the board never runs the script in its own process.
+#' The code that loads it in the R session comes with it.
+#' @param def Its row of `function_definitions(script, functions = FALSE)`,
+#'   or none.
+#' @param name Its name.
+#' @param users The targets that use it.
+#' @param hash Its hash in the metadata, or NULL.
+#' @noRd
+global_ui <- function(def, name, users = character(), hash = NULL) {
+  facts <- shiny::tagList(
+    if (length(users)) shiny::tags$p(paste0("Used by ", describe_names(users), ".")),
+    if (length(hash) && !is.na(hash)) shiny::tags$p(class = "text-muted", "Its hash, as targets recorded it: ", shiny::tags$code(hash)),
+    shiny::tags$p(
+      class = "text-muted",
+      "A global of the pipeline: targets::tar_load_globals() loads it, with the others, in your R session.",
+      copy_code_button("targets::tar_load_globals()")
+    )
+  )
+  if (is.null(def) || nrow(def) != 1) {
+    return(shiny::tagList(shiny::p("Its definition wasn't found in the script or the files it sources."), facts))
+  }
+  shiny::tagList(
+    shiny::tags$details(
+      class = "tb-command tb-function tb-global", `data-global` = name, open = NA,
+      shiny::tags$summary(shiny::tags$code(name), " ", shiny::tags$span(class = "tb-function-where", sprintf("%s:%d", def$file, def$line))),
+      code_block("As written", "global", def$code)
+    ),
+    facts
+  )
 }
 
 #' A function's code and where it is, in a section, or nothing

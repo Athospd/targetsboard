@@ -141,11 +141,13 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
       board()
       function_definitions(backend$poller$script)
     })
-    # A function on the canvas (targets_only = FALSE) has code, not a value.
-    is_function <- function(name) {
+    # A function or a global on the canvas (targets_only = FALSE): code, not
+    # a stored value.
+    is_type <- function(name, type) {
       nodes <- shiny::isolate(board())$x$nodes
-      "type" %in% names(nodes) && name %in% nodes$id[nodes$type %in% "function"]
+      "type" %in% names(nodes) && name %in% nodes$id[nodes$type %in% type]
     }
+    is_function <- function(name) is_type(name, "function")
 
     # tar_target(description = ), or tar_map(descriptions = )'s.
     output$description <- shiny::renderUI({
@@ -348,6 +350,16 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
         all <- functions()
         return(function_ui(all[all$name == name, , drop = FALSE], open = TRUE) %||%
           shiny::p("This function's code wasn't found in the script or the files it sources."))
+      }
+      if (is_type(name, "object")) {
+        graph <- shiny::isolate(board())$x
+        meta <- tryCatch(targets::tar_meta(fields = "data", targets_only = FALSE, store = store()), error = function(e) NULL)
+        defs <- function_definitions(backend$poller$script, functions = FALSE)
+        return(global_ui(
+          defs[defs$name == name, , drop = FALSE], name,
+          users = graph$edges$to[graph$edges$from == name],
+          hash = meta$data[meta$name == name]
+        ))
       }
       # A target that errored or warned shows its problem first; an errored
       # one has no value to show.
