@@ -46,11 +46,13 @@ script_view_server <- function(id, script) {
 # What the tab shows, read from disk: compared with the last, so the tab
 # shows again only when something changed.
 script_view_state <- function(script) {
+  # A pipeline written as a document shows the document (#136).
+  shown <- tangle_document(script) %||% script
   text <- tryCatch(
-    paste(readLines(script, warn = FALSE), collapse = "\n"),
+    paste(readLines(shown, warn = FALSE), collapse = "\n"),
     error = function(e) NULL, warning = function(w) NULL
   )
-  list(script = script, text = text, paths = where_things_are(script))
+  list(script = shown, text = text, paths = where_things_are(script))
 }
 
 #' Where things are: the paths the board and targets work with

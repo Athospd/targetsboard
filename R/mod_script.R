@@ -177,14 +177,28 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
     # tab opened after someone loaded another script, or open while they
     # did, follows it. The scripts loaded join the suggestions.
     known <- shiny::reactiveVal(known_scripts(script, scripts))
+    # A document's script (tangle_script()) shows as the document (#136).
     shiny::observeEvent(backend$loaded_script(), {
       shown <- backend$loaded_script()
+      shown <- tangle_document(shown) %||% shown
       known(union(shiny::isolate(known()), shown))
       if (identical(shown, shiny::isolate(input$path))) return()
       shiny::updateTextInput(session, "path", value = shown)
     })
     output$suggestions_list <- shiny::renderUI(script_suggestions(session$ns("suggestions"), known()))
     shiny::outputOptions(output, "suggestions_list", suspendWhenHidden = FALSE)
+
+    # The scripts loaded on each store this session (#245): two pipelines on
+    # one store share the records of targets with the same names.
+    store_scripts <- shiny::reactiveVal(list())
+    remember_script <- function(project, script) {
+      key <- normalizePath(project_store(project), winslash = "/", mustWork = FALSE)
+      history <- shiny::isolate(store_scripts())
+      history[[key]] <- union(history[[key]], script)
+      store_scripts(history)
+      setdiff(history[[key]], script)
+    }
+    others <- shiny::reactiveVal(remember_script(shiny::isolate(backend$project()), script))
 
     shiny::observeEvent(input$load, {
       new_script <- input$path
@@ -198,6 +212,19 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
         shiny::showNotification(paste0("Script not found: ", new_script), type = "error")
         bslib::update_task_button("load", state = "ready")
         return()
+      }
+      # A pipeline written as a document loads through a script that tangles
+      # it (#136): tar_tangle() needs tarchetypes and parsermd.
+      if (is_tangle_document(new_script)) {
+        missing <- c("tarchetypes", "parsermd")[!vapply(c("tarchetypes", "parsermd"), rlang::is_installed, logical(1))]
+        if (length(missing)) {
+          shiny::showNotification(paste0("A pipeline written as a document needs ", and_list(missing),
+                                         ": install ", if (length(missing) == 1) "it" else "them", " to load it."),
+                                  type = "error")
+          bslib::update_task_button("load", state = "ready")
+          return()
+        }
+        new_script <- tangle_script(new_script)
       }
       if (identical(new_script, poller$script)) {
         bslib::update_task_button("load", state = "ready")
@@ -215,6 +242,11 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
         return()
       }
       start_loading()
+      others(remember_script(project, new_script))
+      if (identical(project, current) && length(others())) {
+        shiny::showNotification(shared_store_ui(new_script, others(), project_store(project)),
+                                type = "warning", duration = NULL)
+      }
       if (identical(project, current)) {
         backend$start_poller(new_script)
       } else {
@@ -249,6 +281,7 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
       if (identical(new_project, shiny::isolate(backend$project()))) return()
       if (shiny::isolate(running())) return() # disabled meanwhile: a race
       start_loading()
+      others(remember_script(new_project, project_script(new_project)))
       backend$switch_project(new_project)
     })
 
@@ -272,7 +305,7 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
       reload_preview_methods()
     })
 
-    list(board = shiny::reactive(board()), methods = shiny::reactive(methods()))
+    list(board = shiny::reactive(board()), methods = shiny::reactive(methods()), store_others = shiny::reactive(others()))
   })
 }
 
@@ -286,4 +319,26 @@ known_scripts <- function(script, scripts = NULL) {
 #' @noRd
 script_suggestions <- function(id, paths) {
   shiny::tags$datalist(id = id, lapply(paths, function(path) shiny::tags$option(value = path)))
+}
+
+#' The notice of a script loaded on a store other scripts used (#245)
+#'
+#' With a _targets.yaml project that gives the script its own store, to
+#' copy: the board doesn't edit the author's files.
+#' @param script The script loaded.
+#' @param others The scripts loaded on the store before it, this session.
+#' @param store The store.
+#' @noRd
+shared_store_ui <- function(script, others, store) {
+  name <- gsub("[^A-Za-z0-9_]+", "_", tools::file_path_sans_ext(basename(script)))
+  yaml <- paste0(name, ":
+  script: ", script, "
+  store: _targets_", name)
+  shiny::tagList(
+    shiny::tags$p(paste0(
+      script, " uses the same store as ", and_list(others), " (", store, "). ",
+      "Targets with the same names are shared."
+    )),
+    code_block(paste0("A store of its own, in _targets.yaml (TAR_PROJECT=", name, ")"), "store", yaml)
+  )
 }

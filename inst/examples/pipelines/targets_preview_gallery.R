@@ -203,7 +203,8 @@ Filter(Negate(is.null), list(
   ), format = "file"),
   quarto_report(),
   tar_target(config_json, write_lines("config.json", c(
-    "{", '  "alpha": 0.1,', sprintf('  "tags": [%s]', paste0('"', settings$tags, '"', collapse = ", ")), "}"
+    "{", '  "alpha": 0.1,', sprintf('  "tags": [%s],', paste0('"', settings$tags, '"', collapse = ", ")),
+    '  "model": {"formula": "mpg ~ wt", "folds": 5, "seed": null, "verbose": false}', "}"
   )), format = "file"),
   tar_target(config_yaml, write_lines("config.yaml", c("alpha: 0.1", "tags:", paste("  -", settings$tags))), format = "file"),
   tar_target(run_log, write_lines("run.log", sprintf("[%03d] step done", 1:250)), format = "file"),

@@ -60,6 +60,13 @@
 #' `_targetsboard.R`. A value larger than 100 MB in the store is read only
 #' when asked; set the limit with `options(targetsboard.preview_bytes = )`.
 #'
+#' @section Profiling:
+#' The Value pane's Debug section can profile a target with profvis: re-run
+#' it once, with its inputs from the store, in a background process, and
+#' open its flame graph. It's off by default: a switch there turns it on for
+#' the session, and `options(targetsboard.profile = TRUE)` turns it on from
+#' the start. The section also gives the code, to run in the console.
+#'
 #' @section Themes:
 #' The board's look is the "Targets board" theme. A few Bootstrap themes
 #' from Bootswatch, checked for readable text in light and dark mode, can
@@ -69,7 +76,10 @@
 #' `options(targetsboard.theme = )` to its name, e.g. `"Cosmo"`.
 #'
 #' @param script Path to the targets script. Defaults to the project's, as
-#'   `targets::tar_config_get("script", project = project)` gives it.
+#'   `targets::tar_config_get("script", project = project)` gives it. A Quarto
+#'   or R Markdown document (`.qmd`, `.Rmd`) is a pipeline written as one:
+#'   the board loads it through `tarchetypes::tar_tangle()`, which needs the
+#'   parsermd package.
 #' @param port Port to serve the board on. Defaults to the `shiny.port` option
 #'   or, without one, a random free port.
 #' @param host Host to serve the board on. Defaults to the `shiny.host` option
@@ -119,6 +129,8 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
                       project = Sys.getenv("TAR_PROJECT", "main"), ...) {
   if (!nzchar(project)) project <- "main"
   check_project(project) # in your session, before anything starts
+  # A pipeline written as a document: through a script that tangles it (#136).
+  if (is_tangle_document(script)) script <- tangle_script(script)
   script_choices(script, scripts) # check them in your session
   # Else the background board dies at once on "address already in use" and
   # the page at the port is whatever was there, often an older board.
@@ -141,12 +153,12 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
     tempfile("targetsboard_editor_", fileext = ".rds")
   }
   bg_process <- callr::r_bg(
-    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme, filters,
-      editor) {
+    \(metadata, script, scripts, project, host, port, targets_only, dev, confirm_nodes, preview_bytes, theme, profile,
+      filters, editor) {
       options(
         targetsboard.dev = dev, targetsboard.confirm_nodes = confirm_nodes,
         targetsboard.preview_bytes = preview_bytes, targetsboard.theme = theme,
-        targetsboard.editor = editor
+        targetsboard.editor = editor, targetsboard.profile = profile
       )
       # The filters as arguments again: values, or expressions for tidyselect.
       print(do.call(targetsboard::tar_board_app, c(list(
@@ -170,6 +182,7 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
       confirm_nodes = confirm_nodes_limit(),
       preview_bytes = preview_bytes_limit(),
       theme = getOption("targetsboard.theme"),
+      profile = isTRUE(getOption("targetsboard.profile")),
       filters = filters,
       editor = editor
     ),

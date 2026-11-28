@@ -38,36 +38,86 @@ files_page <- 50
 
 #' The sections of a files view: one per path, 50 at a time, the first open.
 #' A section holds an output for its view, which the session fills when it
-#' opens; with a single path, the view alone.
+#' opens; with a single path, the view alone. A rendered report (#275)
+#' shows at once, its sources and inputs in one closed list below it.
 #' @noRd
 files_sections <- function(view, ns = identity) {
   paths <- view$paths
   if (length(paths) == 1) return(shiny::uiOutput(ns(file_output_id(1))))
+  labels <- file_labels(paths)
+  if (rendered_report(paths)) {
+    return(shiny::tagList(
+      shiny::uiOutput(ns(file_output_id(1))),
+      shiny::tags$details(
+        class = "tb-preview-sources",
+        shiny::tags$summary(sprintf("Sources and inputs (%s)", format(length(paths) - 1, big.mark = ","))),
+        file_section_list(paths, labels, ns, which = seq_along(paths)[-1], first_open = FALSE)
+      )
+    ))
+  }
   shiny::tagList(
     shiny::tags$p(class = "tb-table-caption", sprintf("%s files.", format(length(paths), big.mark = ","))),
+    file_section_list(paths, labels, ns, which = seq_along(paths), first_open = TRUE)
+  )
+}
+
+# The sections of the paths `which`, 50 shown at a time. The first open
+# already holds its output; the others ask for theirs when they open
+# (srcjs/actions.js).
+file_section_list <- function(paths, labels, ns, which, first_open) {
+  shiny::tagList(
     shiny::tags$div(
       class = "tb-preview-files",
-      lapply(seq_along(paths), function(i) {
-        # Opened the first time, a section gets its output and asks for its
-        # view (srcjs/actions.js); the first one is open with it already.
+      lapply(seq_along(which), function(k) {
+        i <- which[[k]]
+        built <- first_open && k == 1
         shiny::tags$details(
           class = "tb-preview-file", `data-index` = i,
-          open = if (i == 1) NA, hidden = if (i > files_page) NA,
-          `data-tb-input` = if (i > 1) ns("file_open"),
-          `data-tb-value` = if (i > 1) i,
-          `data-tb-output` = if (i > 1) ns(file_output_id(i)),
-          shiny::tags$summary(shiny::tags$code(basename(paths[[i]]))),
-          if (i == 1) shiny::uiOutput(ns(file_output_id(1)), class = "tb-preview-file-body")
+          open = if (built) NA, hidden = if (k > files_page) NA,
+          `data-tb-input` = if (!built) ns("file_open"),
+          `data-tb-value` = if (!built) i,
+          `data-tb-output` = if (!built) ns(file_output_id(i)),
+          shiny::tags$summary(shiny::tags$code(labels[[i]])),
+          if (built) shiny::uiOutput(ns(file_output_id(i)), class = "tb-preview-file-body")
         )
       })
     ),
-    if (length(paths) > files_page) {
+    if (length(which) > files_page) {
       shiny::tags$button(
         type = "button", class = "btn btn-sm btn-default tb-preview-files-more",
         `data-tb-more` = files_page, sprintf("Show %d more", files_page)
       )
     }
   )
+}
+
+#' Each path's label: its path in the folder the paths share, so that
+#' posts/a/index.qmd and posts/b/index.qmd tell apart (#275)
+#' @noRd
+file_labels <- function(paths) {
+  parts <- strsplit(gsub("\\\\", "/", paths), "/", fixed = TRUE)
+  folders <- lapply(parts, function(p) utils::head(p, -1))
+  shared <- 0
+  repeat {
+    k <- shared + 1
+    heads <- vapply(folders, function(f) if (length(f) >= k) f[[k]] else NA_character_, character(1))
+    if (anyNA(heads) || length(unique(heads)) != 1) break
+    shared <- k
+  }
+  vapply(parts, function(p) paste(p[seq_along(p) > shared], collapse = "/"), character(1))
+}
+
+#' Whether a file target's first path is a rendered report, as
+#' tar_quarto() and tar_render() return them: a folder with an index.html
+#' (a site), or an HTML, PDF or Word document with a .qmd or .Rmd among the
+#' paths
+#' @noRd
+rendered_report <- function(paths) {
+  if (length(paths) < 2) return(FALSE)
+  first <- paths[[1]]
+  if (dir.exists(first)) return(file.exists(file.path(first, "index.html")))
+  tolower(tools::file_ext(first)) %in% c("html", "htm", "pdf", "docx") &&
+    any(tolower(tools::file_ext(paths[-1])) %in% c("qmd", "rmd"))
 }
 
 # A file section's output, in the preview module's namespace.
@@ -388,8 +438,67 @@ tar_board_preview.tar_board_file <- function(x, target, ...) {
     return(markdown_view(readLines(path, warn = FALSE, encoding = "UTF-8")))
   }
   if (ext %in% c("r", "rmd", "qmd")) return(text_file_view(path, "r"))
-  if (ext %in% c("txt", "log", "json", "yaml", "yml", "md", "markdown", "toml", "sql", "py", "sh")) {
+  if (ext %in% c("json", "geojson", "ndjson", "jsonl")) return(json_view(path, lines = ext %in% c("ndjson", "jsonl")))
+  if (ext %in% c("txt", "log", "yaml", "yml", "md", "markdown", "toml", "sql", "py", "sh")) {
     return(text_file_view(path))
   }
   NULL
+}
+
+# JSON as a tree (#250): how big a file it parses, how many lines of NDJSON,
+# and how many nodes it draws in all, whatever the shape.
+json_bytes <- function() 5e6
+json_lines <- 100
+json_depth <- 8
+json_nodes <- 2000
+
+#' What a JSON value is, in a few characters: `{3}` an object, `[3]` an
+#' array, string, number, bool, null; from jsonlite's lists
+#' (`simplifyVector = FALSE`), where an object has names, even none
+#' @noRd
+json_type_label <- function(x) {
+  if (is.null(x)) return("null")
+  if (is.list(x)) return(sprintf(if (is.null(names(x))) "[%s]" else "{%s}", format(length(x), big.mark = ",")))
+  if (is.logical(x)) return("bool")
+  if (is.numeric(x)) return("number")
+  if (is.character(x)) return("string")
+  type_label(x)
+}
+
+#' A JSON file as a tree you can fold, its text a click away
+#'
+#' A file too big to parse, or not valid JSON, keeps the text view, with
+#' why. NDJSON (`lines = TRUE`): one item a line, the first `json_lines`.
+#' @noRd
+json_view <- function(path, lines = FALSE) {
+  text_view <- function(note) shiny::tagList(shiny::tags$p(class = "tb-table-caption", note), text_file_view(path))
+  if (isTRUE(file.size(path) > json_bytes())) {
+    return(text_view("Too large to show as a tree: its text."))
+  }
+  value <- tryCatch({
+    if (lines) {
+      text <- first_lines(path, json_lines)
+      lapply(text$lines[nzchar(trimws(text$lines))], jsonlite::parse_json, simplifyVector = FALSE)
+    } else {
+      jsonlite::read_json(path, simplifyVector = FALSE)
+    }
+  }, error = function(e) structure(list(), error = conditionMessage(e)))
+  if (!is.null(attr(value, "error"))) {
+    why <- gsub("[[:space:]]+", " ", cli::ansi_strip(attr(value, "error")))
+    return(text_view(paste("Not valid JSON:", substr(why, 1, 200))))
+  }
+  # JSON spells its bools true and false.
+  shown <- function(x) if (is.logical(x) && length(x) == 1 && !is.na(x)) tolower(x) else short_value(x)
+  options <- tree_options(json_type_label, json_depth, budget = list2env(list(left = json_nodes)), value = shown)
+  shiny::tagList(
+    if (lines && isTRUE(first_lines(path, json_lines)$more)) {
+      shiny::tags$p(class = "tb-table-caption", sprintf("The first %d lines.", json_lines))
+    },
+    if (is.list(value) && length(value)) {
+      shiny::tags$div(class = "tb-tree", tree_items_ui(value, 1, options))
+    } else {
+      shiny::tags$div(class = "tb-tree", tree_node("value", value, 1, options))
+    },
+    shiny::tags$details(class = "tb-preview-raw", shiny::tags$summary("Raw text"), text_file_view(path))
+  )
 }
