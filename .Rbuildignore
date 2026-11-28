@@ -23,3 +23,4 @@
 ^inst/examples/.*_files$
 ^\.claude$
 ^CLAUDE\.md$
+^vitest\.config\.mjs$
