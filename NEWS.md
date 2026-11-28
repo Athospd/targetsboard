@@ -2,6 +2,12 @@
 
 ## New features
 
+* torch targets (`tar_torch()`, `tar_aws_torch()`, #228): a model shows its
+  layers as a tree and a table of its parameters, with how many train; a
+  tensor its shape, dtype, device and first values. torch isn't a
+  dependency. A value whose format needs a package that isn't installed
+  (torch, keras, qs2, arrow, fst) says which to install, under its metadata,
+  instead of no value.
 * A JSON file is a tree you can fold, like a list (#250): objects `{n}`,
   arrays `[n]`, strings, numbers, bools and nulls, 8 levels deep within a
   budget of nodes; `.ndjson`/`.jsonl` one item a line. Its raw text is a

@@ -375,7 +375,15 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
             paste0("Couldn't download the value from ", target$repository, ": ", cli::ansi_strip(failed))
           ), target_tabs_card(tabs_for, session$ns)))
         }
-        if (identical(value, missing)) return(no_value())
+        if (identical(value, missing)) {
+          # A format whose package isn't installed here: say which (#228).
+          needed <- missing_format_package(target$format)
+          if (!is.null(needed)) {
+            return(shiny::tagList(problem_part, missing_package_card(target, needed, store(), session$ns),
+                                  target_tabs_card(tabs_for, session$ns)))
+          }
+          return(no_value())
+        }
         built <- previews$set(key, build_preview(value, target))
       }
       # Plots are drawn by the board, at the size of the preview. Reusing
