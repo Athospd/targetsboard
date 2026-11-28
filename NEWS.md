@@ -8,6 +8,12 @@
   loads a script, and a large one asks first. `tar_board(targets_only = )`
   only sets where it starts.
 
+* An **Export** button under the run controls saves the board as one HTML
+  page (#309), as `tar_board_export()` does: a dialog picks the targets on
+  the board or the selected ones and the size cap, estimates the page, and
+  shows the same in R. The page builds in a background process, with
+  Cancel, and the browser then saves it.
+
 * `tar_board_export()` writes the board as one HTML page that opens in any
   browser, with no R and no Shiny (#284, its first step): the graph as it
   is now, and a click on a target shows its Value pane: facts, views
