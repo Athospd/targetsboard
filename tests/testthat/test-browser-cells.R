@@ -49,8 +49,12 @@ test_that("a list cell opens its value, and a cell in it opens the next level", 
   app$wait_for_js("document.querySelector('.modal-title code')?.textContent === 'fits$data[[2]]'", timeout = preview_timeout)
 
   # A model's cell: the model's own views.
-  app$run_js("document.querySelector('.modal button[data-dismiss], .modal button[data-bs-dismiss]').click()")
-  app$wait_for_js("document.querySelector('.modal .tb-cell-dialog') === null")
+  # Close: clicked until the dialog goes. Bootstrap ignores it while the
+  # dialog is still in its transition, slow on CI.
+  app$wait_for_js(paste(
+    "(() => { const b = document.querySelector('.modal button[data-dismiss], .modal button[data-bs-dismiss]');",
+    "if (b) b.click(); return document.querySelector('.modal .tb-cell-dialog') === null; })()"
+  ), timeout = preview_timeout)
   app$run_js("Array.from(document.querySelectorAll('.tb-preview .tb-cell-open')).find(b => b.textContent === '<lm>').click()")
   app$wait_for_js("document.querySelector('.modal-title code')?.textContent === 'fits$model[[1]]'", timeout = preview_timeout)
   tabs <- app$get_js("Array.from(document.querySelectorAll('.modal .nav-link')).map(t => t.textContent.trim())")
