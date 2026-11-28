@@ -65,7 +65,8 @@ type_abbr <- function(x) {
   if (is.double(x)) return("dbl")
   if (is.character(x)) return("chr")
   if (is.complex(x)) return("cpl")
-  if (is.list(x)) return("list")
+  # A list column, from the cells a table shows: there can be many.
+  if (is.list(x)) return(list_type(utils::head(x, preview_rows)))
   class(x)[1]
 }
 
@@ -159,13 +160,55 @@ column_header <- function(name, type, spark = NULL, rows = NULL) {
   )
 }
 
+#' A list-column cell, as tibble prints it: "tibble [7 x 10]", "lm",
+#' "dbl [3]", "NULL" (#298)
+#'
+#' pillar's summary when it's installed (it is wherever tibble is), else
+#' the list tree's (type_label()). Never formats the whole value.
+#' @noRd
+cell_summary <- function(v) {
+  if (is.null(v)) return("NULL")
+  if (inherits(v, "gg")) return("gg") # pillar abbreviates its package instead
+  if (rlang::is_installed("pillar")) {
+    summary <- tryCatch(pillar::obj_sum(v), error = function(e) NULL)
+    if (is.character(summary) && length(summary) == 1) return(as.vector(summary)) # without its attributes
+  }
+  type_label(v)
+}
+
+# The type of a list column's cells, for its header: "list<tibble>",
+# "list<lm>", "list<mixed>"; just "list" when every cell is NULL.
+list_type <- function(x) {
+  types <- unique(vapply(x[!vapply(x, is.null, logical(1))], function(v) sub(" .*$", "", cell_summary(v)), ""))
+  if (!length(types)) return("list")
+  paste0("list<", if (length(types) == 1) types else "mixed", ">")
+}
+
+# A list-column cell in the Rows tab: its summary, on a button that opens
+# its own views (mod_preview.R), with its column and row.
+cell_button <- function(v, column, row) {
+  summary <- cell_summary(v)
+  if (is.null(v)) return(as.character(htmltools::tags$span(class = "tb-cell-null", summary)))
+  as.character(htmltools::tags$button(
+    type = "button", class = "btn btn-link btn-sm p-0 tb-cell-open",
+    title = "Open this cell's value",
+    `data-tb-cell` = jsonlite::toJSON(list(column = column, row = row), auto_unbox = TRUE),
+    paste0("<", summary, ">")
+  ))
+}
+
 #' A data frame's Rows tab: its first rows, with each column's type
 #' @noRd
 rows_view <- function(x, limit = preview_rows) {
   shown <- utils::head(as.data.frame(x, stringsAsFactors = FALSE), limit)
-  # List columns, and anything else reactable can't show, as text.
+  # List columns as their cells' summaries, each opening its value (#298).
+  cells <- character()
   for (column in names(shown)) {
-    if (is.list(shown[[column]]) || !is.atomic(shown[[column]])) {
+    if (is.list(shown[[column]])) {
+      shown[[column]] <- vapply(seq_along(shown[[column]]), function(i) cell_button(shown[[column]][[i]], column, i), "")
+      cells <- c(cells, column)
+    } else if (!is.atomic(shown[[column]])) {
+      # Anything else reactable can't show, as text.
       shown[[column]] <- vapply(shown[[column]], function(v) paste(format(v), collapse = ", "), character(1))
     }
   }
@@ -174,7 +217,9 @@ rows_view <- function(x, limit = preview_rows) {
   columns <- stats::setNames(lapply(names(shown), function(column) {
     type <- type_abbr(x[[column]])
     spark <- if (is_continuous(x[[column]])) spark_histogram(x[[column]], width = 64, height = 16)
-    reactable::colDef(header = function(value) column_header(column, type, spark, nrow(x)), html = FALSE)
+    cell <- column %in% cells # its cells are buttons: no filter or sort on their markup
+    reactable::colDef(header = function(value) column_header(column, type, spark, nrow(x)), html = cell,
+                      filterable = !cell, sortable = !cell)
   }), names(shown))
   htmltools::tagList(
     if (nrow(x) > limit) {
@@ -293,3 +338,46 @@ tar_board_preview.Date <- tar_board_preview.numeric
 #' @rdname tar_board_preview
 #' @export
 tar_board_preview.POSIXct <- tar_board_preview.numeric
+
+# How deep a cell's value can be opened, cell within cell (#298).
+cell_depth <- 10
+
+# One step into a cell, as a click sends it: its column and row.
+cell_step <- function(x) list(column = as.character(x$column), row = as.integer(x$row))
+
+#' The value of a list-column cell, cell within cell: `path` is a list of
+#' steps, from the target's value
+#' @noRd
+cell_value <- function(value, path) {
+  for (step in path) {
+    column <- value[[step$column]]
+    if (!is.data.frame(value) || !is.list(column) || !isTRUE(step$row >= 1 && step$row <= length(column))) {
+      stop("That cell is no longer in the value: open the target again.", call. = FALSE)
+    }
+    value <- column[[step$row]]
+  }
+  value
+}
+
+#' A cell's value, in a dialog: where it is, as R code, and its views
+#'
+#' Its tables' cells open the next level (`cell_drill`); Back goes up one.
+#' @noRd
+cell_dialog <- function(name, path, built, ns = identity, plot_ids = character()) {
+  where <- paste0(name, paste(vapply(path, function(s) sprintf("$%s[[%d]]", backquote_name(s$column), s$row), ""), collapse = ""))
+  shiny::modalDialog(
+    title = shiny::tags$code(where), size = "xl", easyClose = TRUE,
+    shiny::tags$div(
+      class = "tb-cell-dialog", `data-tb-cell-input` = ns("cell_drill"),
+      shiny::tags$p(class = "tb-preview-facts", lapply(c(built$facts$class, built$facts$shape), shiny::tags$span)),
+      do.call(bslib::navset_underline, view_panels(built$views, plot_ids, ns))
+    ),
+    footer = shiny::tagList(
+      if (length(path) > 1) shiny::actionButton(ns("cell_back"), "Back", class = "btn-default"),
+      shiny::modalButton("Close")
+    )
+  )
+}
+
+# A column name as R code after `$`: backquoted unless syntactic.
+backquote_name <- function(x) if (make.names(x) == x) x else paste0("`", x, "`")

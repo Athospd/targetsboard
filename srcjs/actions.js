@@ -13,6 +13,9 @@
 //     the value, for the server to fill it.
 //   data-tb-more="n", on a button: shows the next n hidden <details> of the
 //     list just before it, and goes when none is left.
+//   data-tb-cell="JSON", on a list-column cell's button (#298): a click
+//     sends the JSON as the input that the closest data-tb-cell-input names:
+//     the Value pane's, or the cell dialog's, where a table has no ns.
 //   data-copy="text", on a button: copies the text. A .tb-copy-code button
 //     shows a check for a moment (index.css); another says "Copied".
 //   data-tb-enter="id", on a text input: Enter clicks button `id`, as in a
@@ -73,12 +76,15 @@ function showMore(button) {
 }
 
 document.addEventListener('click', (event) => {
-  const el = event.target.closest('[data-copy], [data-tb-more], [data-tb-input]');
+  const el = event.target.closest('[data-copy], [data-tb-more], [data-tb-input], [data-tb-cell]');
   if (!el || el.matches('input, details')) return;
   if (el.matches('a')) event.preventDefault();
   if (el.dataset.copy !== undefined) copy(el);
   else if (el.dataset.tbMore !== undefined) showMore(el);
-  else send(el.dataset.tbInput, JSON.parse(el.dataset.tbValue));
+  else if (el.dataset.tbCell !== undefined) {
+    const input = el.closest('[data-tb-cell-input]')?.dataset.tbCellInput;
+    if (input) send(input, JSON.parse(el.dataset.tbCell));
+  } else send(el.dataset.tbInput, JSON.parse(el.dataset.tbValue));
 });
 
 document.addEventListener('change', (event) => {
