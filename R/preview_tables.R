@@ -219,7 +219,7 @@ rows_view <- function(x, limit = preview_rows) {
     spark <- if (is_continuous(x[[column]])) spark_histogram(x[[column]], width = 64, height = 16)
     cell <- column %in% cells # its cells are buttons: no filter or sort on their markup
     reactable::colDef(header = function(value) column_header(column, type, spark, nrow(x)), html = cell,
-                      filterable = !cell, sortable = !cell)
+                      filterable = !cell, sortable = !cell, minWidth = if (cell) 150 else 100)
   }), names(shown))
   htmltools::tagList(
     if (nrow(x) > limit) {

@@ -912,6 +912,7 @@ html .Reactable .rt-page-size-select {
   font-family: var(--bs-font-monospace);
   font-size: inherit;
   vertical-align: baseline;
+  white-space: nowrap;
 }
 .tb-cell-open {
   text-decoration: none;
