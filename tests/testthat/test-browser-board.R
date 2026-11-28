@@ -226,7 +226,7 @@ test_that("a click on a tar_meta() row shows its target on the board", {
   )
 
   app$click(selector = "a[data-value='tar_meta']")
-  app$wait_for_js("document.querySelectorAll('#board-meta-table .rt-tbody .rt-tr').length === 8")
+  app$wait_for_js("document.querySelectorAll('#board-meta-table .rt-tbody .rt-tr').length === 8", timeout = preview_timeout)
   app$run_js(
     "Array.from(document.querySelectorAll('#board-meta-table .rt-tbody .rt-tr'))
        .find(r => r.querySelector('.rt-td').innerText.trim() === 't6')
@@ -390,8 +390,8 @@ test_that("in dark mode, the tables, the toolbar and the buttons stay readable",
   }
 
   app$run_js("document.querySelector('bslib-input-dark-mode').setAttribute('mode', 'dark')")
-  app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'")
-  app$wait_for_js("document.querySelector('.reactflow-wrapper').classList.contains('tb-dark')")
+  app$wait_for_js("document.documentElement.dataset.bsTheme === 'dark'", timeout = preview_timeout)
+  app$wait_for_js("document.querySelector('.reactflow-wrapper').classList.contains('tb-dark')", timeout = preview_timeout)
 
   app$click(selector = ".react-flow__node[data-id='b']")
   app$wait_for_js("document.querySelector('.tb-node-toolbar button') !== null")
