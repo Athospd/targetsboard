@@ -7,7 +7,8 @@
 #'
 #' @param script Path to the targets script the poller starts on.
 #' @param targets_only Show only targets, without functions and globals, to
-#'   start with: the board's switch changes it (#305).
+#'   start with: the board's switch changes it, and remembers it per script
+#'   (#305).
 #' @param project The project of `_targets.yaml` it starts on.
 #' @param filters tar_visnetwork()'s filters for `script` (visnetwork_filters()):
 #'   kept on every redraw of it; another script is drawn whole.
@@ -36,6 +37,11 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
   }
 
   start_poller <- function(script) {
+    # Another script: drawn as the switch was left for it (#305).
+    if (!is.null(poller$script) && !identical(script, poller$script)) {
+      shown <- read_functions_shown(script)
+      if (!is.null(shown)) only(!shown)
+    }
     stop_poller()
     # The author's filters name the opened script's targets: only for it.
     own <- identical(normalizePath(script, mustWork = FALSE), normalizePath(first_script, mustWork = FALSE))
@@ -59,10 +65,12 @@ board_backend <- function(script, targets_only = TRUE, project = active_project(
     start_poller(script)
   }
 
-  # Functions and globals drawn or not: the poller again, on the same script.
-  set_targets_only <- function(value) {
+  # Functions and globals drawn or not, remembered for the script: the
+  # poller again, on the same script, unless `restart` is FALSE.
+  set_targets_only <- function(value, restart = TRUE) {
     only(value)
-    if (!is.null(poller$process)) start_poller(poller$script)
+    write_functions_shown(poller$script %||% script, !value)
+    if (restart && !is.null(poller$process)) start_poller(poller$script)
   }
 
   # Started by the first session, and stopped with the app.

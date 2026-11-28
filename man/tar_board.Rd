@@ -8,7 +8,7 @@
 tar_board(
   script = targets::tar_config_get("script", project = project),
   port = getOption("shiny.port", targets::tar_random_port()),
-  targets_only = TRUE,
+  targets_only = NULL,
   metadata = NULL,
   host = getOption("shiny.host", "127.0.0.1"),
   browse = TRUE,
@@ -20,7 +20,7 @@ tar_board(
 
 tar_board_app(
   script = targets::tar_config_get("script", project = project),
-  targets_only = TRUE,
+  targets_only = NULL,
   metadata = NULL,
   options = list(),
   scripts = NULL,
@@ -39,7 +39,9 @@ parsermd package.}
 or, without one, a random free port.}
 
 \item{targets_only}{Show only targets, without functions and globals, at
-first: the board's "Functions and globals" switch draws them, or not.}
+first: the board's "Functions and globals" switch draws them, or not,
+and remembers it per script in the store. \code{NULL}, the default, is as
+the switch was left for \code{script}, else \code{TRUE}.}
 
 \item{metadata}{Optional: \code{targets::tar_visnetwork()$x} for the first
 render. Computed from \code{script} when \code{NULL}, and empty when there is no

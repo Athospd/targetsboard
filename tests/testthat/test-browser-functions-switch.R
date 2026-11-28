@@ -24,3 +24,25 @@ test_that("the switch draws functions and globals, and takes them away", {
   app$wait_for_js(paste(node, "=== null"), timeout = 60000)
   expect_equal(app$get_js("document.querySelectorAll('.react-flow__node').length"), 2)
 })
+
+test_that("the switch's choice holds when the board starts again", {
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  writeLines(c(
+    "library(targets)",
+    "double_it <- function(x) 2 * x",
+    "list(tar_target(data, 1:3), tar_target(doubled, double_it(data)))"
+  ), file.path(dir, "_targets.R"))
+  withr::local_dir(dir)
+  targets::tar_make(reporter = "silent") # a store, which keeps the choice
+  app <- local_board_app(dir, "functions_switch_saved")
+  app$wait_for_js("document.querySelectorAll('.react-flow__node').length === 2", timeout = 60000)
+  app$wait_for_js("window.jQuery?.('#board-script-functions').data('shiny-input-binding') !== undefined", timeout = 30000)
+  app$run_js("document.querySelector('#board-script-functions').click()")
+  app$wait_for_js("document.querySelector('.react-flow__node[data-id=double_it]') !== null", timeout = 60000)
+  app$stop()
+
+  again <- local_board_app(dir, "functions_switch_again")
+  again$wait_for_js("document.querySelector('.react-flow__node[data-id=double_it]') !== null", timeout = 60000)
+  again$wait_for_js("document.querySelector('#board-script-functions').checked === true", timeout = 30000)
+})

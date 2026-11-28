@@ -127,6 +127,7 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
             reasons$manifest <- manifest
             reasons$cloud <- found$cloud
             reasons$controllers <- found$controllers
+            reasons$globals <- found$globals
             tmp <- paste0(reasons_path, ".tmp")
             saveRDS(reasons, file = tmp)
             if (!file.rename(tmp, reasons_path)) unlink(tmp)
@@ -165,7 +166,8 @@ tar_visnetwork_bg <- function(script, interval = 0.5, settle = 1, filters = list
 #'   `manifest`, each `NULL` if it failed; `cloud`, where the metadata lives
 #'   when in a cloud bucket (`repository`, `bucket`, `prefix`), else `NULL`
 #'   (#111); `controllers`, crew's controller names, the default first, or
-#'   `NULL` (#137); and `errors`, the messages.
+#'   `NULL` (#137); `globals`, each global object's class, size and
+#'   printout, by name (#305); and `errors`, the messages.
 #' @noRd
 poller_why <- function(script) {
   # The script runs in the global environment, as in tar_make(), emptied
@@ -216,6 +218,28 @@ poller_why <- function(script) {
       paste(kinds, collapse = ", ")
     }, character(1))
   }
+  # The script's global objects, as tar_manifest() left them in the global
+  # environment, printed for their Value pane (#305): the board never runs
+  # the script itself. printed_text()'s way, inline: this runs in baseenv().
+  show <- function(value) {
+    old <- options(max.print = 200, width = 80)
+    grDevices::pdf(NULL)
+    device <- grDevices::dev.cur()
+    on.exit({
+      options(old)
+      if (device %in% grDevices::dev.list()) grDevices::dev.off(device)
+    })
+    lines <- utils::capture.output(print(value))
+    if (length(lines) > 40) lines <- c(lines[1:40], sprintf("... %d more lines", length(lines) - 40))
+    list(class = class(value)[1], bytes = as.numeric(utils::object.size(value)), printed = paste(lines, collapse = "\n"))
+  }
+  objects <- reasons$vertices$name[reasons$vertices$type %in% "object"]
+  globals <- list()
+  for (name in objects[vapply(objects, exists, logical(1), envir = globalenv(), inherits = FALSE)]) {
+    value <- get(name, envir = globalenv(), inherits = FALSE)
+    if (is.function(value)) next
+    globals[[name]] <- tryCatch(show(value), error = function(e) list(error = conditionMessage(e)))
+  }
   # The script's options, set when tar_manifest() ran it above.
   cloud <- tryCatch({
     repository <- targets::tar_option_get("repository_meta")
@@ -232,7 +256,7 @@ poller_why <- function(script) {
   } else if (inherits(controller, "crew_class_controller")) {
     controller$launcher$name
   }
-  list(reasons = reasons, manifest = manifest, cloud = cloud, controllers = controllers, errors = errors)
+  list(reasons = reasons, manifest = manifest, cloud = cloud, controllers = controllers, globals = globals, errors = errors)
 }
 environment(poller_why) <- baseenv()
 

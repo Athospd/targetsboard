@@ -52,8 +52,23 @@ function_definitions <- function(script, functions = TRUE) {
 #' @param name Its name.
 #' @param users The targets that use it.
 #' @param hash Its hash in the metadata, or NULL.
+#' @param value Its value from the poller (poller_why()): `class`, `bytes`
+#'   and `printed`, or `error`; NULL until the poller has read the script.
 #' @noRd
-global_ui <- function(def, name, users = character(), hash = NULL) {
+global_ui <- function(def, name, users = character(), hash = NULL, value = NULL) {
+  value_part <- if (!is.null(value$error)) {
+    shiny::tags$p(class = "text-muted", paste0("Its value couldn't be printed: ", value$error))
+  } else if (!is.null(value$printed)) {
+    shiny::tags$details(
+      class = "tb-command tb-global-value", open = NA,
+      shiny::tags$summary(
+        "Its value ",
+        shiny::tags$span(class = "tb-function-where", paste0("(a ", value$class, ", ", format_bytes(value$bytes), ")"))
+      ),
+      shiny::tags$pre(class = "tb-preview-printed", value$printed),
+      shiny::tags$p(class = "text-muted small", "As the script made it, when the board last read the script.")
+    )
+  }
   facts <- shiny::tagList(
     if (length(users)) shiny::tags$p(paste0("Used by ", describe_names(users), ".")),
     if (length(hash) && !is.na(hash)) shiny::tags$p(class = "text-muted", "Its hash, as targets recorded it: ", shiny::tags$code(hash)),
@@ -64,7 +79,7 @@ global_ui <- function(def, name, users = character(), hash = NULL) {
     )
   )
   if (is.null(def) || nrow(def) != 1) {
-    return(shiny::tagList(shiny::p("Its definition wasn't found in the script or the files it sources."), facts))
+    return(shiny::tagList(value_part, shiny::p("Its definition wasn't found in the script or the files it sources."), facts))
   }
   shiny::tagList(
     shiny::tags$details(
@@ -72,6 +87,7 @@ global_ui <- function(def, name, users = character(), hash = NULL) {
       shiny::tags$summary(shiny::tags$code(name), " ", shiny::tags$span(class = "tb-function-where", sprintf("%s:%d", def$file, def$line))),
       code_block("As written", "global", def$code)
     ),
+    value_part,
     facts
   )
 }

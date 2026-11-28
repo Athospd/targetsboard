@@ -118,11 +118,16 @@ script_server <- function(id, backend, metadata, script, scripts = NULL,
     # Back to the script, and its project, before Load or a project switch;
     # or to targets only, before the switch turned functions on.
     go_back <- function() {
+      # The switch as it was, remembered for this script; after a Load, the
+      # previous script's own choice, which start_poller() reads.
       if (!identical(previous_only, shiny::isolate(backend$targets_only()))) {
-        backend$targets_only(previous_only)
-        bslib::update_switch("functions", value = !previous_only)
-        backend$start_poller(previous_script)
-      } else if (identical(previous_project, shiny::isolate(backend$project()))) {
+        if (identical(previous_script, poller$script)) {
+          backend$set_targets_only(previous_only, restart = FALSE)
+        } else {
+          backend$targets_only(previous_only)
+        }
+      }
+      if (identical(previous_project, shiny::isolate(backend$project()))) {
         backend$start_poller(previous_script)
       } else {
         backend$switch_project(previous_project, previous_script)
@@ -216,10 +221,15 @@ script_server <- function(id, backend, metadata, script, scripts = NULL,
     others <- shiny::reactiveVal(remember_script(shiny::isolate(backend$project()), script))
 
     # Functions and globals on the graph or not (#305): the poller again, on
-    # the same script, its graph loading as Load's does. The switch starts
-    # as the backend is: a page loaded again keeps it. Only when it differs
-    # from the page's: a late update would undo a click made meanwhile.
-    if (!shiny::isolate(backend$targets_only())) bslib::update_switch("functions", value = TRUE)
+    # the same script, its graph loading as Load's does. The switch follows
+    # the backend: a page loaded again, another tab's click, a script loaded
+    # as it was left. Only when it differs from the page's: a late update
+    # would undo a click made meanwhile.
+    shiny::observeEvent(backend$targets_only(), {
+      if (!identical(isTRUE(input$functions), !backend$targets_only())) {
+        bslib::update_switch("functions", value = !backend$targets_only())
+      }
+    })
     shiny::observeEvent(input$functions, ignoreInit = TRUE, {
       only <- !isTRUE(input$functions)
       if (identical(only, shiny::isolate(backend$targets_only()))) return()
