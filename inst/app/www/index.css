@@ -904,3 +904,22 @@ html .Reactable .rt-page-size-select {
 .tb-preview-values {
   white-space: pre-wrap;
 }
+
+/* A list-column cell in the Rows tab, as tibble prints it, opening its
+   value (#298); a NULL one, muted. */
+.tb-cell-open,
+.tb-cell-null {
+  font-family: var(--bs-font-monospace);
+  font-size: inherit;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+.tb-cell-open {
+  text-decoration: none;
+}
+.tb-cell-open:hover {
+  text-decoration: underline;
+}
+.tb-cell-null {
+  color: var(--bs-secondary-color);
+}

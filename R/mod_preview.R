@@ -439,6 +439,48 @@ preview_server <- function(id, backend, focused, open_request, board, running, t
     }
     shiny::observeEvent(input$file_open, render_file_section(input$file_open))
 
+    # A list-column cell's value, opened from the Rows tab, in a dialog
+    # (#298): built on click, cell within cell, Back up one level. The
+    # target's value is read once per cell opened from the pane.
+    cell <- new.env()
+    cell_path <- shiny::reactiveVal(list())
+    show_cell <- function(path) {
+      element <- tryCatch(cell_value(cell$value, path), error = function(e) e)
+      if (inherits(element, "error")) {
+        return(shiny::showNotification(conditionMessage(element), type = "warning"))
+      }
+      built <- build_preview(element, cell$target)
+      plots <- Filter(function(view) inherits(view, "tar_board_preview_plot"), built$views)
+      plot_ids <- sprintf("cell_plot_%d", seq_along(plots))
+      for (i in seq_along(plots)) {
+        local({
+          view <- plots[[i]]
+          output[[plot_ids[[i]]]] <- render_preview_plot(view, plot_ids[[i]], session)
+        })
+      }
+      cell_path(path)
+      shiny::showModal(cell_dialog(cell$target$name, path, built, session$ns, session$ns(plot_ids)))
+    }
+    shiny::observeEvent(input$cell_open, {
+      target <- preview_target(focused_target(), store(), branch = branch())
+      shiny::req(target)
+      value <- tryCatch(suppressWarnings(read_trusted(read_preview_value(target, store()))), error = function(e) e)
+      if (inherits(value, "error")) {
+        return(shiny::showNotification(paste("Couldn't read the value:", conditionMessage(value)), type = "warning"))
+      }
+      cell$target <- target
+      cell$value <- value
+      show_cell(list(cell_step(input$cell_open)))
+    })
+    shiny::observeEvent(input$cell_drill, {
+      path <- c(cell_path(), list(cell_step(input$cell_drill)))
+      if (length(path) > cell_depth) {
+        return(shiny::showNotification(sprintf("Cells open %d levels deep at most.", cell_depth), type = "warning"))
+      }
+      show_cell(path)
+    })
+    shiny::observeEvent(input$cell_back, show_cell(utils::head(cell_path(), -1)))
+
     list(target_link = shiny::reactive(input$target_link))
   })
 }

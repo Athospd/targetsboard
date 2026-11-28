@@ -354,16 +354,13 @@ branch_picker <- function(pattern, limit = preview_bytes_limit(), ns = identity)
   )
 }
 
-#' The frame of a value: its header, and a tab per view
-#'
-#' @param plot_ids The output ids of the plot views, in the order they come.
-#' @param ns The preview module's namespace, for the ids the frame writes.
+#' A value's views as tabs: a plot in its output (`plot_ids`, in order), a
+#' widget sized to the pane, a file target's sections
 #' @noRd
-preview_frame <- function(target, built, plot_ids = character(), store = NULL, ns = identity,
-                          tabs_for = function(titles) NULL, own_tabs = target_tabs(ns)) {
+view_panels <- function(views, plot_ids = character(), ns = identity) {
   i <- 0
-  panels <- lapply(names(built$views), function(title) {
-    view <- built$views[[title]]
+  lapply(names(views), function(title) {
+    view <- views[[title]]
     if (inherits(view, "tar_board_preview_plot")) {
       i <<- i + 1
       view <- shiny::tags$div(class = "tb-preview-plot", shiny::imageOutput(plot_ids[[i]], height = "100%"))
@@ -374,6 +371,16 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL, n
     }
     bslib::nav_panel(title, shiny::tags$div(class = "tb-preview-view", view))
   })
+}
+
+#' The frame of a value: its header, and a tab per view
+#'
+#' @param plot_ids The output ids of the plot views, in the order they come.
+#' @param ns The preview module's namespace, for the ids the frame writes.
+#' @noRd
+preview_frame <- function(target, built, plot_ids = character(), store = NULL, ns = identity,
+                          tabs_for = function(titles) NULL, own_tabs = target_tabs(ns)) {
+  panels <- view_panels(built$views, plot_ids, ns)
   # A card inside the board's card, against the usual advice: it sits in its
   # own sidebar, not the board's body, and full_screen needs a card, to
   # read a large value on the whole page.
@@ -382,6 +389,7 @@ preview_frame <- function(target, built, plot_ids = character(), store = NULL, n
     preview_header(target, built$facts, store, ns),
     bslib::card_body(
       class = "tb-preview-body", padding = 0, gap = 0,
+      `data-tb-cell-input` = ns("cell_open"), # a list-column cell's click (#298)
       lapply(c(stand_in_note(target), built$note), function(note) shiny::tags$p(class = "tb-preview-note", note)),
       value_tabs(panels, tabs_for, ns, own_tabs)
     )
