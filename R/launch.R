@@ -69,7 +69,10 @@
 #' `options(targetsboard.theme = )` to its name, e.g. `"Cosmo"`.
 #'
 #' @param script Path to the targets script. Defaults to the project's, as
-#'   `targets::tar_config_get("script", project = project)` gives it.
+#'   `targets::tar_config_get("script", project = project)` gives it. A Quarto
+#'   or R Markdown document (`.qmd`, `.Rmd`) is a pipeline written as one:
+#'   the board loads it through `tarchetypes::tar_tangle()`, which needs the
+#'   parsermd package.
 #' @param port Port to serve the board on. Defaults to the `shiny.port` option
 #'   or, without one, a random free port.
 #' @param host Host to serve the board on. Defaults to the `shiny.host` option
@@ -119,6 +122,8 @@ tar_board <- function(script = targets::tar_config_get("script", project = proje
                       project = Sys.getenv("TAR_PROJECT", "main"), ...) {
   if (!nzchar(project)) project <- "main"
   check_project(project) # in your session, before anything starts
+  # A pipeline written as a document: through a script that tangles it (#136).
+  if (is_tangle_document(script)) script <- tangle_script(script)
   script_choices(script, scripts) # check them in your session
   # Else the background board dies at once on "address already in use" and
   # the page at the port is whatever was there, often an older board.

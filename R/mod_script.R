@@ -177,8 +177,10 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
     # tab opened after someone loaded another script, or open while they
     # did, follows it. The scripts loaded join the suggestions.
     known <- shiny::reactiveVal(known_scripts(script, scripts))
+    # A document's script (tangle_script()) shows as the document (#136).
     shiny::observeEvent(backend$loaded_script(), {
       shown <- backend$loaded_script()
+      shown <- tangle_document(shown) %||% shown
       known(union(shiny::isolate(known()), shown))
       if (identical(shown, shiny::isolate(input$path))) return()
       shiny::updateTextInput(session, "path", value = shown)
@@ -198,6 +200,19 @@ script_server <- function(id, backend, metadata, script, scripts = NULL, targets
         shiny::showNotification(paste0("Script not found: ", new_script), type = "error")
         bslib::update_task_button("load", state = "ready")
         return()
+      }
+      # A pipeline written as a document loads through a script that tangles
+      # it (#136): tar_tangle() needs tarchetypes and parsermd.
+      if (is_tangle_document(new_script)) {
+        missing <- c("tarchetypes", "parsermd")[!vapply(c("tarchetypes", "parsermd"), rlang::is_installed, logical(1))]
+        if (length(missing)) {
+          shiny::showNotification(paste0("A pipeline written as a document needs ", and_list(missing),
+                                         ": install ", if (length(missing) == 1) "it" else "them", " to load it."),
+                                  type = "error")
+          bslib::update_task_button("load", state = "ready")
+          return()
+        }
+        new_script <- tangle_script(new_script)
       }
       if (identical(new_script, poller$script)) {
         bslib::update_task_button("load", state = "ready")

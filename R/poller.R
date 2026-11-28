@@ -283,6 +283,13 @@ sourced_paths <- function(script) {
     } else {
       ""
     }
+    # tar_tangle(path): a pipeline written as a document (#136).
+    if (name == "tar_tangle") {
+      args <- as.list(x)[-1]
+      named <- if (is.null(names(args))) rep("", length(args)) else names(args)
+      arg <- if ("path" %in% named) args[["path"]] else if (length(args) && !nzchar(named[[1]])) args[[1]]
+      if (!is.null(arg)) found <<- c(found, literal(arg))
+    }
     if (name %in% c("tar_source", "source", "sys.source")) {
       args <- as.list(x)[-1]
       named <- if (is.null(names(args))) rep("", length(args)) else names(args)

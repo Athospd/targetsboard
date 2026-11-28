@@ -30,7 +30,10 @@ tar_board_app(
 }
 \arguments{
 \item{script}{Path to the targets script. Defaults to the project's, as
-\code{targets::tar_config_get("script", project = project)} gives it.}
+\code{targets::tar_config_get("script", project = project)} gives it. A Quarto
+or R Markdown document (\code{.qmd}, \code{.Rmd}) is a pipeline written as one:
+the board loads it through \code{tarchetypes::tar_tangle()}, which needs the
+parsermd package.}
 
 \item{port}{Port to serve the board on. Defaults to the \code{shiny.port} option
 or, without one, a random free port.}

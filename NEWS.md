@@ -2,6 +2,12 @@
 
 ## New features
 
+* Pipelines written as Quarto or R Markdown documents
+  (`tarchetypes::tar_tangle()`, #136). A `.qmd` or `.Rmd` loads from the
+  script bar or `tar_board(script = )`, through a script the board writes to
+  its temporary folder; the Script tab shows the document. A script that
+  calls `tar_tangle()` refreshes when its document changes, and Open in
+  editor goes to a target's line in the document. parsermd is in Suggests.
 * Which inputs a branch came from: a pattern's branch has an Inputs
   section in the Value pane. Opened, it names the slice of each target the
   branch mapped ("`x`, slice 2 of 3", or an upstream pattern's branch),
